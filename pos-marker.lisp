@@ -320,11 +320,11 @@ Return that instance or nil otherwise."
       (let ((saved (copy-marker marker))
             success)
         (unwind-protect
-             (multiple-value-prog1
-                 (let ((*atomic-motion-markers*
-                         (cons marker *atomic-motion-markers*)))
-                   (funcall thunk))
-               (setq success t))
+            (multiple-value-prog1
+                (let ((*atomic-motion-markers*
+                        (cons marker *atomic-motion-markers*)))
+                  (funcall thunk))
+              (setq success t))
           (when success
             (when-let (host (focus-marker-p marker))
               (nhooks:run-hook (focus-move-hook host)
@@ -357,9 +357,9 @@ Return that instance or nil otherwise."
   `(let ((,marker (make-instance 'marker
                                  :pos (resolve-marker ,marker-or-pos))))
      (unwind-protect
-          (progn
-            (setf (advance-p ,marker) ,advance-p)
-            ,@body)
+         (progn
+           (setf (advance-p ,marker) ,advance-p)
+           ,@body)
        (delete-marker ,marker))))
 
 ;;; Motion
@@ -406,6 +406,26 @@ Return that instance or nil otherwise."
   (setf (pos marker)
         (or (npos-prev-until (pos marker) #'selectable-p)
             (error 'top-of-subtree))))
+
+(define-command forward-element (&optional (marker (focus)))
+  "Move after first element to the right."
+  (setf (pos marker)
+        (or (iterate-pos-until
+             (alex:disjoin #'npos-right
+                           (alex:compose #'pos-right #'pos-up))
+             (pos marker)
+             (alex:compose #'element-p #'node-before))
+            (error 'top-of-subtree))))
+
+(define-command backward-element (&optional (marker (focus)))
+  "Move to first element to the left."
+  (setf (pos marker)
+        (or (iterate-pos-until
+             (alex:disjoin #'npos-left #'pos-up)
+             (pos marker)
+             #'element-p)
+            (error 'top-of-subtree)))
+  (setq *adjust-marker-direction* 'backward))
 
 (defun ensure-selectable (marker &optional backward)
   (let ((pos (pos marker)))
