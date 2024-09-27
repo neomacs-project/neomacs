@@ -407,23 +407,27 @@ Return that instance or nil otherwise."
         (or (npos-prev-until (pos marker) #'selectable-p)
             (error 'top-of-subtree))))
 
+(defun graphic-element-p (node)
+  (and (element-p node)
+       (not (new-line-node-p node))))
+
 (define-command forward-element (&optional (marker (focus)))
-  "Move after first element to the right."
+  "Move after first element (exclude line break) to the right."
   (setf (pos marker)
         (or (iterate-pos-until
              (alex:disjoin #'npos-right
                            (alex:compose #'pos-right #'pos-up))
              (pos marker)
-             (alex:compose #'element-p #'node-before))
+             (alex:compose #'graphic-element-p #'node-before))
             (error 'top-of-subtree))))
 
 (define-command backward-element (&optional (marker (focus)))
-  "Move to first element to the left."
+  "Move to first element (exclude line break) to the left."
   (setf (pos marker)
         (or (iterate-pos-until
              (alex:disjoin #'npos-left #'pos-up)
              (pos marker)
-             #'element-p)
+             #'graphic-element-p)
             (error 'top-of-subtree)))
   (setq *adjust-marker-direction* 'backward))
 
