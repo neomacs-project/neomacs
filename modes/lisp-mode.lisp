@@ -246,6 +246,10 @@
     (hooks:remove-hook (completion-hook neomacs) 'lisp-completion)))
 
 (defun parse-prefix (string)
+  "Parse prefix from STRING.
+Return a list of wrapper functions and the rest of STRING.  The list
+of wrapper functions can be applied to some Lisp object one-by-one and
+reproduce the effect of parsed prefix."
   (let (wrappers (i 0))
     (iter (while (< i (length string)))
       (case (aref string i)
@@ -276,6 +280,8 @@
     (values wrappers (subseq string i))))
 
 (defun node-to-sexp (node)
+  "Parse DOM NODE as a Lisp object.
+It also takes into account any prefix preceding NODE."
   (labels ((ghost-symbol-p (node)
              (when (symbol-node-p node)
                (bind (((:values wrappers rest)
