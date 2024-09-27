@@ -371,7 +371,7 @@
 (defstyle sexp-node `(:display "inline-block"
                       :vertical-align "top"
                       :position "relative"
-                      :white-space "pre"))
+                      :white-space "pre-wrap"))
 (defstyle list-node
     `(((:append "::before")
        :content "("
@@ -398,7 +398,7 @@
 (defstyle symbol-node `(:inherit sexp-node))
 (defstyle comment-node `(((:append "::after") :content "⁣")
                          :display "inline-block"
-                         :white-space "pre"))
+                         :white-space "pre-wrap"))
 (defstyle comment-node-1 `(:position "sticky"
                            :left "20em"
                            :border-left "0.3rem solid #ccc"

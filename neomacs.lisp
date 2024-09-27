@@ -183,7 +183,12 @@
   (hooks:add-hook (buffer-loaded-hook (buffer mode))
                   'neomacs-buffer-loaded-hook)
   (hooks:add-hook (buffer-delete-hook (buffer mode))
-                  'neomacs-buffer-delete-hook))
+                  'neomacs-buffer-delete-hook)
+  (dolist (style (styles mode))
+    (add-observer (css-cell style)
+                  (nclo update-neomacs (cell)
+                    (declare (ignore cell))
+                    (update-style mode style)))))
 
 (defmethod disable ((mode neomacs-mode) &key)
   (hooks:remove-hook (dispatch-command-hook (buffer mode)) 'dispatch-command-sync)
@@ -368,7 +373,8 @@
                       :content "  "
                       :white-space "pre"
                       :inherit selection)
-                     :white-space "pre"
+                     :left 0 :right 0
+                     :white-space "pre-wrap"
                      :padding-left "1em"))
 
 (defstyle neomacs-mode
