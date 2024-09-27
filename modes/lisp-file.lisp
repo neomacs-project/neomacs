@@ -72,20 +72,6 @@
                 t))
        (read-dom stream t)))))
 
-(defnclo read-quote (prefix) (stream c)
-  (declare (ignore c))
-  (append-child
-   *dom-output*
-   (lret ((*dom-output* (make-quote-node prefix nil)))
-     (read-dom stream t))))
-
-(defun read-character-literal (stream c)
-  (unread-char c stream)
-  (let ((node (make-quote-node "#\\" nil)))
-    (append-child *dom-output* node)
-    (let ((*dom-output* node))
-      (read-constituent stream 'symbol))))
-
 (defun read-constituent (stream syntax-class)
   (iter (for c = (read-char stream nil nil t))
     (when (eql (get-syntax-table c *syntax-table*) 'single-escape)
@@ -148,16 +134,6 @@
   (setf (get-syntax-table #\" table) 'read-string)
   (setf (get-syntax-table #\\ table) 'single-escape)
   (setf (get-syntax-table #\; table) 'read-line-comment)
-  (setf (get-syntax-table #\' table) (make-read-quote "'"))
-  (setf (get-syntax-table #\` table) (make-read-quote "`"))
-  (setf (get-syntax-table #\, table)
-        (make-syntax-table
-         #\@ (make-read-quote ",@")
-         t (make-read-quote ",")))
-  (setf (get-syntax-table #\# table)
-        (make-syntax-table
-         #\' (make-read-quote "#'")
-         #\\ 'read-character-literal))
   (setq *syntax-table* table))
 
 (setf (get 'whitespace 'read-filter) 'whitespace-filter)
@@ -253,9 +229,6 @@
                  (iter (for c in (child-nodes self))
                    (write c :stream s)))
                :stream stream))
-             ((equal (attribute self "class") "quote")
-              (write-string (attribute self "prefix") stream)
-              (write (quote-node-body self) :stream stream))
              ((equal (attribute self "class") "comment")
               (dotimes (_ (parse-number:parse-number (attribute self "comment-level")))
                 (write-char #\; stream))

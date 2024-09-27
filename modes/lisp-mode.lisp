@@ -10,15 +10,13 @@
     (or (characterp node)
         (and node (not (symbol-node-p node)))
         (and (not node)
-             (member (attribute parent "class")
-                     '("doc" "string" "list" "quote")
-                     :test 'equal))
+             (class-p parent "doc" "string" "list"))
         (funcall cont))))
 
 (defun lisp-focus-move (old new)
   (declare (ignore old))
   (let ((node (node-containing new)))
-    (if (class-p node "list" "symbol" "quote" "doc")
+    (if (class-p node "list" "symbol" "doc")
         (unless (find-submode 'sexp-editing-mode)
           (enable-modes* 'sexp-editing-mode (current-buffer)))
         (when (find-submode 'sexp-editing-mode)
@@ -77,12 +75,6 @@
     (when (plusp (length text))
       (append-child node (make-instance 'text-node :text text)))))
 
-(defun make-quote-node (prefix body)
-  (lret ((node (make-instance 'element :tag-name "span")))
-    (setf (attribute node "class") "quote"
-          (attribute node "prefix") prefix)
-    (when body (append-child node body))))
-
 (defun make-new-line-node ()
   (make-instance 'element :tag-name "br"))
 
@@ -93,7 +85,7 @@
   (class-p node "symbol" "string" "object" "comment"))
 
 (defun sexp-node-p (node)
-  (class-p node "list" "symbol" "string" "object" "quote"))
+  (class-p node "list" "symbol" "string" "object"))
 
 (defun symbol-node-p (node)
   (and (element-p node)
@@ -135,7 +127,7 @@
   (make-atom-node "string" string))
 
 (defmethod print-dom ((obj t) &key)
-  (make-atom-node "symbol" (princ-to-string obj)))
+  (make-atom-node "symbol" (prin1-to-string obj)))
 
 (defun lisp-self-insert (marker string)
   (cond ((equal string " ")
@@ -144,8 +136,7 @@
              (insert-nodes marker string)))
         ((atom-node-p (node-containing marker))
          (insert-nodes marker string))
-        ((and (element-p (node-before marker))
-              (equal (attribute (node-before marker) "class") "comment"))
+        ((class-p (node-before marker) "comment")
          (insert-nodes (end-pos (node-before marker)) string))
         (t
          (let ((node (make-atom-node "symbol" string)))
@@ -190,14 +181,6 @@
     (insert-nodes pos node)
     (move-nodes pos (pos-right pos) (end-pos node))))
 
-(defun make-quote-command (prefix)
-  (nyxt:lambda-command quote-command ()
-    (undo-auto-amalgamate)
-    (let ((marker (focus))
-          (node (make-quote-node prefix nil)))
-      (insert-nodes marker node)
-      (setf (pos marker) (end-pos node)))))
-
 (define-command lisp-raise (&optional (pos (focus)))
   (setq pos (or (pos-up-ensure pos #'sexp-node-p)
                 (error 'top-of-subtree)))
@@ -237,13 +220,7 @@
       keyscheme:default
       (list "(" 'open-paren
             "\"" 'open-string
-            ";" 'open-comment
-            "'" (make-quote-command "'")
-            "`" (make-quote-command "`")
-            "," (make-quote-command ",")
-            "@" (make-quote-command ",@")
-            "# '" (make-quote-command "#'")
-            "# \\" (make-quote-command "#\\"))))
+            ";" 'open-comment)))
    (rememberable-p nil))
   (:toggler-command-p nil))
 
@@ -268,41 +245,67 @@
     (hooks:remove-hook (node-setup-hook neomacs) 'lisp-node-setup)
     (hooks:remove-hook (completion-hook neomacs) 'lisp-completion)))
 
-(defun quote-node-body (node)
-  (find-if #'element-p (child-nodes node)))
+(defun parse-prefix (string)
+  (let (wrappers (i 0))
+    (iter (while (< i (length string)))
+      (case (aref string i)
+        ((#\')
+         (incf i)
+         (push (lambda (next) (list 'quote next)) wrappers))
+        ((#\`)
+         (incf i)
+         (push (lambda (next) (list 'sb-int:quasiquote next)) wrappers))
+        ((#\,)
+         (incf i)
+         (case (when (< i (length string))
+                 (aref string i))
+           ((#\@)
+            (incf i)
+            (push (lambda (next) (sb-int:unquote next 2)) wrappers))
+           (t
+            (push (lambda (next) (sb-int:unquote next 0)) wrappers))))
+        ((#\#)
+         (incf i)
+         (case (when (< i (length string))
+                 (aref string i))
+           ((#\')
+            (incf i)
+            (push (lambda (next) (list 'function next)) wrappers))
+           (t (decf i) (return))))
+        (t (return))))
+    (values wrappers (subseq string i))))
 
 (defun node-to-sexp (node)
-  (labels ((process (node)
-             (cond ((list-node-p node)
-                    (mapcar #'process
-                            (remove-if (alex:disjoin #'text-node-p #'new-line-node-p)
-                                       (child-nodes node))))
-                   ((equal "string" (attribute node "class"))
-                    (atom-node-text node))
-                   ((equal "quote" (attribute node "class"))
-                    (let ((prefix (attribute node "prefix")))
-                      (cond ((equal prefix "'")
-                             (list 'quote
-                                   (process (quote-node-body node))))
-                            ((equal prefix "`")
-                             (list 'sb-int:quasiquote
-                                   (process (quote-node-body node))))
-                            ((equal prefix ",")
-                             (sb-int:unquote
-                              (process (quote-node-body node))
-                              0))
-                            ((equal prefix ",@")
-                             (sb-int:unquote
-                              (process (quote-node-body node))
-                              2))
-                            ((equal prefix "#'")
-                             (list 'function
-                                   (process (quote-node-body node))))
-                            (t (error "Unrecognized quote prefix: ~a" prefix)))))
-                   ((symbol-node-p node)
-                    (read-from-string (atom-node-text node)))
-                   ((new-line-node-p node) nil)
-                   (t (error "Unrecognized DOM node: ~a" node)))))
+  (labels ((ghost-symbol-p (node)
+             (when (symbol-node-p node)
+               (bind (((:values wrappers rest)
+                       (parse-prefix (atom-node-text node))))
+                 (when (zerop (length rest))
+                   wrappers))))
+           (apply-wrappers (wrappers node)
+             (iter (for w in wrappers)
+               (setq node (funcall w node)))
+             node)
+           (process (node)
+             (let ((sexp
+                     (cond ((list-node-p node)
+                            (mapcar #'process
+                                    (remove-if (alex:disjoin
+                                                #'text-node-p
+                                                #'ghost-symbol-p
+                                                #'new-line-node-p)
+                                               (child-nodes node))))
+                           ((equal "string" (attribute node "class"))
+                            (atom-node-text node))
+                           ((symbol-node-p node)
+                            (bind (((:values wrappers rest)
+                                    (parse-prefix (atom-node-text node))))
+                              (apply-wrappers wrappers (read-from-string rest))))
+                           ((new-line-node-p node) nil)
+                           (t (error "Unrecognized DOM node: ~a" node)))))
+               (if-let (wrappers (ghost-symbol-p (previous-sibling node)))
+                 (apply-wrappers wrappers sexp)
+                 sexp))))
     (process node)))
 
 (define-command eval-defun
@@ -419,8 +422,6 @@
                             :position "absolute")
                            :font-size "1.1em"
                            :inherit comment))
-(defstyle quote-node `(((:append ":empty::after") :content "_")
-                       ((:append ".focus::before") :inherit selection)))
 
 (defstyle lisp-mode
     `((".symbol" :inherit symbol-node)
@@ -434,10 +435,7 @@
       (".comment[comment-level=\"1\"]" :inherit comment-node-1)
       (".comment[comment-level=\"2\"]" :inherit comment-node-2)
       (".comment[comment-level=\"3\"]" :inherit comment-node-3)
-      (".comment[comment-level=\"4\"]" :inherit comment-node-4)
-      (".quote"
-       ((:append "::before") :content #:|attr(prefix)|)
-       :inherit quote-node)))
+      (".comment[comment-level=\"4\"]" :inherit comment-node-4)))
 
 ;;; Default hooks
 (add-mode-hook 'lisp-mode 'undo-mode)
