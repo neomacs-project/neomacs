@@ -116,6 +116,8 @@ non-overridable."
           (:ul
            (:nxdoc :command 'forward-node)
            (:nxdoc :command 'backward-node)
+           (:nxdoc :command 'forward-element)
+           (:nxdoc :command 'backward-element)
            (:nxdoc :command 'backward-up-node)
            (:nxdoc :command 'forward-word)
            (:nxdoc :command 'backward-word)
