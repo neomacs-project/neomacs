@@ -119,6 +119,8 @@ non-overridable."
            (:nxdoc :command 'forward-element)
            (:nxdoc :command 'backward-element)
            (:nxdoc :command 'backward-up-node)
+           (:nxdoc :command 'beginning-of-buffer)
+           (:nxdoc :command 'end-of-buffer)
            (:nxdoc :command 'forward-word)
            (:nxdoc :command 'backward-word)
            (:nxdoc :command 'beginning-of-line)

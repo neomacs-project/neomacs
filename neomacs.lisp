@@ -72,6 +72,8 @@
                   "M-b" backward-word
                   "C-M-f" forward-element
                   "C-M-b" backward-element
+                  "M-<" beginning-of-buffer
+                  "M->" end-of-buffer
                   "C-a" beginning-of-line
                   "C-e" end-of-line
                   "M-a" beginning-of-defun

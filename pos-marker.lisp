@@ -427,6 +427,15 @@ Return that instance or nil otherwise."
             (error 'top-of-subtree)))
   (setq *adjust-marker-direction* 'backward))
 
+(define-command beginning-of-buffer (&optional (marker (focus)))
+  "Move to beginning of buffer."
+  (setf (pos marker) (pos-down (restriction (host marker)))))
+
+(define-command end-of-buffer (&optional (marker (focus)))
+  "Move to end of buffer."
+  (setq *adjust-marker-direction* 'backward)
+  (setf (pos marker) (end-pos (restriction (host marker)))))
+
 (defun ensure-selectable (marker &optional backward)
   (let ((pos (pos marker)))
     (unless (selectable-p pos)
