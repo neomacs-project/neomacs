@@ -210,8 +210,7 @@
         ;; "C-c C-c" compile-defun
         "tab" show-completions
         "C-x C-e" eval-last-expression
-        "C-c C-p" eval-print-last-expression)))
-   (buffer-package (find-package "NEOMACS"))))
+        "C-c C-p" eval-print-last-expression)))))
 
 (define-mode sexp-editing-mode ()
   "Editing S-exp."
@@ -314,11 +313,27 @@ It also takes into account any prefix preceding NODE."
                  sexp))))
     (process node)))
 
-(define-command eval-defun
-    (&optional (marker-or-pos (focus)) (mode (find-submode 'lisp-mode)))
+(defun current-package (&optional (marker-or-pos (focus)))
+  "Return the package in the context of MARKER-OR-POS.
+This is determined by searching for a `in-package' top-level form
+before MARKER-OR-POS."
+  (with-marker (marker marker-or-pos)
+    (or (find-package
+         (handler-case
+             (iter (beginning-of-defun marker)
+               (for node = (node-after marker))
+               (when (and (list-node-p node)
+                          (eql 'in-package (compute-symbol (first-child node))))
+                 (let ((p (npos-right-until (first-child node) #'sexp-node-p)))
+                   (when-let (s (compute-symbol p))
+                     (return (symbol-name s))))))
+           (top-of-subtree ())))
+        (find-package "NEOMACS"))))
+
+(define-command eval-defun (&optional (marker-or-pos (focus)))
   (with-marker (marker marker-or-pos)
     (beginning-of-defun marker)
-    (let* ((*package* (buffer-package mode))
+    (let* ((*package* (current-package marker))
            (result (eval (node-to-sexp (pos marker)))))
       (echo "=> ~a" result))))
 
@@ -329,15 +344,13 @@ It also takes into account any prefix preceding NODE."
     (setq pos (npos-prev pos)))
   (node-before pos))
 
-(define-command eval-last-expression
-    (&optional (marker (focus)) (mode (find-submode 'lisp-mode)))
-  (let* ((*package* (buffer-package mode))
+(define-command eval-last-expression (&optional (marker (focus)))
+  (let* ((*package* (current-package marker))
          (result (eval (node-to-sexp (last-expression (pos marker))))))
     (echo "=> ~a" result)))
 
-(define-command eval-print-last-expression
-    (&optional (marker (focus)) (mode (find-submode 'lisp-mode)))
-  (let* ((*package* (buffer-package mode))
+(define-command eval-print-last-expression (&optional (marker (focus)))
+  (let* ((*package* (current-package marker))
          (node (last-expression marker))
          (pos (pos-right node))
          (last-line (make-new-line-node)))
@@ -368,11 +381,11 @@ It also takes into account any prefix preceding NODE."
 
 (defun lisp-completion (pos)
   (when-let (node (symbol-around pos))
-    (let* ((mode (find-submode 'lisp-mode))
-           (swank::*buffer-package* (buffer-package mode))
+    (let* ((package (current-package pos))
+           (swank::*buffer-package* package)
            (completions (car (swank:fuzzy-completions
                               (atom-node-text node)
-                              (buffer-package mode)))))
+                              package))))
       (list (cons (pos-down node) nil) completions))))
 
 ;;; Style

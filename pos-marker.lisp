@@ -492,8 +492,7 @@ Return that instance or nil otherwise."
     (unless moved
       (let ((pos (pos marker)))
         (setq pos (npos-left-until
-                   pos (alex:compose #'not #'new-line-node-p
-                                     #'node-after)))
+                   pos (alex:compose #'not #'new-line-node-p)))
         (setf (pos marker) (or pos (error 'top-of-subtree)))))))
 
 (define-command end-of-defun (&optional (marker (focus)))
