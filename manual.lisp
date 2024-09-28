@@ -147,19 +147,19 @@ non-overridable."
         (:nsection :title "Selectable positions")
         (:nsection :title "Motion commands"
           (:ul
-           (:nxdoc :command 'forward-node)
-           (:nxdoc :command 'backward-node)
-           (:nxdoc :command 'forward-element)
-           (:nxdoc :command 'backward-element)
-           (:nxdoc :command 'backward-up-node)
-           (:nxdoc :command 'beginning-of-buffer)
-           (:nxdoc :command 'end-of-buffer)
-           (:nxdoc :command 'forward-word)
-           (:nxdoc :command 'backward-word)
-           (:nxdoc :command 'beginning-of-line)
-           (:nxdoc :command 'end-of-line)
-           (:nxdoc :command 'beginning-of-defun)
-           (:nxdoc :command 'end-of-defun))))
+           (:nxdoc :command 'forward-node :mode 'neomacs-mode)
+           (:nxdoc :command 'backward-node :mode 'neomacs-mode)
+           (:nxdoc :command 'forward-element :mode 'neomacs-mode)
+           (:nxdoc :command 'backward-element :mode 'neomacs-mode)
+           (:nxdoc :command 'backward-up-node :mode 'neomacs-mode)
+           (:nxdoc :command 'beginning-of-buffer :mode 'neomacs-mode)
+           (:nxdoc :command 'end-of-buffer :mode 'neomacs-mode)
+           (:nxdoc :command 'forward-word :mode 'neomacs-mode)
+           (:nxdoc :command 'backward-word :mode 'neomacs-mode)
+           (:nxdoc :command 'beginning-of-line :mode 'neomacs-mode)
+           (:nxdoc :command 'end-of-line :mode 'neomacs-mode)
+           (:nxdoc :command 'beginning-of-defun :mode 'neomacs-mode)
+           (:nxdoc :command 'end-of-defun :mode 'neomacs-mode))))
       (:nsection :title "Editing"
         (:nsection :title "Editing primitives"
           (:p "Lisp programs are expected to use the following primitives to edit the Neomacs DOM. These primitives provides " (:a :href "#positions" "Positions")  "-based interface and handles " (:nxref :class-name 'text-node) " splitting/merging automatically. These primitives also maintain " (:a :href "#undo" "Undo") " history, updates browser renderer-side DOM, setup and destruction of observers and computed attributes, and allocation of neomacs-identifier.")
@@ -176,15 +176,15 @@ non-overridable."
            (:nxdoc :function 'split-node)))
         (:nsection :title "Editing commands"
           (:ul
-           (:nxdoc :command 'new-line)
-           (:nxdoc :command 'backward-delete)
-           (:nxdoc :command 'forward-delete)
-           (:nxdoc :command 'backward-cut-word)
-           (:nxdoc :command 'cut-element)
-           (:nxdoc :command 'copy-element)
-           (:nxdoc :command 'paste)
-           (:nxdoc :command 'paste-pop)
-           (:nxdoc :command 'forward-cut))))
+           (:nxdoc :command 'new-line :mode 'neomacs-mode)
+           (:nxdoc :command 'backward-delete :mode 'neomacs-mode)
+           (:nxdoc :command 'forward-delete :mode 'neomacs-mode)
+           (:nxdoc :command 'backward-cut-word :mode 'neomacs-mode)
+           (:nxdoc :command 'cut-element :mode 'neomacs-mode)
+           (:nxdoc :command 'copy-element :mode 'neomacs-mode)
+           (:nxdoc :command 'paste :mode 'neomacs-mode)
+           (:nxdoc :command 'paste-pop :mode 'neomacs-mode)
+           (:nxdoc :command 'forward-cut :mode 'neomacs-mode))))
       (:nsection :title "Ranges"
         (:nsection :title "Range operations"
           (:ul
