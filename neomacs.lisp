@@ -87,6 +87,7 @@
                   "C-p" previous-line
                   "C-v" scroll-down-command
                   "M-v" scroll-up-command
+
                   "M-backspace" backward-cut-word
                   "C-d" forward-delete
                   "M-d" forward-cut-word
@@ -94,7 +95,9 @@
                   "M-w" copy-element
                   "C-y" paste
                   "M-y" paste-pop
-                  "C-k" forward-cut))))
+                  "C-k" forward-cut
+
+                  "C-s" isearch))))
       (iter (for i from 32 below 127)
         (for char = (code-char i))
         (unless (member char '(#\  #\-))
@@ -213,14 +216,19 @@
 
 ;;; Parenscript utils
 
+(defun assign-neomacs-id (node)
+  (setf (attribute node "nyxt-identifier")
+        (princ-to-string (incf (next-nyxt-id (find-submode 'neomacs-mode)))))
+  node)
+
 (ps:defpsmacro js-node (node)
   (cond ((text-node-p node)
          (if-let (next (next-sibling node))
            `(ps:chain (js-node ,next) previous-sibling)
            `(ps:chain (js-node ,(parent node)) last-child)))
         ((element-p node)
-         `(ps:chain document (query-selector ,(format nil "[neomacs-identifier='~a']"
-                                                      (attribute node "neomacs-identifier")))))
+         `(ps:chain document (query-selector ,(format nil "[nyxt-identifier='~a']"
+                                                      (attribute node "nyxt-identifier")))))
         ((null node) nil)
         (t (error "Unknown node type ~a." node))))
 
@@ -253,56 +261,71 @@
    (bind ((node (node-after pos))
           (parent (node-containing pos))
           (scroll-margin (scroll-margin (host pos))))
-     (if (or (characterp node)
-             (and node (equal (tag-name node) "br")))
-         `(let ((range (ps:new (-range))))
-            (dolist (e (ps:chain document (get-elements-by-class-name "focus")))
-              (ps:chain e class-list (remove "focus")))
-            (dolist (e (ps:chain document (get-elements-by-class-name "focus-tail")))
-              (ps:chain e class-list (remove "focus-tail")))
-            ,(if (characterp node)
-                 `(let* ((text-node (js-node ,(text-pos-node pos)))
-                         (parent (ps:chain text-node parent-node)))
-                    (ps:chain range (set-start text-node
-                                               ,(text-pos-offset pos)))
-                    (ps:chain range (set-end text-node
-                                             ,(1+ (text-pos-offset pos)))))
-                 `(let ((element (js-node ,node)))
-                    (ps:chain range (select-node element))))
-            (let ((rect (ps:chain range (get-bounding-client-rect)))
-                  (highlight (ps:chain document (get-element-by-id "neomacs-highlight"))))
-              (setf (ps:chain highlight style display) "inline")
-              (setf (ps:chain highlight style left)
-                    (+ (ps:chain rect x) (ps:chain window scroll-x) "px")
-                    (ps:chain highlight style top)
-                    (+ (ps:chain rect y) (ps:chain window scroll-y) "px")
-                    (ps:chain highlight style width)
-                    (+ (ps:chain rect width) "px")
-                    (ps:chain highlight style height)
-                    (+ (ps:chain rect height) "px"))
-              (ps:chain highlight (scroll-into-view-if-needed)))
-            nil)
-         `(let ((element (js-node ,(or node parent)))
-                (highlight (ps:chain document (get-element-by-id "neomacs-highlight"))))
-            (dolist (e (ps:chain document (get-elements-by-class-name "focus")))
-              (ps:chain e class-list (remove "focus")))
-            (dolist (e (ps:chain document (get-elements-by-class-name "focus-tail")))
-              (ps:chain e class-list (remove "focus-tail")))
-            (setf (ps:chain highlight style display) "none")
-            (ps:chain element class-list
-                      (add ,(if node "focus" "focus-tail")))
-            (let* ((rect (ps:chain element (get-bounding-client-rect)))
-                   (x (ps:chain rect ,(if node 'left 'right)))
-                   (y (ps:chain rect ,(if node 'top 'bottom))))
-              (ps:chain window
-                        (scroll-to
-                         (+ (ps:chain window scroll-x)
-                            (min (- x (* ,scroll-margin (ps:chain window inner-width))) 0)
-                            (max (- x (* ,(- 1 scroll-margin) (ps:chain window inner-width))) 0))
-                         (+ (ps:chain window scroll-y)
-                            (min (- y (* ,scroll-margin (ps:chain window inner-height))) 0)
-                            (max (- y (* ,(- 1 scroll-margin) (ps:chain window inner-height))) 0))))
-              nil))))))
+     `(let (anchor-x anchor-y)
+        ,(if (or (characterp node)
+                 (and node (equal (tag-name node) "br")))
+             `(let ((range (ps:new (-range))))
+                (dolist (e (ps:chain document (get-elements-by-class-name "focus")))
+                  (ps:chain e class-list (remove "focus")))
+                (dolist (e (ps:chain document (get-elements-by-class-name "focus-tail")))
+                  (ps:chain e class-list (remove "focus-tail")))
+                ,(if (characterp node)
+                     `(let* ((text-node (js-node ,(text-pos-node pos)))
+                             (parent (ps:chain text-node parent-node)))
+                        (ps:chain range (set-start text-node
+                                                   ,(text-pos-offset pos)))
+                        (ps:chain range (set-end text-node
+                                                 ,(1+ (text-pos-offset pos)))))
+                     `(let ((element (js-node ,node)))
+                        (ps:chain range (select-node element))))
+                (let ((rect (ps:chain range (get-bounding-client-rect)))
+                      (highlight (ps:chain document (get-element-by-id "neomacs-highlight"))))
+                  (setq anchor-x (ps:chain rect x))
+                  (setq anchor-y (ps:chain rect y))
+                  (if (> (ps:chain rect width) 5)
+                      (progn
+                        (setf (ps:chain highlight style display) "none")
+                        (let ((highlight (ps:chain -c-s-s highlights (get "neomacs"))))
+                          (unless highlight
+                            (setq highlight (ps:new (-highlight)))
+                            (ps:chain -c-s-s highlights (set "neomacs" highlight)))
+                          (ps:chain highlight (clear))
+                          (ps:chain highlight (add range))))
+                      (progn
+                        (let ((highlight (ps:chain -c-s-s highlights (get "neomacs"))))
+                          (when highlight (ps:chain highlight (clear))))
+                        (setf (ps:chain highlight style display) "inline")
+                        (setf (ps:chain highlight style left)
+                              (+ (ps:chain rect x) (ps:chain window scroll-x) "px")
+                              (ps:chain highlight style top)
+                              (+ (ps:chain rect y) (ps:chain window scroll-y) "px")
+                              (ps:chain highlight style width)
+                              (+ (ps:chain rect width) "px")
+                              (ps:chain highlight style height)
+                              (+ (ps:chain rect height) "px")))))
+                nil)
+             `(let ((element (js-node ,(or node parent)))
+                    (highlight (ps:chain document (get-element-by-id "neomacs-highlight"))))
+                (dolist (e (ps:chain document (get-elements-by-class-name "focus")))
+                  (ps:chain e class-list (remove "focus")))
+                (dolist (e (ps:chain document (get-elements-by-class-name "focus-tail")))
+                  (ps:chain e class-list (remove "focus-tail")))
+                (setf (ps:chain highlight style display) "none")
+                (let ((highlight (ps:chain -c-s-s highlights (get "neomacs"))))
+                  (when highlight (ps:chain highlight (clear))))
+                (ps:chain element class-list
+                          (add ,(if node "focus" "focus-tail")))
+                (let ((rect (ps:chain element (get-bounding-client-rect))))
+                  (setq anchor-x (ps:chain rect ,(if node 'left 'right)))
+                  (setq anchor-y (ps:chain rect ,(if node 'top 'bottom))))))
+        (ps:chain window
+                  (scroll-to
+                   (+ (ps:chain window scroll-x)
+                      (min (- anchor-x (* ,scroll-margin (ps:chain window inner-width))) 0)
+                      (max (- anchor-x (* ,(- 1 scroll-margin) (ps:chain window inner-width))) 0))
+                   (+ (ps:chain window scroll-y)
+                      (min (- anchor-y (* ,scroll-margin (ps:chain window inner-height))) 0)
+                      (max (- anchor-y (* ,(- 1 scroll-margin) (ps:chain window inner-height))) 0))))))))
 
 (defun redisplay-focus (saved pos)
   (declare (ignore saved))
@@ -349,8 +372,7 @@
       (send-dom-update
        `(let ((element (ps:chain document (get-element-by-id ,id))))
           (when element
-            (ps:chain element (remove)))
-          nil)))))
+            (ps:chain element (remove))))))))
 
 (defmethod (setf styles) (new-val (mode neomacs-mode))
   (dolist (style (set-difference new-val (slot-value mode 'styles)))
@@ -396,5 +418,6 @@
     `(("body" :inherit default)
       (".focus" :inherit focus)
       (".focus-tail" :inherit focus-tail)
+      ("::highlight(neomacs)" :inherit cursor)
       ("#neomacs-highlight" :inherit cursor)
       (".doc" :inherit doc-node)))
