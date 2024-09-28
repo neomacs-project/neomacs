@@ -146,6 +146,7 @@ non-overridable."
       (:nsection :title "Motion"
         (:nsection :title "Selectable positions")
         (:nsection :title "Motion commands"
+          (:p "The following moves according to structure of the document.")
           (:ul
            (:nxdoc :command 'forward-node :mode 'neomacs-mode)
            (:nxdoc :command 'backward-node :mode 'neomacs-mode)
@@ -159,7 +160,13 @@ non-overridable."
            (:nxdoc :command 'beginning-of-line :mode 'neomacs-mode)
            (:nxdoc :command 'end-of-line :mode 'neomacs-mode)
            (:nxdoc :command 'beginning-of-defun :mode 'neomacs-mode)
-           (:nxdoc :command 'end-of-defun :mode 'neomacs-mode))))
+           (:nxdoc :command 'end-of-defun :mode 'neomacs-mode))
+          (:p "The following line motion commands try to keep horizontal approximately the same. Currently, we do this by counting number of selectable positions between current focus position and beginning-of-line position, and try to keep that number the same.")
+          (:ul
+           (:nxdoc :command 'previous-line :mode 'neomacs-mode)
+           (:nxdoc :command 'next-line :mode 'neomacs-mode)
+           (:nxdoc :command 'scroll-up-command :mode 'neomacs-mode)
+           (:nxdoc :command 'scroll-down-command :mode 'neomacs-mode))))
       (:nsection :title "Editing"
         (:nsection :title "Editing primitives"
           (:p "Lisp programs are expected to use the following primitives to edit the Neomacs DOM. These primitives provides " (:a :href "#positions" "Positions")  "-based interface and handles " (:nxref :class-name 'text-node) " splitting/merging automatically. These primitives also maintain " (:a :href "#undo" "Undo") " history, updates browser renderer-side DOM, setup and destruction of observers and computed attributes, and allocation of neomacs-identifier.")

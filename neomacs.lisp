@@ -52,6 +52,7 @@
     0.2
     :type (real 0 0.5)
     :documentation "With value s, try to keep cursor within [s,1-s] portion of the viewport.")
+   (scroll-lines 10 :type (integer 1))
    (styles (list 'neomacs-mode 'completion) :type (list-of symbol))
 
    (keyscheme-map
@@ -63,6 +64,10 @@
                       "return" 'new-line
                       "right" 'forward-node
                       "left" 'backward-node
+                      "M-right" 'forward-word
+                      "M-left" 'backward-word
+                      "down" 'next-line
+                      "up" 'previous-line
                       "end" 'end-of-line
                       "home" 'beginning-of-line)
                 keyscheme:emacs
@@ -78,6 +83,10 @@
                   "C-e" end-of-line
                   "M-a" beginning-of-defun
                   "M-e" end-of-defun
+                  "C-n" next-line
+                  "C-p" previous-line
+                  "C-v" scroll-down-command
+                  "M-v" scroll-up-command
                   "M-backspace" backward-cut-word
                   "C-d" forward-delete
                   "M-d" forward-cut-word

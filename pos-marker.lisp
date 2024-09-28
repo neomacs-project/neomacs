@@ -485,12 +485,20 @@ Return that instance or nil otherwise."
       (setq *adjust-marker-direction* 'backward))))
 
 (define-command beginning-of-line (&optional (marker (focus)))
-  (let ((pos (pos marker)))
+  "Move to beginning of line.
+
+Also returns number of skipped selectable position, useful for
+non-interactive use."
+  (let ((pos (pos marker))
+        (n 0))
     (iter (until (new-line-node-p (node-before pos)))
+      (when (selectable-p pos) (incf n))
       (setq pos (or (npos-prev pos) (return))))
-    (setf (pos marker) (or pos (error 'top-of-subtree)))))
+    (setf (pos marker) (or pos (error 'top-of-subtree)))
+    n))
 
 (define-command end-of-line (&optional (marker (focus) non-interactive))
+  "Move to end of line."
   (let ((pos (pos marker)))
     (iter (until (new-line-node-p (node-after pos)))
       (setq pos (or (npos-next pos) (return))))
@@ -521,3 +529,41 @@ Return that instance or nil otherwise."
                pos (alex:compose #'not #'new-line-node-p
                                  #'node-after)))
     (setf (pos marker) (or pos (error 'top-of-subtree)))))
+
+(defun forward-node-same-line (marker n)
+  "Move MARKER forward by N selectable positions or till end of line."
+  (let ((pos (pos marker)))
+    (iter (until (new-line-node-p (node-after pos)))
+      (while (plusp n))
+      (when (selectable-p pos) (decf n))
+      (setq pos (or (npos-next pos) (return))))
+    (setf (pos marker) pos)))
+
+(define-command previous-line (&optional (n 1) (marker (focus)))
+  "Move to N-th previous line.
+
+Try to keep horizontal location approximately the same."
+  (let ((i (beginning-of-line marker)))
+    (dotimes (_ n)
+      (backward-node marker)
+      (beginning-of-line))
+    (forward-node-same-line marker i)))
+
+(define-command next-line (&optional (n 1) (marker (focus)))
+  "Move to N-th next line.
+
+Try to keep horizontal location approximately the same."
+  (let ((i (with-marker (tmp marker)
+             (beginning-of-line tmp))))
+    (dotimes (_ n)
+      (end-of-line marker)
+      (forward-node marker))
+    (forward-node-same-line marker i)))
+
+(define-command scroll-up-command ()
+  "Move up `scroll-lines'."
+  (previous-line (scroll-lines (current-neomacs))))
+
+(define-command scroll-down-command ()
+  "Move down `scroll-lines'."
+  (next-line (scroll-lines (current-neomacs))))
