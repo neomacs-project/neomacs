@@ -161,7 +161,7 @@ non-overridable."
            (:nxdoc :command 'end-of-line :mode 'neomacs-mode)
            (:nxdoc :command 'beginning-of-defun :mode 'neomacs-mode)
            (:nxdoc :command 'end-of-defun :mode 'neomacs-mode))
-          (:p "The following line motion commands try to keep horizontal approximately the same. Currently, we do this by counting number of selectable positions between current focus position and beginning-of-line position, and try to keep that number the same.")
+          (:p "The following line motion commands try to keep horizontal location approximately the same. Currently, we do this by counting number of selectable positions between current focus position and beginning-of-line position, and try to keep that number the same.")
           (:ul
            (:nxdoc :command 'previous-line :mode 'neomacs-mode)
            (:nxdoc :command 'next-line :mode 'neomacs-mode)
