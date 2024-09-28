@@ -13,6 +13,7 @@
                (:file "undo")
                (:file "neomacs")
                (:file "edit")
+               (:file "range")
                (:file "completion")
                (:file "manual")
                (:file "modes/file-mode")

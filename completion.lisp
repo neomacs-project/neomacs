@@ -71,26 +71,12 @@
             (current-completion mode) 0
             (replace-range mode) replace-range))))
 
-(defun inside-range-p (pos range)
-  (bind (((beg . length) range))
-    (and (text-pos-p beg) (text-pos-p pos)
-         (eql (text-pos-node beg) (text-pos-node pos))
-         (< (text-pos-offset beg) (text-pos-offset pos))
-         (or (not length)
-             (< (text-pos-offset pos) (+ (text-pos-offset beg) length))))))
-
-(defun range-end (range)
-  (bind (((beg . length) range))
-    (ematch beg
-      ((text-pos node offset)
-       (if length
-           (text-pos node (+ length offset))
-           (text-pos node (length (text node))))))))
-
 (defun maybe-hide-completions ()
   (let ((mode (find-submode 'active-completion-mode)))
-    (unless (inside-range-p (npos-prev-until (focus) #'selectable-p)
-                            (replace-range mode))
+    (unless
+        (or (inside-range-p (focus) (replace-range mode))
+            (inside-range-p (npos-prev-until (focus) #'selectable-p)
+                            (replace-range mode)))
       (hide-completions))))
 
 (define-command hide-completions ()
@@ -150,12 +136,13 @@
     (&optional (mode (find-submode 'active-completion-mode))
      (neomacs (find-submode 'neomacs-mode)))
   (bind ((selection (nth (current-completion mode) (completions mode)))
-         ((text-pos . length) (replace-range mode)))
+         (range (replace-range mode))
+         (end (range-end range)))
     (disable-modes* 'active-completion-mode (current-buffer))
     (with-dom-update neomacs
-      (with-marker (marker text-pos)
-        (insert-nodes text-pos (car selection))
-        (delete-nodes marker length)))))
+      (with-marker (marker end)
+        (delete-range range)
+        (insert-nodes marker (car selection))))))
 
 ;;; Auto completion
 

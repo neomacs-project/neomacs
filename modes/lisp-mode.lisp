@@ -386,7 +386,8 @@ before MARKER-OR-POS."
            (completions (car (swank:fuzzy-completions
                               (atom-node-text node)
                               package))))
-      (list (cons (pos-down node) nil) completions))))
+      (list (range (pos-down node) (pos-down-last node))
+            completions))))
 
 ;;; Style
 

@@ -232,7 +232,9 @@
               (node (js-node ,node)))
           (ps:chain range (set-start node ,offset))
           (ps:chain range (set-end node ,offset))
-          (ps:chain range (get-bounding-client-rect)))))))
+          (ps:chain range (get-bounding-client-rect))))
+      ((end-pos node)
+       `(ps:chain (js-node ,node) (get-bounding-client-rect))))))
 
 ;;; Render focus
 

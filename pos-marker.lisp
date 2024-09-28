@@ -59,6 +59,7 @@
 
 (defun normalize-node-pos (node direction)
   "Convert NODE to `text-pos' if necessary.
+
 If DIRECTION is nil, convert to leftmost position;
 otherwise, convert to rightmost position."
   (if (text-node-p node)
@@ -67,6 +68,7 @@ otherwise, convert to rightmost position."
 
 (defun pos-right (pos &key destructive)
   "Return the position to the right of POS.
+
 If DESTRUCTIVE is non-nil, POS might be mutated."
   (setq pos (resolve-marker pos))
   (labels ((node-right (node)
@@ -87,6 +89,7 @@ If DESTRUCTIVE is non-nil, POS might be mutated."
 
 (defun pos-left (pos &key destructive)
   "Return the position to the left of POS.
+
 If DESTRUCTIVE is non-nil, POS might be mutated."
   (setq pos (resolve-marker pos))
   (labels ((node-left (node)
@@ -136,6 +139,7 @@ If DESTRUCTIVE is non-nil, POS might be mutated."
 
 (defun pos-next (pos &key destructive)
   "Return the next position of POS in preorder traversal.
+
 If DESTRUCTIVE is non-nil, POS might be mutated."
   (setq pos (resolve-marker pos))
   (or (pos-down pos)
@@ -145,6 +149,7 @@ If DESTRUCTIVE is non-nil, POS might be mutated."
 
 (defun pos-prev (pos &key destructive)
   "Return the previous position of POS in preorder traversal.
+
 If DESTRUCTIVE is non-nil, POS might be mutated."
   (setq pos (resolve-marker pos))
   (or (if-let (left (pos-left pos :destructive destructive))
@@ -161,21 +166,25 @@ If DESTRUCTIVE is non-nil, POS might be mutated."
 
 (defun pos-next-until (pos predicate &key destructive)
   "Return the first position after POS satisfying PREDICATE.
+
 If DESTRUCTIVE is non-nil, POS might be mutated."
   (iterate-pos-until #'pos-next pos predicate :destructive destructive))
 
 (defun pos-prev-until (pos predicate &key destructive)
   "Return the last position before POS satisfying PREDICATE.
+
 If DESTRUCTIVE is non-nil, POS might be mutated."
   (iterate-pos-until #'pos-prev pos predicate :destructive destructive))
 
 (defun pos-right-until (pos predicate &key destructive)
   "Return the first sibling after POS satisfying PREDICATE.
+
 If DESTRUCTIVE is non-nil, POS might be mutated."
   (iterate-pos-until #'pos-right pos predicate :destructive destructive))
 
 (defun pos-left-until (pos predicate &key destructive)
   "Return the last sibling before POS satisfying PREDICATE.
+
 If DESTRUCTIVE is non-nil, POS might be mutated."
   (iterate-pos-until #'pos-left pos predicate :destructive destructive))
 
@@ -194,21 +203,25 @@ If DESTRUCTIVE is non-nil, POS might be mutated."
 
 (defun pos-next-ensure (pos predicate &key destructive)
   "Return POS or the first position after POS satisfying PREDICATE.
+
 If DESTRUCTIVE is non-nil, POS might be mutated."
   (iterate-pos-ensure #'pos-next pos predicate :destructive destructive))
 
 (defun pos-prev-ensure (pos predicate &key destructive)
   "Return POS or the last position before POS satisfying PREDICATE.
+
 If DESTRUCTIVE is non-nil, POS might be mutated."
   (iterate-pos-ensure #'pos-prev pos predicate :destructive destructive))
 
 (defun pos-right-ensure (pos predicate &key destructive)
   "Return POS or the first sibling after POS satisfying PREDICATE.
+
 If DESTRUCTIVE is non-nil, POS might be mutated."
   (iterate-pos-ensure #'pos-right pos predicate :destructive destructive))
 
 (defun pos-left-ensure (pos predicate &key destructive)
   "Return POS or the last sibling before POS satisfying PREDICATE.
+
 If DESTRUCTIVE is non-nil, POS might be mutated."
   (iterate-pos-ensure #'pos-left pos predicate :destructive destructive))
 
@@ -271,6 +284,9 @@ If DESTRUCTIVE is non-nil, POS might be mutated."
   (typep object 'marker))
 
 (defun advance-p (marker)
+  "Returns t if MARKER advances, nil otherwise.
+
+This place is setf-able."
   (etypecase (slot-value marker 'pos)
     ((or element end-pos text-pos) t)
     ((or %start-pos %after-pos) nil)))
@@ -307,6 +323,7 @@ If DESTRUCTIVE is non-nil, POS might be mutated."
 
 (defun focus-marker-p (marker)
   "Test if MARKER is the focus marker of some `neomacs-mode' instance.
+
 Return that instance or nil otherwise."
   (let ((host (host marker)))
     (when (eq marker (focus-marker host))

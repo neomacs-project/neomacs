@@ -1,5 +1,10 @@
 (in-package :neomacs)
 
+(defun print-arglist (arglist package)
+  (if arglist
+      (prini-to-string arglist :package package)
+      "()"))
+
 (spinneret:deftag :nxdoc (body attrs &rest keys &key slot mode class-name function macro command (command-key-p t) variable package (target "_self") &allow-other-keys)
   "Create an inline description for BODY symbol.
 
@@ -29,18 +34,23 @@ non-overridable."
     (ecase type
       ((:function)
        `(:li "Function: " (:nxref ,@keys) " "
-             (:code (prini-to-string (swank-backend:arglist ,function)
-                                     :package (symbol-package ,function)))
+             (:code (print-arglist (swank-backend:arglist ,function)
+                                   (symbol-package ,function)))
              (:p (:raw (resolve-backtick-quote-links
                         (documentation ,function 'function)
                         (symbol-package ,function))))))
       ((:command)
        `(:li "Command: " (:nxref ,@keys) " "
-             (:code (prini-to-string (swank-backend:arglist ,command)
-                                     :package (symbol-package ,command)))
+             (:code (print-arglist (swank-backend:arglist ,command)
+                                   (symbol-package ,command)))
              (:p (:raw (resolve-backtick-quote-links
                         (documentation ,command 'function)
-                        (symbol-package ,command)))))))))
+                        (symbol-package ,command))))))
+      ((:variable)
+       `(:li "Variable: " (:nxref ,@keys)
+             (:p (:raw (resolve-backtick-quote-links
+                        (documentation ,variable 'variable)
+                        (symbol-package ,variable)))))))))
 
 (defun neomacs-manual-content ()
   (spinneret:with-html-string
@@ -52,20 +62,35 @@ non-overridable."
           (:ul
            (:li (:nxref :class-name 'node))
            (:li (:nxref :class-name 'text-node))
-           (:li (:nxref :class-name 'element))))
+           (:li (:nxref :class-name 'element))
+           (:nxdoc :function 'child-nodes)
+           (:nxdoc :function 'element-p)
+           (:nxdoc :function 'text-node-p)
+           (:nxdoc :function 'clone-node)))
+        (:nsection :title "Traversing DOM"
+          (:ul
+           (:nxdoc :function 'do-dom)
+           (:nxdoc :function 'do-elements)))
         (:nsection :title "Attributes"
           (:ul
            (:nxdoc :function 'attribute)
-           (:nxdoc :function 'set-attribute-function))))
+           (:nxdoc :function 'set-attribute-function)))
+        (:nsection :title "Low-level DOM edits"
+          (:p "This section documents low-level primitives for modifying Lisp-side DOM. They are used to implement programmer-facing editing operations, see " (:a :href "#editing-primitives" "Editing primitives") ".")
+          (:ul
+           (:nxdoc :function 'insert-before)
+           (:nxdoc :function 'append-child)
+           (:nxdoc :function 'append-children)
+           (:nxdoc :function 'remove-node))))
       (:nsection :title "Positions"
         (:p "A " (:i "position") " denotes somewhere in the DOM tree, which can be before or after some node, or between two adjacent nodes.")
         (:p "Positions may become invalid after editing operations. To maintain a valid position across arbitrary editing operations, see " (:a :href "#markers" "Markers") ".")
         (:nsection :title "Types of positions"
           (:ul
            (:li "An " (:nxref :class-name 'element) " denotes the position before the " (:code "element") ".")
-           (:li (:code "(end-pos node)") " denotes the position at the end of " (:code "node") " (after any children). " (:code "node") " must be a " (:nxref :class-name 'element) ".")
+           (:li (:code "(end-pos node)") " denotes the position at the end of " (:code "node") " (after any children). " (:code "node") " must be an " (:nxref :class-name 'element) ".")
            (:li (:code "(text-pos node offset)") " denotes the position before the " (:code "offset") "-th character of " (:code "node") ". " (:code "node") " must be a " (:nxref :class-name 'text-node))
-           (:li (:code "nil") " denotes nowhere. Many position-related functions may return nil if requested position does not exist, and propagates nil if some they receives nil position as an argument.")))
+           (:li (:code "nil") " denotes nowhere. Many position-related functions may return nil if requested position does not exist, and propagates nil if they receives nil position as an argument.")))
         (:nsection :title "Node around positions"
           (:p "The following queries node around a given position. A node can be a " (:nxref :class-name 'character) " or " (:nxref :class-name 'element) ". If no node is found, nil is returned.")
           (:ul
@@ -82,7 +107,7 @@ non-overridable."
            (:nxdoc :function 'pos-up)
            (:nxdoc :function 'pos-down)
            (:nxdoc :function 'pos-down-last))
-          (:p "Iterate until or ensure a position predicate is met:"
+          (:p "Iterate until or ensure a position predicate is satisfied:"
                (:nxref :function 'pos-left-until) ", "
                (:nxref :function 'pos-right-until) ", "
                (:nxref :function 'pos-prev-until) ", "
@@ -106,10 +131,18 @@ non-overridable."
                (:nxref :function 'npos-right-ensure) ", "
                (:nxref :function 'npos-next-ensure) ", "
                (:nxref :function 'npos-prev-ensure) ".")
-          (:p "All of the above functions may take and return nil positions without signaling error.")))
+          (:p "All of the above functions may take and return nil positions without signaling error."))
+        (:nsection :title "Comparing positions"
+          (:p "Two positions point to the same location iff they are " (:nxref :function 'equalp) ".")
+          (:p "Additional functions for comparing positions:")
+          (:ul
+           (:nxdoc :function 'before-p))))
       (:nsection :title "Markers"
         (:p "A " (:nxref :class-name 'marker) " maintains a position in the buffer, which stays valid across arbitrary editing operations.")
-        (:nsection :title "Marker advance types"))
+        (:nsection :title "Marker advance types"
+          (:ul
+           (:p "When an insertion happens at a marker, the marker may get pushed after the inserted contents (it " (:i "advances") "), or stay before the inserted contents (it does not advance). This property can be queried and set using the following function:")
+           (:nxdoc :function 'advance-p))))
       (:nsection :title "Motion"
         (:nsection :title "Selectable positions")
         (:nsection :title "Motion commands"
@@ -129,7 +162,7 @@ non-overridable."
            (:nxdoc :command 'end-of-defun))))
       (:nsection :title "Editing"
         (:nsection :title "Editing primitives"
-          (:p "Lisp programs are expected to use the following primitives to edit the Neomacs DOM. These primitives provides " (:a :href "#positions" "Positions")  "-based interface and handles " (:nxref :class-name 'text-node) " splitting/merging internally. These primitives also maintain " (:a :href "#undo" "Undo") " history, updates browser renderer-side DOM, setup and destruction of observers and computed attributes, and allocation of neomacs-identifier.")
+          (:p "Lisp programs are expected to use the following primitives to edit the Neomacs DOM. These primitives provides " (:a :href "#positions" "Positions")  "-based interface and handles " (:nxref :class-name 'text-node) " splitting/merging automatically. These primitives also maintain " (:a :href "#undo" "Undo") " history, updates browser renderer-side DOM, setup and destruction of observers and computed attributes, and allocation of neomacs-identifier.")
           (:ul
            (:nxdoc :function 'delete-nodes)
            (:nxdoc :function 'extract-nodes)
@@ -152,7 +185,28 @@ non-overridable."
            (:nxdoc :command 'paste)
            (:nxdoc :command 'paste-pop)
            (:nxdoc :command 'forward-cut))))
-      (:nsection :title "Undo")
+      (:nsection :title "Ranges"
+        (:nsection :title "Range operations"
+          (:ul
+           (:nxdoc :function 'range)
+           (:nxdoc :function 'range-collapsed-p)
+           (:nxdoc :function 'inside-range-p)
+           (:nxdoc :function 'extract-range)
+           (:nxdoc :function 'delete-range)))
+        (:nsection :title "Range selection"))
+      (:nsection :title "Undo"
+        (:p "The following functions maintains the undo history.")
+        (:ul
+         (:nxdoc :function 'record-undo)
+         (:nxdoc :variable '*inhibit-record-undo*)
+         (:nxdoc :function 'undo-auto-amalgamate)
+         (:nxdoc :function 'undo-boundary))
+        (:p "The following functions and commands perform undo and redo operations.")
+        (:ul
+         (:nxdoc :function 'undo)
+         (:nxdoc :function 'redo)
+         (:nxdoc :function 'undo-command)
+         (:nxdoc :function 'redo-command)))
       (:nsection :title "Completion"))))
 
 (define-internal-page-command-global neomacs-manual ()

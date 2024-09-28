@@ -69,9 +69,15 @@
   (:method ((self undo-root)) nil)
   (:method ((self undo-child)) (null (undo-thunks self))))
 
-(defvar *inhibit-record-undo* nil)
+(defvar *inhibit-record-undo* nil
+  "If non-nil, `record-undo' has no effect.
+
+This is bound to non-nil during undo process itself.")
 
 (defun record-undo (undo-thunk redo-thunk)
+  "Add UNDO-THUNK and REDO-THUNK to undo history.
+
+If `*inhibit-record-undo*' is non-nil, do nothing instead."
   (unless *inhibit-record-undo*
     (when-let (mode (find-submode 'undo-mode))
       (let ((entry (undo-entry mode)))
@@ -83,6 +89,7 @@
         nil))))
 
 (defun undo-boundary (&optional (mode (find-submode 'undo-mode)))
+  "Ensure undo state is at a undo boudary, insert one if necessary."
   (let ((entry (undo-entry mode)))
     (when (leaf-p entry)
       (unless (undo-boundary-p entry)
@@ -91,6 +98,7 @@
     nil))
 
 (defun remove-undo-boundary (mode)
+  "Remove undo boudary (if any) at current undo state."
   (let ((entry (undo-entry mode)))
     (when (undo-boundary-p entry)
       (setf (undo-entry mode) (parent entry))
@@ -98,6 +106,7 @@
       nil)))
 
 (defun undo-auto-amalgamate ()
+  "Call at the beginning of a command to amalgamate undo entry."
   (when-let (neomacs (find-submode 'neomacs-mode))
     (when-let (undo (find-submode 'undo-mode))
       (if (and (last-command neomacs)
@@ -112,6 +121,7 @@
   nil)
 
 (defun undo (&optional (mode (find-submode 'undo-mode)))
+  "Move undo state up one `undo-entry'."
   (let ((entry (undo-entry mode))
         (*inhibit-record-undo* t))
     (setf (undo-entry mode)
@@ -120,6 +130,7 @@
     nil))
 
 (defun redo (&optional (branch-index 0) (mode (find-submode 'undo-mode)))
+  "Move undo state down to BRANCH-INDEX-th child."
   (let* ((entry (nth branch-index (children (undo-entry mode))))
          (*inhibit-record-undo* t))
     (if entry
@@ -129,11 +140,13 @@
     nil))
 
 (define-command undo-command (&optional (mode (find-submode 'undo-mode)))
+  "Undo."
   (remove-undo-boundary mode)
   (undo mode)
   (update-undo-history))
 
 (define-command redo-command (&optional (mode (find-submode 'undo-mode)))
+  "Redo."
   (redo 0 mode)
   (update-undo-history))
 

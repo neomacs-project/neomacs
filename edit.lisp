@@ -106,6 +106,7 @@ If LENGTH is NIL, move everything after SRC-OFFSET."
 
 (defun maybe-split-text-node (pos)
   "Split `text-node' at POS if possible.
+
 Returns the node after the position after this operation."
   (match pos
     ((text-pos node offset)
@@ -152,12 +153,21 @@ Returns the node after the position after this operation."
     nil))
 
 (defun node-setup (node host)
+  "Setup NODE as a good citizen of HOST.
+
+This assigns a neomacs-id attribute and run `node-setup-hook'.
+
+This function should be called on all nodes entering HOST's DOM
+tree (which is usually taken care of by `inset-nodes')."
   (setf (host node) host)
   (when (element-p node)
     (assign-neomacs-id node)
     (hooks:run-hook (node-setup-hook host) node)))
 
 (defun insert-nodes (marker-or-pos &rest things)
+  "Insert THINGS at MARKER-OR-POS.
+
+THINGS can be DOM nodes or strings, which are converted to text nodes."
   (let* ((pos (resolve-marker marker-or-pos))
          (host (host pos)))
     (unless host
@@ -259,6 +269,13 @@ Returns the node after the position after this operation."
       nodes)))
 
 (defun node-cleanup (node)
+  "Release resources associated with NODE under its active document.
+
+This removes any observers on NODE's cell slots.
+
+This function should be called on all nodes leaving HOST's DOM
+tree (which is usually taken care of by `delete-nodes' and
+`extract-nodes')."
   (when (element-p node)
     (iter (for s in '(parent next-sibling previous-sibling
                       first-child last-child))
@@ -276,21 +293,27 @@ Returns the node after the position after this operation."
     (unless host
       (error "~a does not point inside an active document." beg))
     (check-read-only host)
-    (let ((nodes (delete-nodes-1 beg end)))
-      (mapc (alex:curry #'do-dom #'node-cleanup)
-            nodes)
-      (record-undo
-       (nclo undo-node-cleanup ()
-         (mapc (alex:curry #'do-dom (alex:rcurry #'node-setup host)) nodes))
-       (nclo redo-node-cleanup ()
-         (mapc (alex:curry #'do-dom #'node-cleanup) nodes)))
-      nodes)))
+    (unless (equalp beg end)
+      (let ((nodes (delete-nodes-1 beg end)))
+        (mapc (alex:curry #'do-dom #'node-cleanup)
+              nodes)
+        (record-undo
+         (nclo undo-node-cleanup ()
+           (mapc (alex:curry #'do-dom (alex:rcurry #'node-setup host)) nodes))
+         (nclo redo-node-cleanup ()
+           (mapc (alex:curry #'do-dom #'node-cleanup) nodes)))
+        nodes))))
 
 (defun delete-nodes (beg end)
+  "Delete nodes between BEG and END and returns nil.
+
+BEG and END must be sibling positions.  If END is nil, delete children
+starting from BEG till the end of its parent."
   (delete-nodes-0 beg end)
   nil)
 
 (defun extract-nodes (beg end)
+  "Like `delete-nodes', but clone and return the deleted contents."
   (mapcar #'clone-node (delete-nodes-0 beg end)))
 
 (defun move-nodes-2 (src-parent beg end dst-parent reference)
@@ -331,6 +354,10 @@ Returns the node after the position after this operation."
      (move-nodes-2 src-parent beg end dst-parent reference))))
 
 (defun move-nodes (beg end to)
+  "Move nodes between BEG and END to TO and returns nil.
+
+BEG and END must be sibling positions.  If END is nil, move children
+starting from BEG till the end of its parent."
   (let* ((beg (resolve-marker beg))
          (end (resolve-marker end))
          (to (resolve-marker to))
@@ -352,18 +379,27 @@ Returns the node after the position after this operation."
     nil))
 
 (defun splice-node (node)
+  "Splice children of NODE in place of NODE itself."
   (move-nodes (pos-down node) nil (pos-right node))
   (delete-nodes node (pos-right node)))
 
 (defun join-nodes (dst src)
+  "Join DST and SRC nodes.
+
+This moves all children of SRC into DST and deletes SRC."
   (move-nodes src (pos-right src) (pos-down-last dst))
   (splice-node src))
 
 (defun raise-node (node)
+  "Replace NODE's parent with NODE."
   (move-nodes node (pos-right node) (pos-up node))
   (delete-nodes (pos-right node) (pos-right (pos-right node))))
 
 (defun split-node (pos)
+  "Split node containing POS at POS.
+
+Let parent be the node containing POS. This involves inserting a clone
+of parent after parent, and moving children after POS into the clone."
   (let* ((node (node-containing pos))
          (new-node (clone-node node nil))
          (dst (pos-right (pos-up pos))))

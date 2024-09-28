@@ -115,7 +115,9 @@ If DEEP is non-nil, recursively clone all descendant.")
 
 (defun insert-before (parent new-node reference)
   "Insert NEW-NODE under PARENT before REFERENCE.
-If REFERENCE is nil, insert NEW-NODE as last child of PARENT."
+
+If REFERENCE is nil, insert NEW-NODE as last child of PARENT.
+Returns NEW-NODE."
   (assert (or (not reference) (eql (parent reference) parent)))
   (let ((prev (if reference (previous-sibling reference)
                   (last-child parent))))
@@ -129,8 +131,18 @@ If REFERENCE is nil, insert NEW-NODE as last child of PARENT."
   new-node)
 
 (defun append-child (parent new-node)
-  "Insert NEW-NODE as last child of PARENT."
+  "Insert NEW-NODE as last child of PARENT.
+
+Returns NEW-NODE."
   (insert-before parent new-node nil))
+
+(defun append-children (parent children)
+  "Insert CHILDREN as last children of PARENT.
+
+Returns CHILDREN."
+  (dolist (c children)
+    (insert-before parent c nil))
+  children)
 
 (defun remove-node (node)
   "Remove NODE from DOM tree."
