@@ -246,9 +246,8 @@
 ;;; File mode
 
 (define-mode lisp-file-mode (file-mode)
-  "Lisp source files."
   ()
-  (:toggler-command-p nil))
+  (:documentation "Lisp source files."))
 
 (defmethod load-contents ((mode lisp-file-mode))
   (read-from-file (filename mode)))
@@ -260,9 +259,9 @@
       (let ((*print-pretty* t)
             (*print-pprint-dispatch* *lisp-pprint-dispatch*)
             (*package* (find-package "NEOMACS")))
-        (dolist (c (child-nodes (restriction (current-neomacs))))
+        (dolist (c (child-nodes (restriction (current-buffer))))
           (prin1 c s))
         nil))))
 
-(define-auto-rule '(match-regex ".*lisp")
+#+nil (define-auto-rule '(match-regex ".*lisp")
   :included '(lisp-file-mode lisp-mode))

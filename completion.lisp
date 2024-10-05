@@ -3,25 +3,22 @@
 ;;; TAB completion
 
 (define-mode active-completion-mode ()
-  "Transient mode when completion menu is active."
-  ((scroll-distance 10)
-   (current-completion 0)
-   (completions nil)
+  ((scroll-distance :default 10)
+   (current-completion :initform 0)
+   (completions :initform nil)
    (replace-range)
-   (keyscheme-map
-    (keymaps:define-keyscheme-map "active-completion" ()
-      keyscheme:default
-      '("up" previous-completion
-        "down" next-completion)
-      keyscheme:emacs
-      '("C-p" previous-completion
-        "C-n" next-completion
-        "C-v" scroll-completion-down
-        "M-v" scroll-completion-up
-        "C-g" hide-completions
-        "return" complete-selection)))
-   (rememberable-p nil))
-  (:toggler-command-p nil))
+   (keymap
+    :default
+    (define-keymap "active-completion" ()
+      "up" 'previous-completion
+      "down" 'next-completion
+      "C-p" 'previous-completion
+      "C-n" 'next-completion
+      "C-v" 'scroll-completion-down
+      "M-v" 'scroll-completion-up
+      "C-g" 'hide-completions
+      "return" 'complete-selection)))
+  (:documentation "Transient mode when completion menu is active."))
 
 (define-command show-completions (&optional (marker (focus)) silent)
   (bind (((replace-range completions)

@@ -62,12 +62,40 @@ which ensures renderer side ATTRIBUTE of NODE matches value of CELL."
     (add-observer cell #'update)
     cell))
 
+(declaim (inline element-p text-node-p make-element class-p))
+
+(defun element-p (object)
+  (typep object 'element))
+
+(defun text-node-p (object)
+  (typep object 'text-node))
+
+(defun make-element (tag-name &rest attributes &key &allow-other-keys)
+  (lret ((element (make-instance 'element :tag-name tag-name)))
+    (iter (for (k v) on attributes by #'cddr)
+      (if (eql k :children)
+          (dolist (c v)
+            (when (stringp c)
+              (setq c (make-instance 'text-node :text c)))
+            (append-child element c))
+          (setf (attribute element (string-downcase (symbol-name k))) v)))))
+
 (defun class-p (node class &rest more-classes)
   "Test if NODE is an element of one of CSS CLASS or MORE-CLASSES."
   (and (element-p node)
        (member (attribute node "class")
                (cons class more-classes)
                :test 'equal)))
+
+(defun make-new-line-node ()
+  (make-instance 'element :tag-name "br"))
+
+(defun new-line-node-p (node)
+  (or (and (element-p node)
+           (or (equal (attribute node "class")
+                      "new-line")
+               (equal (tag-name node) "br")))
+      (eql node #\Newline)))
 
 (defun serialize (node stream)
   "Serialize NODE to HTML and write to STREAM.
@@ -155,14 +183,6 @@ Returns CHILDREN."
         (setf (first-child parent) next))
     node))
 
-(declaim (inline element-p text-node-p))
-
-(defun element-p (object)
-  (typep object 'element))
-
-(defun text-node-p (object)
-  (typep object 'text-node))
-
 (defun child-nodes (node)
   "Return immediate child nodes of NODE as a list."
   (when (element-p node)
@@ -196,3 +216,13 @@ This includes `element's and `text-node's."
              (when (element-p node)
                (funcall function node)))
            node))
+
+(defun get-elements-by-class-name (node class)
+  "Find all descendant elements of NODE with CLASS."
+  (let (nodes)
+    (do-elements
+        (lambda (child)
+          (when (class-p child class)
+            (push child nodes)))
+      node)
+    (nreverse nodes)))

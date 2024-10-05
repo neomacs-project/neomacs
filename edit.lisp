@@ -4,22 +4,8 @@
 
 (defun assign-neomacs-id (node)
   (setf (attribute node "neomacs-identifier")
-        (princ-to-string (incf (next-nyxt-id (find-submode 'neomacs-mode)))))
+        (princ-to-string (incf (next-neomacs-id (current-buffer)))))
   node)
-
-(defvar *inhibit-dom-update* nil)
-
-(defun send-dom-update (parenscript)
-  (unless *inhibit-dom-update*
-    (if *inside-dom-update-p*
-        (let ((ps:*parenscript-stream* *dom-update-stream*))
-          (ps:ps* `(ignore-errors ,parenscript)))
-        (progn
-          (ffi-buffer-evaluate-javascript
-           (current-buffer)
-           (let (ps:*parenscript-stream*)
-             (ps:ps* `(progn ,parenscript nil))))
-          nil))))
 
 (defun text-markers-in (neomacs text-node offset length)
   (iter (for m in (markers neomacs))
@@ -271,11 +257,13 @@ THINGS can be DOM nodes or strings, which are converted to text nodes."
 (defun node-cleanup (node)
   "Release resources associated with NODE under its active document.
 
-This removes any observers on NODE's cell slots.
+This runs `node-cleanup-hook' and removes any observers on NODE's cell
+slots.
 
 This function should be called on all nodes leaving HOST's DOM
 tree (which is usually taken care of by `delete-nodes' and
 `extract-nodes')."
+  (hooks:run-hook (node-cleanup-hook (host node)) node)
   (when (element-p node)
     (iter (for s in '(parent next-sibling previous-sibling
                       first-child last-child))
@@ -378,6 +366,8 @@ starting from BEG till the end of its parent."
     (maybe-merge-text-nodes beg)
     nil))
 
+;;; Additional operations
+
 (defun splice-node (node)
   "Splice children of NODE in place of NODE itself."
   (move-nodes (pos-down node) nil (pos-right node))
@@ -407,7 +397,25 @@ of parent after parent, and moving children after POS into the clone."
     (move-nodes pos nil (end-pos new-node))
     new-node))
 
+(defun wrap-node (node new-node)
+  "Insert NEW-NODE around NODE.
+
+NODE become the last child of NEW-NODE."
+  (insert-nodes node new-node)
+  (move-nodes node (pos-right node) (end-pos new-node)))
+
 ;;; Editing commands
+
+(defun self-insert-char ()
+  (let ((desc (key-description (lastcar *this-command-keys*))))
+    (cond ((= (length desc) 1) (aref desc 0))
+          ((equal desc "space") #\Space))))
+
+(define-command self-insert-command ()
+  (undo-auto-amalgamate)
+  (insert-nodes (focus) (string (self-insert-char))))
+
+(defvar *clipboard-ring* (containers:make-ring-buffer 1000 t))
 
 (define-command new-line (&optional (marker (focus)))
   (insert-nodes marker (make-new-line-node)))
@@ -427,41 +435,31 @@ of parent after parent, and moving children after POS into the clone."
       (delete-nodes (pos-left marker) marker))))
 
 (define-command backward-cut-word (&optional (marker (focus)))
-  (with-dom-update (host marker)
-    (let ((end (pos marker)))
-      (backward-word marker)
-      (let ((start (pos marker)))
-        (if (and (text-pos-p end)
-                 (eql (text-pos-node end)
-                      (text-pos-node start)))
-            (delete-nodes start end)
-            (delete-nodes start nil))))))
+  (let ((end (pos marker)))
+    (backward-word marker)
+    (let ((start (pos marker)))
+      (if (and (text-pos-p end)
+               (eql (text-pos-node end)
+                    (text-pos-node start)))
+          (delete-nodes start end)
+          (delete-nodes start nil)))))
 
 (define-command cut-element (&optional (pos (focus)))
-  (with-dom-update (host pos)
-    (setq pos (or (pos-up-ensure pos #'element-p)
-                  (error 'top-of-subtree)))
-    (containers:insert-item (clipboard-ring *browser*)
-                            (extract-nodes pos 1))))
+  (setq pos (or (pos-up-ensure pos #'element-p)
+                (error 'top-of-subtree)))
+  (containers:insert-item *clipboard-ring* (extract-nodes pos 1)))
 
 (define-command copy-element (&optional (pos (focus)))
-  (with-dom-update (host pos)
-    (setq pos (or (pos-up-ensure pos #'element-p)
-                  (error 'top-of-subtree)))
-    (containers:insert-item (clipboard-ring *browser*)
-                            (list (clone-node pos)))))
+  (setq pos (or (pos-up-ensure pos #'element-p)
+                (error 'top-of-subtree)))
+  (containers:insert-item *clipboard-ring* (list (clone-node pos))))
 
 (define-command paste (&optional (neomacs (find-submode 'neomacs-mode)))
-  (with-dom-update neomacs
-    (let ((item (containers:current-item (clipboard-ring *browser*)))
-          (marker (focus neomacs)))
-      (if (stringp item)
-          (hooks:run-hook (self-insert-hook (find-submode 'neomacs-mode))
-                          marker item)
-          (progn
-            (setf (advance-p (selection-marker neomacs)) nil)
-            (setf (pos (selection-marker neomacs)) (pos marker))
-            (apply #'insert-nodes marker (mapcar #'clone-node item)))))))
+  (let ((item (containers:current-item *clipboard-ring*))
+        (marker (focus neomacs)))
+    (setf (advance-p (selection-marker neomacs)) nil)
+    (setf (pos (selection-marker neomacs)) (pos marker))
+    (apply #'insert-nodes marker (mapcar #'clone-node item))))
 
 (defun rotate-ring (ring)
   (with-slots (containers::buffer-start
@@ -479,26 +477,39 @@ of parent after parent, and moving children after POS into the clone."
             0))))
 
 (define-command paste-pop (&optional (neomacs (find-submode 'neomacs-mode)))
-  (with-dom-update neomacs
-    (rotate-ring (clipboard-ring *browser*))
-    (let ((marker (focus neomacs))
-          (item (containers:current-item (clipboard-ring *browser*))))
-      (if (stringp item)
-          (hooks:run-hook (self-insert-hook (find-submode 'neomacs-mode))
-                          marker item)
-          (progn
-            (delete-nodes (selection-marker neomacs)
-                          (pos-right (selection-marker neomacs)))
-            (apply #'insert-nodes marker (mapcar #'clone-node item)))))))
+  (rotate-ring *clipboard-ring*)
+  (let ((marker (focus neomacs))
+        (item (containers:current-item *clipboard-ring*)))
+    (delete-nodes (selection-marker neomacs)
+                  (pos-right (selection-marker neomacs)))
+    (apply #'insert-nodes marker (mapcar #'clone-node item))))
 
 (define-command forward-cut (&optional (pos (focus)))
   (iter (with end = (copy-pos pos))
     (setq end (npos-right end))
     (unless end
-      (containers:insert-item (clipboard-ring *browser*)
-                              (extract-nodes pos nil))
+      (containers:insert-item *clipboard-ring* (extract-nodes pos nil))
       (return))
     (when (new-line-node-p end)
-      (containers:insert-item (clipboard-ring *browser*)
-                              (extract-nodes pos end))
+      (containers:insert-item *clipboard-ring* (extract-nodes pos end))
       (return))))
+
+;;; Default key bindings
+
+(define-keys *global-keymap*
+  "backspace" 'backward-delete
+  "space" 'self-insert-command
+  "enter" 'new-line
+  "M-backspace" 'backward-cut-word
+  "C-d" 'forward-delete
+  "M-d" 'forward-cut-word
+  "C-w" 'cut-element
+  "M-w" 'copy-element
+  "C-y" 'paste
+  "M-y" 'paste-pop
+  "C-k" 'forward-cut)
+
+(iter (for i from 32 below 127)
+  (for char = (code-char i))
+  (unless (member char '(#\ ))
+    (define-key *global-keymap* (string char) 'self-insert-command)))

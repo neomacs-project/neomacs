@@ -1,19 +1,14 @@
 (in-package #:neomacs)
 
 (define-mode file-mode ()
-  "Generic mode for buffer backed by files."
-  (filename
-   (keyscheme-map
-    (keymaps:define-keyscheme-map "file" ()
-      keyscheme:emacs
-      '("C-x C-s" save-buffer))))
-  (:toggler-command-p nil))
+  ((filename))
+  (:documentation
+   "Generic mode for buffer backed by files."))
 
 (defgeneric load-contents (file-mode)
   (:method :after ((mode t))
-    (let ((neomacs (current-neomacs)))
-      (dolist (c (child-nodes *dom-output*))
-        (do-dom (alex:rcurry #'node-setup neomacs) c)))))
+    (dolist (c (child-nodes *dom-output*))
+      (do-dom (alex:rcurry #'node-setup (current-buffer)) c))))
 
 (defvar *dom-output* nil)
 
@@ -30,7 +25,7 @@
   (write-file mode)
   (echo "Wrote ~a" (filename mode)))
 
-(define-internal-scheme "neomacs"
+#+nil (define-internal-scheme "neomacs"
     (lambda (url)
       (let ((mode (current-neomacs))
             (filename (quri.uri:uri-path (quri:uri url))))
@@ -60,7 +55,7 @@
            (:div :id "neomacs-highlight" :style "display: none")
            (:table (:tbody :id "completion-menu" :style "display: none")))))))
 
-(define-command-global open-file
+#+nil (define-command-global open-file
     (&optional
      (filename
       (uiop:native-namestring

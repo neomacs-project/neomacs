@@ -379,12 +379,17 @@ Return that instance or nil otherwise."
            ,@body)
        (delete-marker ,marker))))
 
+(defvar *current-buffer* nil)
+
+(defmacro with-current-buffer (buffer &body body)
+  `(call-with-current-buffer ,buffer (lambda () ,@body)))
+
 ;;; Motion
 
 (defun selectable-p (pos)
   (when pos
     (hooks:run-hook (selectable-p-hook (host pos))
-                    (constantly nil) pos)))
+                    (constantly t) pos)))
 
 (defun word-character-p (neomacs node)
   (and (characterp node)
@@ -422,6 +427,22 @@ Return that instance or nil otherwise."
   "Move to closest selectable preorder predecessor."
   (setf (pos marker)
         (or (npos-prev-until (pos marker) #'selectable-p)
+            (error 'top-of-subtree))))
+
+(define-command forward-node-cycle (&optional (marker (focus)))
+  "Like `forward-node', but may wrap around to beginning of buffer."
+  (setf (pos marker)
+        (or (npos-next-until (pos marker) #'selectable-p)
+            (npos-next-until (pos-down (restriction (host marker)))
+                             #'selectable-p)
+            (error 'top-of-subtree))))
+
+(define-command backward-node-cycle (&optional (marker (focus)))
+  "Like `backward-node', but may wrap around to beginning of buffer."
+  (setf (pos marker)
+        (or (npos-prev-until (pos marker) #'selectable-p)
+            (npos-prev-until (end-pos (restriction (host marker)))
+                             #'selectable-p)
             (error 'top-of-subtree))))
 
 (defun graphic-element-p (node)
@@ -463,7 +484,11 @@ Return that instance or nil otherwise."
       (setq pos (if backward
                     (npos-prev-until pos #'selectable-p)
                     (npos-next-until pos #'selectable-p)))
-      (setf (pos marker) (or pos (error 'top-of-subtree))))))
+      (setf (pos marker) (or pos
+                             (npos-next-until
+                              (pos-down (restriction (host marker)))
+                              #'selectable-p)
+                             (error 'top-of-subtree))))))
 
 (define-command backward-up-node (&optional (marker (focus)))
   "Move to closest selectable parent."
@@ -484,6 +509,25 @@ Return that instance or nil otherwise."
     (unless non-interactive
       (setq *adjust-marker-direction* 'backward))))
 
+(defun default-block-element-p (element)
+  (member (tag-name element)
+          '("tr" "address" "article" "aside" "blockquote" "canvas" "dd" "div" "dl" "dt" "fieldset" "figcaption" "figure" "footer" "form" "h1" "h2" "h3" "h4" "h5" "h6" "header" "hr" "li" "main" "nav" "noscript" "ol" "p" "pre" "section" "table" "tfoot" "ul" "video")
+          :test 'equal))
+
+(defun block-element-p (node)
+  (when (element-p node)
+    (hooks:run-hook (block-element-p-hook (host node))
+                    (lambda () (default-block-element-p node)) node)))
+
+(defun line-start-p (pos)
+  (or (new-line-node-p (node-before pos))
+      (block-element-p (node-after pos))))
+
+(defun line-end-p (pos)
+  (or (new-line-node-p (node-after pos))
+      (and (end-pos-p pos)
+           (block-element-p (end-pos-node pos)))))
+
 (define-command beginning-of-line (&optional (marker (focus)))
   "Move to beginning of line.
 
@@ -491,7 +535,7 @@ Also returns number of skipped selectable position, useful for
 non-interactive use."
   (let ((pos (pos marker))
         (n 0))
-    (iter (until (new-line-node-p (node-before pos)))
+    (iter (until (line-start-p pos))
       (when (selectable-p pos) (incf n))
       (setq pos (or (npos-prev pos) (return))))
     (setf (pos marker) (or pos (error 'top-of-subtree)))
@@ -500,7 +544,7 @@ non-interactive use."
 (define-command end-of-line (&optional (marker (focus) non-interactive))
   "Move to end of line."
   (let ((pos (pos marker)))
-    (iter (until (new-line-node-p (node-after pos)))
+    (iter (until (line-end-p pos))
       (setq pos (or (npos-next pos) (return))))
     (setf (pos marker) (or pos (error 'top-of-subtree)))
     (unless non-interactive
@@ -562,8 +606,8 @@ Try to keep horizontal location approximately the same."
 
 (define-command scroll-up-command ()
   "Move up `scroll-lines'."
-  (previous-line (scroll-lines (current-neomacs))))
+  (previous-line (scroll-lines (current-buffer))))
 
 (define-command scroll-down-command ()
   "Move down `scroll-lines'."
-  (next-line (scroll-lines (current-neomacs))))
+  (next-line (scroll-lines (current-buffer))))

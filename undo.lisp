@@ -1,50 +1,44 @@
 (in-package :neomacs)
 
 (define-mode undo-mode ()
-  "Enable undo."
-  ((undo-entry (make-instance 'undo-root) :type undo-entry)
-   (amalgamate-limit 20 :type integer)
-   (amalgamate-count 0 :type integer)
-   (keyscheme-map
+  ((undo-entry :initform (make-instance 'undo-root) :type undo-entry)
+   (amalgamate-limit :default 20 :type integer)
+   (amalgamate-count :default 0 :type integer)
+   #+nil (keyscheme-map
     (keymaps:define-keyscheme-map "undo" ()
       keyscheme:emacs
-      '("C-x u" undo-history)))))
+      '("C-x u" undo-history))))
+  (:documentation "Enable undo."))
 
-(defmethod enable ((mode undo-mode) &key)
-  (hooks:add-hook (pre-command-hook (find-submode 'neomacs-mode))
-                  'undo-boundary))
+(defmethod enable ((mode undo-mode))
+  (hooks:add-hook (pre-command-hook (current-buffer)) 'undo-boundary))
 
-(defmethod disable ((mode undo-mode) &key)
-  (when-let (neomacs (find-submode 'neomacs-mode))
-    (hooks:remove-hook (pre-command-hook neomacs)
-                       'undo-boundary)))
+(defmethod disable ((mode undo-mode))
+  (hooks:remove-hook (pre-command-hook (current-buffer)) 'undo-boundary))
 
 (define-mode active-undo-mode ()
-  "Transient mode when undo history panel is active."
-  ((id-table (make-hash-table))
-   (keyscheme-map
-    (keymaps:define-keyscheme-map "active-undo" ()
-      keyscheme:default
-      '("up" undo-command
-        "down" redo-command
-        "left" previous-branch
-        "right" next-branch
-        "escape" undo-history
-        "return" undo-history)
-      keyscheme:emacs
-      '("p" undo-command
-        "n" redo-command
-        "f" next-branch
-        "b" previous-branch
-        "q" undo-history
-        "C-g" undo-history))))
-  (:toggler-command-p nil))
+  ((id-table :initform (make-hash-table))
+   (keymap :default
+           (define-keymap "active-undo" ()
+             "arrow-up" 'undo-command
+             "arrow-down" 'redo-command
+             "arrow-left" 'previous-branch
+             "arrow-right" 'next-branch
+             "escape" 'undo-history
+             "enter" 'undo-history
+             "p" 'undo-command
+             "n" 'redo-command
+             "f" 'next-branch
+             "b" 'previous-branch
+             "q" 'undo-history
+             "C-g" 'undo-history)))
+  (:documentation "Transient mode when undo history panel is active."))
 
-(defmethod enable ((mode active-undo-mode) &key)
-  (setf (read-only-p (find-submode 'neomacs-mode (buffer mode))) t))
+(defmethod enable ((mode active-undo-mode))
+  (setf (read-only-p (current-buffer)) t))
 
-(defmethod disable ((mode active-undo-mode) &key)
-  (setf (read-only-p (find-submode 'neomacs-mode (buffer mode))) nil))
+(defmethod disable ((mode active-undo-mode))
+  (setf (read-only-p (current-buffer)) nil))
 
 (define-class undo-entry ()
   ((children :type (list-of undo-entry))))
@@ -52,7 +46,7 @@
 (define-class undo-root (undo-entry) ())
 
 (define-class undo-child (undo-entry)
-  ((parent (error "Must supply :parent.") :type (or undo-root undo-entry))
+  ((parent :initform (error "Must supply :parent.") :type (or undo-root undo-entry))
    (undo-thunks :type (list-of function))
    (redo-thunks :type (list-of function))))
 
@@ -107,17 +101,15 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
 
 (defun undo-auto-amalgamate ()
   "Call at the beginning of a command to amalgamate undo entry."
-  (when-let (neomacs (find-submode 'neomacs-mode))
-    (when-let (undo (find-submode 'undo-mode))
-      (if (and (last-command neomacs)
-               (eql (name (last-command neomacs))
-                    (name (this-command neomacs)))
-               (< (1+ (amalgamate-count undo))
-                  (amalgamate-limit undo)))
-          (progn
-            (remove-undo-boundary undo)
-            (incf (amalgamate-count undo)))
-          (setf (amalgamate-count undo) 0))))
+  (when-let (undo (find-submode 'undo-mode))
+    (if (and *last-command*
+             (eql *last-command* *this-command*)
+             (< (1+ (amalgamate-count undo))
+                (amalgamate-limit undo)))
+        (progn
+          (remove-undo-boundary undo)
+          (incf (amalgamate-count undo)))
+        (setf (amalgamate-count undo) 0)))
   nil)
 
 (defun undo (&optional (mode (find-submode 'undo-mode)))
@@ -172,7 +164,7 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
     (redo (1- current-index) mode)
     (update-undo-history)))
 
-(defun update-undo-history ()
+#+nil (defun update-undo-history ()
   (when-let (buffer (find-panel-buffer 'undo-history))
     (let ((id (gethash (undo-entry (find-submode 'undo-mode))
                        (id-table (find-submode 'active-undo-mode)))))
@@ -196,7 +188,7 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
                (ps:chain focus (scroll-into-view-if-needed)))
              nil)))))))
 
-(define-panel-command undo-history () (buffer "*undo*")
+#+nil (define-panel-command undo-history () (buffer "*undo*")
   (let ((parent-buffer (current-buffer)))
     (enable-modes* 'active-undo-mode parent-buffer)
     (hooks:add-hook (buffer-delete-hook buffer)
@@ -204,24 +196,24 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
                       (declare (ignore buffer))
                       (disable-modes* 'active-undo-mode parent-buffer))))
   (setf (style buffer)
-        (theme:themed-css (theme *browser*)
-          ("body" :whitespace "pre"
+        (lass:compile-and-write
+          '("body" :whitespace "pre"
                   :line-height 0
                   :font-family "dejavu sans mono")
-          (".col" :display "inline-block"
+          '(".col" :display "inline-block"
                   :vertical-align "top")
-          (".hr" :border-bottom "1px solid"
+          '(".hr" :border-bottom "1px solid"
                  :margin-right "0.25em"
                  :margin-left "0.25em")
-          (".row" :display "inline-block"
+          '(".row" :display "inline-block"
                   :margin-right "auto"
                   :vertical-align "top")
-          (".node" :width "0.5em"
+          '(".node" :width "0.5em"
                    :height "0.5em"
                    :border-radius "50%"
                    :border "1px solid")
-          (".focus" :background-color "#000")
-          (".vert" :border-left "1px solid"
+          '(".focus" :background-color "#000")
+          '(".vert" :border-left "1px solid"
                    :height "0.5em"
                    :width "100%"
                    :margin-left "0.25em")))

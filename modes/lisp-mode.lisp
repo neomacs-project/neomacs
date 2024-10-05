@@ -1,26 +1,31 @@
 (in-package #:neomacs)
 
-(define-command-global neomacs-scratch ()
+#+nil (define-command-global neomacs-scratch ()
   (let ((buffer (make-buffer :url (quri:uri "neomacs:scratch.lisp"))))
     (set-current-buffer buffer)))
 
 (defun lisp-selectable-p (cont pos)
+  (declare (ignore cont))
   (let ((node (node-after pos))
         (parent (node-containing pos)))
     (or (characterp node)
         (and node (not (symbol-node-p node)))
         (and (not node)
-             (class-p parent "doc" "string" "list"))
-        (funcall cont))))
+             (class-p parent "string" "list" "doc")))))
+
+(defun lisp-block-element-p (cont element)
+  (if (equal (tag-name element) "div")
+      (not (class-p element "list" "comment"))
+      (funcall cont)))
 
 (defun lisp-focus-move (old new)
   (declare (ignore old))
   (let ((node (node-containing new)))
     (if (class-p node "list" "symbol" "doc")
         (unless (find-submode 'sexp-editing-mode)
-          (enable-modes* 'sexp-editing-mode (current-buffer)))
+          (enable 'sexp-editing-mode))
         (when (find-submode 'sexp-editing-mode)
-          (disable-modes* 'sexp-editing-mode (current-buffer))))))
+          (disable 'sexp-editing-mode)))))
 
 (defgeneric print-dom (object &key &allow-other-keys))
 
@@ -75,9 +80,6 @@
     (when (plusp (length text))
       (append-child node (make-instance 'text-node :text text)))))
 
-(defun make-new-line-node ()
-  (make-instance 'element :tag-name "br"))
-
 (defun list-node-p (node)
   (class-p node "list"))
 
@@ -90,13 +92,6 @@
 (defun symbol-node-p (node)
   (and (element-p node)
        (equal (attribute node "class") "symbol")))
-
-(defun new-line-node-p (node)
-  (or (and (element-p node)
-           (or (equal (attribute node "class")
-                      "new-line")
-               (equal (tag-name node) "br")))
-      (eql node #\Newline)))
 
 (defun atom-node-text (node)
   (ignore-errors (text (first-child node))))
@@ -129,18 +124,20 @@
 (defmethod print-dom ((obj t) &key)
   (make-atom-node "symbol" (prin1-to-string obj)))
 
-(defun lisp-self-insert (marker string)
-  (cond ((equal string " ")
-         (if (symbol-node-p (node-containing marker))
-             (lisp-split marker)
-             (insert-nodes marker string)))
-        ((atom-node-p (node-containing marker))
-         (insert-nodes marker string))
-        ((class-p (node-before marker) "comment")
-         (insert-nodes (end-pos (node-before marker)) string))
-        (t
-         (let ((node (make-atom-node "symbol" string)))
-           (insert-nodes marker node)))))
+(defun lisp-self-insert ()
+  (let ((string (string (self-insert-char)))
+        (marker (focus)))
+    (cond ((equal string " ")
+           (if (symbol-node-p (node-containing marker))
+               (lisp-split marker)
+               (insert-nodes marker string)))
+          ((atom-node-p (node-containing marker))
+           (insert-nodes marker string))
+          ((class-p (node-before marker) "comment")
+           (insert-nodes (end-pos (node-before marker)) string))
+          (t
+           (let ((node (make-atom-node "symbol" string)))
+             (insert-nodes marker node))))))
 
 (define-command open-paren (&optional (marker (focus)))
   (let ((node (make-list-node nil)))
@@ -151,8 +148,7 @@
   (let ((node (make-list-node nil)))
     (setq pos (or (pos-up-ensure pos #'sexp-node-p)
                   (error 'top-of-subtree)))
-    (insert-nodes pos node)
-    (move-nodes pos (pos-right pos) (end-pos node))))
+    (wrap-node pos node)))
 
 (define-command open-string (&optional (marker (focus)))
   (let ((node (make-atom-node "string" "")))
@@ -178,8 +174,7 @@
   (let ((node (make-atom-node "comment" "")))
     (setq pos (or (pos-up-ensure pos #'sexp-node-p)
                   (error 'top-of-subtree)))
-    (insert-nodes pos node)
-    (move-nodes pos (pos-right pos) (end-pos node))))
+    (wrap-node pos node)))
 
 (define-command lisp-raise (&optional (pos (focus)))
   (setq pos (or (pos-up-ensure pos #'sexp-node-p)
@@ -195,54 +190,51 @@
   (insert-nodes (setf (pos marker) (split-node marker)) " "))
 
 (define-mode lisp-mode ()
-  "Lisp mode."
-  ((keyscheme-map
-    (keymaps:define-keyscheme-map "lisp" ()
-      keyscheme:default
-      (list "tab" 'show-completions)
-      keyscheme:emacs
-      '("M-(" wrap-paren
-        "M-;" wrap-comment
-        "M-r" lisp-raise
-        "M-s" lisp-splice
+  ((keymap
+    :default
+    (lret ((m (make-keymap :name "lisp")))
+      (define-keys m
+        'self-insert-command 'lisp-self-insert
+        "tab" 'show-completions
+        "M-(" 'wrap-paren
+        "M-;" 'wrap-comment
+        "M-r" 'lisp-raise
+        "M-s" 'lisp-splice
 
-        "C-M-x" eval-defun
-        ;; "C-c C-c" compile-defun
-        "tab" show-completions
-        "C-x C-e" eval-last-expression
-        "C-c C-p" eval-print-last-expression)))))
+        "C-M-x" 'eval-defun
+        ;; "C-c C-c" 'compile-defun
+        "tab" 'show-completions
+        "C-x C-e" 'eval-last-expression
+        "C-c C-p" 'eval-print-last-expression))))
+  (:documentation "Lisp mode."))
 
 (define-mode sexp-editing-mode ()
-  "Editing S-exp."
-  ((keyscheme-map
-    (keymaps:define-keyscheme-map "sexp" ()
-      keyscheme:default
-      (list "(" 'open-paren
-            "\"" 'open-string
-            ";" 'open-comment)))
-   (rememberable-p nil))
-  (:toggler-command-p nil))
+  ((keymap
+    :default
+    (lret ((m (make-keymap :name "sexp")))
+      (define-keys m
+        "(" 'open-paren
+        "\"" 'open-string
+        ";" 'open-comment))))
+  (:documentation "Editing S-exp."))
 
-(defmethod enable ((mode lisp-mode) &key)
-  (with-current-buffer (buffer mode)
-    (let ((neomacs (current-neomacs)))
-      (alex:unionf (word-boundary-list neomacs) '(#\  #\-))
-      (pushnew 'lisp-mode (styles neomacs))
-      (hooks:add-hook (selectable-p-hook neomacs) 'lisp-selectable-p)
-      (hooks:add-hook (self-insert-hook neomacs) 'lisp-self-insert)
-      (hooks:add-hook (focus-move-hook neomacs) 'lisp-focus-move)
-      (hooks:add-hook (node-setup-hook neomacs) 'lisp-node-setup)
-      (hooks:add-hook (completion-hook neomacs) 'lisp-completion)
-      (do-elements #'lisp-node-setup (restriction neomacs)))))
+(defmethod enable ((mode lisp-mode))
+  (alex:unionf (word-boundary-list (current-buffer)) '(#\  #\-))
+  (pushnew 'lisp-mode (styles (current-buffer)))
+  (hooks:add-hook (selectable-p-hook (current-buffer)) 'lisp-selectable-p)
+  (hooks:add-hook (focus-move-hook (current-buffer)) 'lisp-focus-move)
+  (hooks:add-hook (node-setup-hook (current-buffer)) 'lisp-node-setup)
+  (hooks:add-hook (completion-hook (current-buffer)) 'lisp-completion)
+  (hooks:add-hook (block-element-p-hook (current-buffer)) 'lisp-block-element-p)
+  (do-elements #'lisp-node-setup (restriction (current-buffer))))
 
-(defmethod disable ((mode lisp-mode) &key)
-  (let ((neomacs (current-neomacs)))
-    (alex:deletef (styles neomacs) 'lisp-mode)
-    (hooks:remove-hook (selectable-p-hook neomacs) 'lisp-selectable-p)
-    (hooks:remove-hook (self-insert-hook neomacs) 'lisp-self-insert)
-    (hooks:remove-hook (focus-move-hook neomacs) 'lisp-focus-move)
-    (hooks:remove-hook (node-setup-hook neomacs) 'lisp-node-setup)
-    (hooks:remove-hook (completion-hook neomacs) 'lisp-completion)))
+(defmethod disable ((mode lisp-mode))
+  (alex:deletef (styles (current-buffer)) 'lisp-mode)
+  (hooks:remove-hook (selectable-p-hook (current-buffer)) 'lisp-selectable-p)
+  (hooks:remove-hook (focus-move-hook (current-buffer)) 'lisp-focus-move)
+  (hooks:remove-hook (node-setup-hook (current-buffer)) 'lisp-node-setup)
+  (hooks:remove-hook (completion-hook (current-buffer)) 'lisp-completion)
+  (hooks:remove-hook (block-element-p-hook (current-buffer)) 'lisp-block-element-p))
 
 (defun parse-prefix (string)
   "Parse prefix from STRING.
@@ -340,6 +332,7 @@ before MARKER-OR-POS."
 (defun last-expression (pos)
   (iter
     (for node = (node-before pos))
+    (unless node (error 'beginning-of-subtree))
     (until (sexp-node-p node))
     (setq pos (npos-prev pos)))
   (node-before pos))
@@ -443,8 +436,17 @@ before MARKER-OR-POS."
                            :font-size "1.1em"
                            :inherit comment))
 
+(defstyle doc-node `(((:append ".focus-tail::after")
+                      :content "  "
+                      :white-space "pre"
+                      :inherit selection)
+                     :left 0 :right 0
+                     :white-space "pre-wrap"
+                     :padding-left "1em"))
+
 (defstyle lisp-mode
-    `((".symbol" :inherit symbol-node)
+    `((".body" :inherit doc-node)
+      (".symbol" :inherit symbol-node)
       (".string" :inherit string-node)
       (".object" :inherit symbol-node)
       (".symbol[symbol-type=\"macro\"][operator]" :inherit macro)
@@ -458,5 +460,5 @@ before MARKER-OR-POS."
       (".comment[comment-level=\"4\"]" :inherit comment-node-4)))
 
 ;;; Default hooks
-(add-mode-hook 'lisp-mode 'undo-mode)
-(add-mode-hook 'lisp-mode 'auto-completion-mode)
+#+nil (add-mode-hook 'lisp-mode 'undo-mode)
+#+nil (add-mode-hook 'lisp-mode 'auto-completion-mode)
