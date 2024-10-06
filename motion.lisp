@@ -82,7 +82,7 @@
              (pos marker)
              #'graphic-element-p)
             (error 'top-of-subtree)))
-  (setq *adjust-marker-direction* 'backward))
+  (setf (adjust-marker-direction (current-buffer)) 'backward))
 
 (define-command beginning-of-buffer (&optional (marker (focus)))
   "Move to beginning of buffer."
@@ -90,7 +90,7 @@
 
 (define-command end-of-buffer (&optional (marker (focus)))
   "Move to end of buffer."
-  (setq *adjust-marker-direction* 'backward)
+  (setf (adjust-marker-direction (current-buffer)) 'backward)
   (setf (pos marker) (end-pos (restriction (host marker)))))
 
 (defun ensure-selectable (marker &optional backward)
@@ -129,7 +129,7 @@
     (setq pos (npos-prev-until pos #'word-start-p))
     (setf (pos marker) (or pos (error 'top-of-subtree)))
     (unless non-interactive
-      (setq *adjust-marker-direction* 'backward))))
+      (setf (adjust-marker-direction (current-buffer)) 'backward))))
 
 (defgeneric block-element-p-aux (buffer element)
   (:method ((buffer buffer) (element element))
@@ -170,7 +170,7 @@ non-interactive use."
       (setq pos (or (npos-next pos) (return))))
     (setf (pos marker) (or pos (error 'top-of-subtree)))
     (unless non-interactive
-      (setq *adjust-marker-direction* 'backward))))
+      (setf (adjust-marker-direction (current-buffer)) 'backward))))
 
 (define-command beginning-of-defun (&optional (marker (focus)))
   "Move to current or previous toplevel node."
@@ -194,7 +194,7 @@ non-interactive use."
     (setq pos (npos-right-until
                pos (alex:compose #'not #'new-line-node-p
                                  #'node-after)))
-    (setf *adjust-marker-direction* 'backward
+    (setf (adjust-marker-direction (current-buffer)) 'backward
           (pos marker) (or pos (error 'top-of-subtree)))))
 
 (defun forward-node-same-line (marker n)

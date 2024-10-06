@@ -80,7 +80,7 @@
 
 (defun make-frame-root (init-buffer)
   (lret ((buffer (make-instance 'buffer :name " *frame-root*"
-                                        :styles '(frame-root buffer))))
+                                        :styles '(frame-root))))
     (with-current-buffer buffer
       (enable 'frame-root-mode)
       (let* ((echo-area (make-echo-area))
@@ -223,11 +223,22 @@
 
 (defstyle frame-root `((".vertical" :display "flex" :flex-flow "row" :width "100%" :height "100%")
                        (".horizontal" :display "flex" :flex-flow "column" :height "100%" :width "100%")
-                       (".content" :width "100%" :height "100%")
+                       (".content"
+                        :backdrop-filter "blur(10px)"
+                        :width "100%" :height "100%")
                        (".buffer" :flex "1 0 1em" :display "flex"
-                                  :flex-flow "column")
-                       (".minibuffer" :flex "0 0 2em")
-                       (".focus" :inherit focus)))
+                                  :flex-flow "column"
+                                  :margin "8px")
+                       (".minibuffer"
+                        :flex "0 0 2em"
+                        :margin "8px")
+                       #+nil (".focus" :inherit focus)
+                       (".header" :inherit header)
+                       ("body"
+                        :padding "16px"
+                        :inherit default
+                        :background-size "contain"
+                        :background-image "url(https://sozaino.site/wp-content/uploads/2021/08/sf35.png)")))
 
 (defstyle echo-area `(("body" :inherit default
                               :margin-top 0
@@ -235,3 +246,9 @@
 
 (defstyle minibuffer `(("body" :margin-top 0
                                :margin-bottom 0)))
+
+(defstyle header `(:margin-left "8px"
+                   :margin-right "8px"
+                   :padding "8px"
+                   :backdrop-filter "blur(10px)"
+                   :background-color "rgba(169,151,160,0.2)"))

@@ -399,10 +399,10 @@ before MARKER-OR-POS."
                          :white-space "pre-wrap"))
 (defstyle comment-node-1 `(:position "sticky"
                            :left "20em"
-                           :border-left "0.3rem solid #ccc"
+                           :border-left "0.3rem solid #a997a0"
                            :padding-left "0.3rem"
                            :inherit comment))
-(defstyle comment-node-2 `(:border-left "0.3rem solid #ccc"
+(defstyle comment-node-2 `(:border-left "0.3rem solid #a997a0"
                            :padding-left "0.3rem"
                            :inherit comment))
 (defstyle comment-node-3 `(((:append "::before")

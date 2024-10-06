@@ -2,8 +2,6 @@
 
 ;;; Neomacs buffer
 
-(defvar *adjust-marker-direction* 'forward)
-
 (defvar *buffer-table* (make-hash-table) "Map ID to buffer instances.")
 
 (defun generate-buffer-id ()
@@ -31,6 +29,7 @@
    (word-boundary-list :default (list #\ ))
    (focus-marker)
    (selection-marker)
+   (adjust-marker-direction :initform 'forward)
    (markers :type list)
    (document-root)
    (restriction)
@@ -78,7 +77,7 @@
 (defun buffer-alive-p (buffer)
   (eql (gethash (slot-value buffer 'id) *buffer-table*) buffer))
 
-(defun call-with-current-buffer (buffer thunk)
+#+nil (defun call-with-current-buffer (buffer thunk)
   (let ((*current-buffer* buffer)
         (*adjust-marker-direction* *adjust-marker-direction*))
     (bt:with-recursive-lock-held ((lock buffer))
@@ -92,6 +91,38 @@
             ((forward) (ensure-selectable (focus)))
             ((backward) (ensure-selectable (focus) t)))
           (render-focus (focus buffer)))))))
+
+(defvar *locked-buffers* nil)
+
+(defun cleanup-locked-buffers ()
+  (dolist (buffer *locked-buffers*)
+    (when (buffer-alive-p buffer)
+      (let ((*current-buffer* buffer))
+        (on-post-command buffer)
+        (case (adjust-marker-direction buffer)
+          ((forward) (ensure-selectable (focus buffer)))
+          ((backward) (ensure-selectable (focus buffer) t)))
+        (render-focus (focus buffer))))))
+
+(defun call-with-current-buffer (buffer thunk)
+  (cond ((not *locked-buffers*)
+         (let ((*locked-buffers* (list buffer))
+               (*current-buffer* buffer))
+           (unwind-protect
+                (with-delayed-evaluation
+                  (funcall thunk))
+             (unwind-protect
+                  (cleanup-locked-buffers)
+               (dolist (buffer *locked-buffers*)
+                 (bt:release-recursive-lock (lock buffer)))))))
+        ((member buffer *locked-buffers*)
+         (let ((*current-buffer* buffer))
+           (funcall thunk)))
+        (t
+         (push buffer *locked-buffers*)
+         (bt:acquire-recursive-lock (lock buffer))
+         (let ((*current-buffer* buffer))
+           (funcall thunk)))))
 
 (defun send-dom-update (parenscript buffer)
   (unless *inhibit-dom-update*
@@ -116,8 +147,10 @@
           (gethash (name buffer) *buffer-name-table*) buffer)
     (setf (gethash (slot-value buffer 'id) *buffer-table*) buffer))
   (cera.d:js cera.d:*driver*
-             (format nil "Ceramic.createBuffer(~S, ~S, {})"
-                     (id buffer) (quri:render-uri (url buffer))))
+             (format nil "Ceramic.createBuffer(~S, ~S, {});
+Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
+                     (id buffer) (quri:render-uri (url buffer))
+                     (id buffer)))
   (setf (document-root buffer)
         (make-instance 'element :tag-name "body" :host buffer)
         (restriction buffer) (document-root buffer)
@@ -378,14 +411,25 @@
                                            (slot-value f 'buffer)))))
   (setf (slot-value buffer 'styles) new-val))
 
-(defstyle default `(:font-family "Verdana"))
-(defstyle focus `(:background-color "#f0f7ff"))
-(defstyle selection `(:background-color "#bde1ff"))
-(defstyle keyword `(:color "#fd79a8"))
-(defstyle macro `(:color "#fd79a8"))
-(defstyle special-operator `(:color "#fd79a8"))
-(defstyle string `(:color "#a29bfe"))
-(defstyle comment `(:color "#777"))
+#+nil (progn
+        (defstyle default `(:font-family "Verdana" :color "rgb(169,151,160)"))
+ (defstyle focus `(:background-color "#f0f7ff"))
+ (defstyle selection `(:background-color "#bde1ff"))
+ (defstyle keyword `(:color "#fd79a8"))
+ (defstyle macro `(:color "#fd79a8"))
+ (defstyle special-operator `(:color "#fd79a8"))
+ (defstyle string `(:color "#a29bfe"))
+ (defstyle comment `(:color "#777")))
+
+(defstyle default `(:font-family "Verdana" :color "#54454d"))
+(defstyle focus `(:background-color "rgba(169,151,160,0.1)"))
+(defstyle selection `(:background-color "rgba(169,151,160,0.5)"))
+(defstyle keyword `(:color "#d29fa8"))
+(defstyle macro `(:color "#d29fa8"))
+(defstyle special-operator `(:color "#d29fa8"))
+(defstyle string `(:color "#d29fa8"))
+(defstyle comment `(:color "#a997a0"))
+
 (defstyle focus-tail
     `(((:append "::after") :content " " :inherit selection)
       :inherit focus))
@@ -397,7 +441,10 @@
       :inherit selection))
 
 (defstyle buffer
-    `(("body" :inherit default)
+    `(("body"
+       ;:margin-top 0
+       :margin-bottom 0
+       :inherit default)
       (".focus" :inherit focus)
       (".focus-tail" :inherit focus-tail)
       ("::highlight(neomacs)" :inherit cursor)

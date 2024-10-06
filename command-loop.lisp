@@ -87,7 +87,9 @@
     (when exit-condition (error exit-condition))))
 
 (defun recursive-edit ()
-  (command-loop t))
+  (cleanup-locked-buffers)
+  (let (*locked-buffers*)
+    (command-loop t)))
 
 (defvar *command-loop-thread* nil)
 
