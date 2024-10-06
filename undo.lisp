@@ -1,6 +1,6 @@
 (in-package :neomacs)
 
-(define-mode undo-mode ()
+(define-class undo-mixin ()
   ((undo-entry :initform (make-instance 'undo-root) :type undo-entry)
    (amalgamate-limit :default 20 :type integer)
    (amalgamate-count :default 0 :type integer)
@@ -10,15 +10,12 @@
       '("C-x u" undo-history))))
   (:documentation "Enable undo."))
 
-(defmethod enable ((mode undo-mode))
-  (hooks:add-hook (pre-command-hook (current-buffer)) 'undo-boundary))
+(defmethod on-pre-command progn ((buffer undo-mixin))
+  (undo-boundary))
 
-(defmethod disable ((mode undo-mode))
-  (hooks:remove-hook (pre-command-hook (current-buffer)) 'undo-boundary))
-
-(define-mode active-undo-mode ()
+(define-class active-undo-mode ()
   ((id-table :initform (make-hash-table))
-   (keymap :default
+   #+nil (keymap :default
            (define-keymap "active-undo" ()
              "arrow-up" 'undo-command
              "arrow-down" 'redo-command
@@ -34,11 +31,7 @@
              "C-g" 'undo-history)))
   (:documentation "Transient mode when undo history panel is active."))
 
-(defmethod enable ((mode active-undo-mode))
-  (setf (read-only-p (current-buffer)) t))
-
-(defmethod disable ((mode active-undo-mode))
-  (setf (read-only-p (current-buffer)) nil))
+(defmethod read-only-p ((buffer active-undo-mode)) t)
 
 (define-class undo-entry ()
   ((children :type (list-of undo-entry))))
@@ -73,95 +66,95 @@ This is bound to non-nil during undo process itself.")
 
 If `*inhibit-record-undo*' is non-nil, do nothing instead."
   (unless *inhibit-record-undo*
-    (when-let (mode (find-submode 'undo-mode))
-      (let ((entry (undo-entry mode)))
+    (when (typep (current-buffer) 'undo-mixin)
+      (let ((entry (undo-entry (current-buffer))))
         (unless (leaf-p entry)
           (setf entry (make-instance 'undo-child :parent entry))
-          (setf (undo-entry mode) entry))
+          (setf (undo-entry (current-buffer)) entry))
         (push undo-thunk (undo-thunks entry))
         (push redo-thunk (redo-thunks entry))
         nil))))
 
-(defun undo-boundary (&optional (mode (find-submode 'undo-mode)))
+(defun undo-boundary (&optional (buffer (current-buffer)))
   "Ensure undo state is at a undo boudary, insert one if necessary."
-  (let ((entry (undo-entry mode)))
+  (let ((entry (undo-entry buffer)))
     (when (leaf-p entry)
       (unless (undo-boundary-p entry)
-        (setf (undo-entry mode)
+        (setf (undo-entry buffer)
               (make-instance 'undo-child :parent entry))))
     nil))
 
-(defun remove-undo-boundary (mode)
+(defun remove-undo-boundary (buffer)
   "Remove undo boudary (if any) at current undo state."
-  (let ((entry (undo-entry mode)))
+  (let ((entry (undo-entry buffer)))
     (when (undo-boundary-p entry)
-      (setf (undo-entry mode) (parent entry))
+      (setf (undo-entry buffer) (parent entry))
       (alex:deletef (children (parent entry)) entry)
       nil)))
 
 (defun undo-auto-amalgamate ()
   "Call at the beginning of a command to amalgamate undo entry."
-  (when-let (undo (find-submode 'undo-mode))
+  (when (typep (current-buffer) 'undo-mixin)
     (if (and *last-command*
              (eql *last-command* *this-command*)
-             (< (1+ (amalgamate-count undo))
-                (amalgamate-limit undo)))
+             (< (1+ (amalgamate-count (current-buffer)))
+                (amalgamate-limit (current-buffer))))
         (progn
-          (remove-undo-boundary undo)
-          (incf (amalgamate-count undo)))
-        (setf (amalgamate-count undo) 0)))
+          (remove-undo-boundary (current-buffer))
+          (incf (amalgamate-count (current-buffer))))
+        (setf (amalgamate-count (current-buffer)) 0)))
   nil)
 
-(defun undo (&optional (mode (find-submode 'undo-mode)))
+(defun undo (&optional (buffer (current-buffer)))
   "Move undo state up one `undo-entry'."
-  (let ((entry (undo-entry mode))
+  (let ((entry (undo-entry buffer))
         (*inhibit-record-undo* t))
-    (setf (undo-entry mode)
+    (setf (undo-entry buffer)
           (or (parent entry) (error "No more undo.")))
     (mapc #'funcall (undo-thunks entry))
     nil))
 
-(defun redo (&optional (branch-index 0) (mode (find-submode 'undo-mode)))
+(defun redo (&optional (branch-index 0) (buffer (current-buffer)))
   "Move undo state down to BRANCH-INDEX-th child."
-  (let* ((entry (nth branch-index (children (undo-entry mode))))
+  (let* ((entry (nth branch-index (children (undo-entry buffer))))
          (*inhibit-record-undo* t))
     (if entry
-        (setf (undo-entry mode) entry)
+        (setf (undo-entry buffer) entry)
         (error "No more redo."))
     (mapc #'funcall (reverse (redo-thunks entry)))
     nil))
 
-(define-command undo-command (&optional (mode (find-submode 'undo-mode)))
+(define-command undo-command (&optional (buffer (current-buffer)))
   "Undo."
-  (remove-undo-boundary mode)
-  (undo mode)
+  (remove-undo-boundary buffer)
+  (undo buffer)
   (update-undo-history))
 
-(define-command redo-command (&optional (mode (find-submode 'undo-mode)))
+(define-command redo-command (&optional (buffer (current-buffer)))
   "Redo."
-  (redo 0 mode)
+  (redo 0 buffer)
   (update-undo-history))
 
-(define-command next-branch (&optional (mode (find-submode 'undo-mode)))
-  (let* ((entry (undo-entry mode))
+(define-command next-branch (&optional (buffer (current-buffer)))
+  (let* ((entry (undo-entry buffer))
          (parent (or (parent entry)
                      (error "No next branch.")))
          (current-index (position entry (children parent))))
     (unless (< (1+ current-index) (length (children parent)))
       (error "No next branch."))
-    (undo mode)
-    (redo (1+ current-index) mode)
+    (undo buffer)
+    (redo (1+ current-index) buffer)
     (update-undo-history)))
 
-(define-command previous-branch (&optional (mode (find-submode 'undo-mode)))
-  (let* ((entry (undo-entry mode))
+(define-command previous-branch (&optional (buffer (current-buffer)))
+  (let* ((entry (undo-entry buffer))
          (parent (or (parent entry)
                      (error "No next branch.")))
          (current-index (position entry (children parent))))
     (unless (> current-index 0)
       (error "No previous branch."))
-    (undo mode)
-    (redo (1- current-index) mode)
+    (undo buffer)
+    (redo (1- current-index) buffer)
     (update-undo-history)))
 
 #+nil (defun update-undo-history ()

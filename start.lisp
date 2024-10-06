@@ -10,6 +10,8 @@
       (enable 'lisp-mode)
       (let ((doc-node (make-element "div" :class "doc")))
         (insert-nodes (end-pos (document-root buffer)) doc-node)
+        (setf (restriction buffer) doc-node
+              (pos (focus buffer)) (end-pos doc-node))
         (apply #'insert-nodes (end-pos doc-node)
                (read-from-file
                 (asdf:system-relative-pathname :neomacs #p"scratch.lisp")))))

@@ -245,21 +245,20 @@
 
 ;;; File mode
 
-(define-mode lisp-file-mode (file-mode)
-  ()
-  (:documentation "Lisp source files."))
+(define-class lisp-file-mode (file-mode)
+  () (:documentation "Lisp source files."))
 
-(defmethod load-contents ((mode lisp-file-mode))
-  (read-from-file (filename mode)))
+(defmethod load-contents ((buffer lisp-file-mode))
+  (read-from-file (filename buffer)))
 
-(defmethod write-file ((mode lisp-file-mode))
-  (with-open-file (s (filename mode)
+(defmethod write-file ((buffer lisp-file-mode))
+  (with-open-file (s (filename buffer)
                      :direction :output :if-exists :supersede)
     (with-standard-io-syntax
       (let ((*print-pretty* t)
             (*print-pprint-dispatch* *lisp-pprint-dispatch*)
             (*package* (find-package "NEOMACS")))
-        (dolist (c (child-nodes (restriction (current-buffer))))
+        (dolist (c (child-nodes (document-root buffer)))
           (prin1 c s))
         nil))))
 

@@ -10,21 +10,21 @@
                (:file "default-value")
                (:file "dom")
                (:file "command")
-               (:file "mode")
                (:file "pos-marker")
                (:file "defstyle")
                (:file "buffer")
                (:file "keymap")
+               (:file "motion")
+               (:file "edit")
+               (:file "range")
                (:file "frame")
                (:file "command-loop")
                (:file "minibuffer")
                (:file "list-commands")
                (:file "undo")
-               (:file "edit")
-               (:file "range")
                (:file "ceramic")
                (:file "start")
-               #+nil (:file "completion")
+               (:file "completion")
                #+nil (:file "manual")
                (:file "modes/file-mode")
                (:file "modes/lisp-mode")
@@ -32,6 +32,7 @@
   :depends-on (:lwcells
                :ceramic
                :nhooks
+               :dynamic-mixins
                :parenscript
                :plump
                :lass

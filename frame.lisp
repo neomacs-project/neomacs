@@ -7,7 +7,13 @@
            "div" :class "minibuffer"
            :children (list (make-element "div" :class "content" :buffer (id buffer)))))))
 
-(define-mode frame-root-mode () ())
+(define-class frame-root-mode () ())
+
+(defmethod on-buffer-loaded progn ((buffer frame-root-mode))
+  (redisplay-windows))
+
+(defmethod on-post-command progn ((buffer frame-root-mode))
+  (redisplay-windows))
 
 (ps:defpsmacro js-frame (buffer)
   `(ps:getprop (ps:chain -ceramic frames) (ps:lisp (id ,buffer))))
@@ -15,9 +21,7 @@
 (ps:defpsmacro js-buffer (buffer)
   `(ps:getprop (ps:chain -ceramic buffers) (ps:lisp (id ,buffer))))
 
-(defmethod enable ((mode frame-root-mode))
-  (hooks:add-hook (buffer-loaded-hook (current-buffer)) 'redisplay-windows)
-  (hooks:add-hook (post-command-hook (current-buffer)) 'redisplay-windows)
+(defmethod enable-aux ((mode (eql 'frame-root-mode)))
   (evaluate-javascript
    (ps:ps
      (let ((frame (ps:chain -ceramic (create-frame (ps:lisp (id (current-buffer))) (ps:create))))
@@ -49,44 +53,30 @@
                                     (ps:chain (ps:getprop (ps:chain -ceramic buffers) buffer)
                                               (set-bounds (ps:getprop result buffer)))))))))))
        (ps:chain frame (on "resize" resize))))
-   nil)
-  (hooks:add-hook (selectable-p-hook (current-buffer)) 'frame-root-selectable-p)
-  (hooks:add-hook (focus-move-hook (current-buffer)) 'frame-root-focus-move)
-  (hooks:add-hook (node-setup-hook (current-buffer)) 'frame-root-node-setup)
-  (hooks:add-hook (node-cleanup-hook (current-buffer)) 'frame-root-node-cleanup)
-  (hooks:add-hook (buffer-delete-hook (current-buffer))
-                  (make-instance 'hooks:handler
-                                 :name 'frame-root-mode
-                                 :fn (lambda () (disable 'frame-root-mode)))))
+   nil))
 
-(defmethod disable ((mode frame-root-mode))
-  (hooks:remove-hook (selectable-p-hook (current-buffer)) 'frame-root-selectable-p)
-  (hooks:remove-hook (focus-move-hook (current-buffer)) 'frame-root-focus-move)
-  (hooks:remove-hook (node-setup-hook (current-buffer)) 'frame-root-node-setup)
-  (hooks:remove-hook (node-cleanup-hook (current-buffer)) 'frame-root-node-cleanup)
-  (hooks:remove-hook (buffer-delete-hook (current-buffer)) 'frame-root-mode)
+(defmethod on-buffer-delete progn ((buffer frame-root-mode))
   (evaluate-javascript
    (ps:ps (ps:chain -ceramic (close-frame (ps:lisp (id (current-buffer))))))
-   nil)
-  (hooks:remove-hook (buffer-loaded-hook (current-buffer)) 'redisplay-windows)
-  (hooks:remove-hook (post-command-hook (current-buffer)) 'redisplay-windows))
+   nil))
 
-(defun frame-root-selectable-p (cont pos)
-  (declare (ignore cont))
+(defmethod selectable-p-aux ((buffer frame-root-mode) pos)
   (let ((node (node-after pos)))
     (and (class-p node "buffer" "minibuffer") (attribute node "selectable"))))
 
-(defun current-buffer ()
-  (or *current-buffer*
-      (window-buffer (node-after (focus *current-frame-root*)))))
+(defun focused-buffer (&optional (frame-root (current-frame-root)))
+  (window-buffer (node-after (focus frame-root))))
 
-(defun frame-root-focus-move (saved new)
+(defun current-buffer ()
+  (or *current-buffer* (focused-buffer)))
+
+(defmethod on-focus-move progn ((buffer frame-root-mode) saved new)
   (declare (ignore saved))
   (when-let (window-node (node-after new))
     (when-let (buffer (window-buffer window-node))
-      (cera.d:js cera.d:*driver*
-                 (format nil "Ceramic.buffers[~S].webContents.focus();"
-                         (id buffer))))))
+      (evaluate-javascript
+       (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
+       nil))))
 
 (defun make-frame-root (init-buffer)
   (lret ((buffer (make-instance 'buffer :name " *frame-root*" :styles '(frame-root))))
@@ -113,17 +103,10 @@
   (with-current-buffer (current-frame-root)
     (backward-node-cycle)))
 
-(define-keys *global-keymap*
+(define-keys global
   "C-x o" 'other-window)
 
-(defun make-minibuffer ()
-  (lret ((buffer (make-instance 'buffer :name " *minibuffer*" :styles '(buffer minibuffer))))
-    (setf (window-decoration buffer)
-          (make-element
-           "div" :class "minibuffer" :selectable ""
-           :children (list (make-element "div" :class "content" :buffer (id buffer)))))))
-
-(defun frame-root-node-setup (node)
+(defmethod on-node-setup progn ((buffer frame-root-mode) node)
   (when (class-p node "content")
     (evaluate-javascript
      (ps:ps (ps:chain (js-frame (current-buffer)) content-view
@@ -131,7 +114,7 @@
                                                   (ps:lisp (attribute node "buffer"))))))
      nil)))
 
-(defun frame-root-node-cleanup (node)
+(defmethod on-node-cleanup progn ((buffer frame-root-mode) node)
   (when (class-p node "content")
     (evaluate-javascript
      (ps:ps (ps:chain (js-frame (current-buffer)) content-view
@@ -149,11 +132,11 @@
 (defun frame-root (buffer)
   (host (window-decoration buffer)))
 
-(defun switch-to-buffer (&optional (buffer (focused-buffer))
+(defun switch-to-buffer (&optional (buffer (buffer-at-focus))
                            (victim (current-buffer)))
   (unless (frame-root victim)
     (error "~A is not displayed" victim))
-  (when (find-submode 'frame-root-mode buffer)
+  (when (typep buffer 'frame-root-mode)
     (error "Cannot switch to frame root ~A" buffer))
   (when (frame-root buffer)
     (error "~A is already displayed" buffer))

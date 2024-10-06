@@ -43,7 +43,7 @@ If LENGTH is NIL, move everything after SRC-OFFSET."
           ((%after-pos before)
            (process-text-pos before)))
         (when (eq m (focus-marker (host m)))
-          (nhooks:run-hook (focus-move-hook (host m)) (pos m) (pos m)))))))
+          (on-focus-move (host m) (pos m) (pos m)))))))
 
 (defun merge-text-nodes (prev node)
   (let ((host (host node))
@@ -53,10 +53,10 @@ If LENGTH is NIL, move everything after SRC-OFFSET."
      `(let* ((node (js-node ,node))
              (prev (ps:chain node previous-sibling))
              (parent (js-node ,parent)))
-        (ps:chain console (log node))
         (ps:chain prev (append-data (ps:chain node data)))
         (ps:chain parent (remove-child node))
-        nil))
+        nil)
+     node)
 
     (setf (text prev)
           (sera:concat (text prev) (text node)))
@@ -79,7 +79,8 @@ If LENGTH is NIL, move everything after SRC-OFFSET."
   (let ((parent (parent node))
         (host (host node)))
     (send-dom-update
-     `(ps:chain (js-node ,node) (split-text ,offset)))
+     `(ps:chain (js-node ,node) (split-text ,offset))
+     node)
     (insert-before parent next (next-sibling node))
     (psetf (text node) (subseq (text node) 0 offset)
            (text next) (subseq (text node) offset))
@@ -118,7 +119,8 @@ Returns the node after the position after this operation."
                 (from (ps:chain template content child-nodes))
                 (for-each (lambda (c)
                             (ps:chain parent (insert-before c reference)))))
-      nil))
+      nil)
+   parent)
 
   (dolist (c nodes)
     (insert-before parent c reference))
@@ -141,14 +143,14 @@ Returns the node after the position after this operation."
 (defun node-setup (node host)
   "Setup NODE as a good citizen of HOST.
 
-This assigns a neomacs-id attribute and run `node-setup-hook'.
+This assigns a neomacs-id attribute and run `on-node-setup'.
 
 This function should be called on all nodes entering HOST's DOM
 tree (which is usually taken care of by `inset-nodes')."
   (setf (host node) host)
   (when (element-p node)
     (assign-neomacs-id node)
-    (hooks:run-hook (node-setup-hook host) node)))
+    (on-node-setup host node)))
 
 (defun insert-nodes (marker-or-pos &rest things)
   "Insert THINGS at MARKER-OR-POS.
@@ -193,7 +195,8 @@ THINGS can be DOM nodes or strings, which are converted to text nodes."
             (dotimes (_ ,length)
               (ps:chain parent (remove-child
                                 (ps:chain parent first-child))))
-            nil)))
+            nil))
+     parent)
     (let ((nodes
             (iter (for node = (if reference (next-sibling reference)
                                   (first-child parent)))
@@ -257,13 +260,13 @@ THINGS can be DOM nodes or strings, which are converted to text nodes."
 (defun node-cleanup (node)
   "Release resources associated with NODE under its active document.
 
-This runs `node-cleanup-hook' and removes any observers on NODE's cell
+This runs `on-node-cleanup' and removes any observers on NODE's cell
 slots.
 
 This function should be called on all nodes leaving HOST's DOM
 tree (which is usually taken care of by `delete-nodes' and
 `extract-nodes')."
-  (hooks:run-hook (node-cleanup-hook (host node)) node)
+  (on-node-cleanup (host node) node)
   (when (element-p node)
     (iter (for s in '(parent next-sibling previous-sibling
                       first-child last-child))
@@ -327,7 +330,8 @@ starting from BEG till the end of its parent."
                         (insert-before
                          (ps:chain src-parent first-child)
                          dst-reference)))
-            nil)))
+            nil))
+     dst-parent)
 
     (iter (for node = (if src-reference (next-sibling src-reference)
                           (first-child src-parent)))
@@ -403,6 +407,10 @@ of parent after parent, and moving children after POS into the clone."
 NODE become the last child of NEW-NODE."
   (insert-nodes node new-node)
   (move-nodes node (pos-right node) (end-pos new-node)))
+
+(defun erase-buffer (buffer)
+  "Delete all content of BUFFER."
+  (delete-nodes (pos-down (document-root buffer)) nil))
 
 ;;; Editing commands
 
@@ -496,7 +504,7 @@ NODE become the last child of NEW-NODE."
 
 ;;; Default key bindings
 
-(define-keys *global-keymap*
+(define-keys global
   "backspace" 'backward-delete
   "space" 'self-insert-command
   "enter" 'new-line

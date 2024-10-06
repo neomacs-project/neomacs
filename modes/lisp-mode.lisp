@@ -4,8 +4,24 @@
   (let ((buffer (make-buffer :url (quri:uri "neomacs:scratch.lisp"))))
     (set-current-buffer buffer)))
 
-(defun lisp-selectable-p (cont pos)
-  (declare (ignore cont))
+(define-class lisp-mode () ()
+  (:documentation "Lisp mode."))
+
+(define-keymap lisp-mode ()
+  'self-insert-command 'lisp-self-insert
+  "tab" 'show-completions
+  "M-(" 'wrap-paren
+  "M-;" 'wrap-comment
+  "M-r" 'lisp-raise
+  "M-s" 'lisp-splice
+
+  "C-M-x" 'eval-defun
+  ;; "C-c C-c" 'compile-defun
+  "tab" 'show-completions
+  "C-x C-e" 'eval-last-expression
+  "C-c C-p" 'eval-print-last-expression)
+
+(defmethod selectable-p-aux ((buffer lisp-mode) pos)
   (let ((node (node-after pos))
         (parent (node-containing pos)))
     (or (characterp node)
@@ -13,19 +29,17 @@
         (and (not node)
              (class-p parent "string" "list" "doc")))))
 
-(defun lisp-block-element-p (cont element)
+(defmethod block-element-p-aux ((buffer lisp-mode) element)
   (if (equal (tag-name element) "div")
       (not (class-p element "list" "comment"))
-      (funcall cont)))
+      (call-next-method)))
 
-(defun lisp-focus-move (old new)
+(defmethod on-focus-move progn ((buffer lisp-mode) old new)
   (declare (ignore old))
   (let ((node (node-containing new)))
     (if (class-p node "list" "symbol" "doc")
-        (unless (find-submode 'sexp-editing-mode)
-          (enable 'sexp-editing-mode))
-        (when (find-submode 'sexp-editing-mode)
-          (disable 'sexp-editing-mode)))))
+        (enable 'sexp-editing-mode)
+        (disable 'sexp-editing-mode))))
 
 (defgeneric print-dom (object &key &allow-other-keys))
 
@@ -47,7 +61,7 @@
           ((keywordp symbol) "keyword")
           (t ""))))
 
-(defun lisp-node-setup (node)
+(defmethod on-node-setup progn ((buffer lisp-mode) node)
   (set-attribute-function node "operator" 'compute-operator)
 
   (add-observer (slot-value node 'parent)
@@ -189,52 +203,20 @@
 (define-command lisp-split (&optional (marker (focus)))
   (insert-nodes (setf (pos marker) (split-node marker)) " "))
 
-(define-mode lisp-mode ()
-  ((keymap
-    :default
-    (lret ((m (make-keymap :name "lisp")))
-      (define-keys m
-        'self-insert-command 'lisp-self-insert
-        "tab" 'show-completions
-        "M-(" 'wrap-paren
-        "M-;" 'wrap-comment
-        "M-r" 'lisp-raise
-        "M-s" 'lisp-splice
-
-        "C-M-x" 'eval-defun
-        ;; "C-c C-c" 'compile-defun
-        "tab" 'show-completions
-        "C-x C-e" 'eval-last-expression
-        "C-c C-p" 'eval-print-last-expression))))
-  (:documentation "Lisp mode."))
-
-(define-mode sexp-editing-mode ()
-  ((keymap
-    :default
-    (lret ((m (make-keymap :name "sexp")))
-      (define-keys m
-        "(" 'open-paren
-        "\"" 'open-string
-        ";" 'open-comment))))
+(define-class sexp-editing-mode () ()
   (:documentation "Editing S-exp."))
 
-(defmethod enable ((mode lisp-mode))
-  (alex:unionf (word-boundary-list (current-buffer)) '(#\  #\-))
-  (pushnew 'lisp-mode (styles (current-buffer)))
-  (hooks:add-hook (selectable-p-hook (current-buffer)) 'lisp-selectable-p)
-  (hooks:add-hook (focus-move-hook (current-buffer)) 'lisp-focus-move)
-  (hooks:add-hook (node-setup-hook (current-buffer)) 'lisp-node-setup)
-  (hooks:add-hook (completion-hook (current-buffer)) 'lisp-completion)
-  (hooks:add-hook (block-element-p-hook (current-buffer)) 'lisp-block-element-p)
-  (do-elements #'lisp-node-setup (restriction (current-buffer))))
+(define-keymap sexp-editing-mode ()
+  "(" 'open-paren
+  "\"" 'open-string
+  ";" 'open-comment)
 
-(defmethod disable ((mode lisp-mode))
-  (alex:deletef (styles (current-buffer)) 'lisp-mode)
-  (hooks:remove-hook (selectable-p-hook (current-buffer)) 'lisp-selectable-p)
-  (hooks:remove-hook (focus-move-hook (current-buffer)) 'lisp-focus-move)
-  (hooks:remove-hook (node-setup-hook (current-buffer)) 'lisp-node-setup)
-  (hooks:remove-hook (completion-hook (current-buffer)) 'lisp-completion)
-  (hooks:remove-hook (block-element-p-hook (current-buffer)) 'lisp-block-element-p))
+(defmethod enable-aux ((mode (eql 'lisp-mode)))
+  (pushnew 'lisp-mode (styles (current-buffer)))
+  #+nil (do-elements #'lisp-node-setup (restriction (current-buffer))))
+
+(defmethod disable-aux ((mode (eql 'lisp-mode)))
+  (alex:deletef (styles (current-buffer)) 'lisp-mode))
 
 (defun parse-prefix (string)
   "Parse prefix from STRING.
@@ -331,8 +313,8 @@ before MARKER-OR-POS."
 
 (defun last-expression (pos)
   (iter
+    (unless pos (error 'beginning-of-subtree))
     (for node = (node-before pos))
-    (unless node (error 'beginning-of-subtree))
     (until (sexp-node-p node))
     (setq pos (npos-prev pos)))
   (node-before pos))
@@ -372,7 +354,7 @@ before MARKER-OR-POS."
     (when (equal "comment" (attribute node "class"))
       node)))
 
-(defun lisp-completion (pos)
+(defmethod compute-completion ((buffer lisp-mode) pos)
   (when-let (node (symbol-around pos))
     (let* ((package (current-package pos))
            (swank::*buffer-package* package)

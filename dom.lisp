@@ -45,20 +45,21 @@ ELEMENT as a single argument."
   (cell-set-function (attribute-cell element attribute)
                      (lambda () (funcall function element))))
 
+(defvar *inhibit-dom-update* nil)
+
 (defun add-attribute-observer (cell node attribute)
   "Add an observer to CELL,
 which ensures renderer side ATTRIBUTE of NODE matches value of CELL."
   (labels ((update (cell)
-             (when (host node)
+             (when-let (host (host node))
                (let ((value (cell-ref cell)))
                  (send-dom-update
-                  `(progn
-                     ,(if value
-                          `(ps:chain (js-node ,node)
-                                     (set-attribute ,attribute ,value))
-                          `(ps:chain (js-node ,node)
-                                     (remove-attribute ,attribute)))
-                     nil))))))
+                  (if value
+                      `(ps:chain (js-node ,node)
+                                 (set-attribute ,attribute ,value))
+                      `(ps:chain (js-node ,node)
+                                 (remove-attribute ,attribute)))
+                  node)))))
     (add-observer cell #'update)
     cell))
 

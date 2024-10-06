@@ -2,17 +2,6 @@
 
 ;;; Neomacs buffer
 
-(defun combine-around-hook (hook cont &rest args)
-  (labels ((process (handlers-alist)
-             (if handlers-alist
-                 (if (cdar handlers-alist)
-                     (apply (hooks:fn (caar handlers-alist))
-                            (lambda () (process (cdr handlers-alist)))
-                            args)
-                     (process (cdr handlers-alist)))
-                 (funcall cont))))
-    (process (hooks:handlers-alist hook))))
-
 (defvar *adjust-marker-direction* 'forward)
 
 (defvar *buffer-table* (make-hash-table) "Map ID to buffer instances.")
@@ -39,24 +28,7 @@
   ((id :initform (generate-buffer-id) :type integer)
    (name :type string)
    (url :initarg :url :type quri:uri)
-   (selectable-p-hook
-    :hook (make-instance 'hooks:hook-any :combination #'combine-around-hook)
-    :type hooks:hook)
-   (block-element-p-hook
-       :hook (make-instance 'hooks:hook-any :combination #'combine-around-hook)
-       :type hooks:hook)
    (word-boundary-list :default (list #\ ))
-   (post-command-hook :hook (make-instance 'hooks:hook-any) :type hooks:hook)
-   (pre-command-hook :hook (make-instance 'hooks:hook-any) :type hooks:hook)
-   (buffer-loaded-hook :hook (make-instance 'hooks:hook-any) :type hooks:hook)
-   (buffer-delete-hook :hook (make-instance 'hooks:hook-any) :type hooks:hook)
-   (node-setup-hook :hook (make-instance 'hooks:hook-any) :type hooks:hook)
-   (node-cleanup-hook :hook (make-instance 'hooks:hook-any) :type hooks:hook)
-   (focus-move-hook :hook (make-instance 'hooks:hook-any) :type hooks:hook)
-   (completion-hook
-    :hook (make-instance 'hooks:hook-any
-                         :combination #'hooks:combine-hook-until-success)
-    :type hooks:hook)
    (focus-marker)
    (selection-marker)
    (markers :type list)
@@ -71,7 +43,7 @@
    (scroll-lines :default 10 :type (integer 1))
    (styles :default (list 'buffer 'completion) :initarg :styles)
    (modes :initform nil)
-   (lock :initform (bt:make-lock) :reader lock)
+   (lock :initform (bt:make-recursive-lock) :reader lock)
    (window-decoration)
    (previous-buffer))
   (:default-initargs :url (quri:uri "about:blank")))
@@ -79,42 +51,58 @@
 (defmethod id ((buffer buffer))
   (format nil "~A" (slot-value buffer 'id)))
 
+(defun enable (mode-name)
+  (dynamic-mixins:ensure-mix (current-buffer) mode-name))
+
+(defun disable (mode-name)
+  (dynamic-mixins:delete-from-mix (current-buffer) mode-name))
+
+(defgeneric enable-aux (mode-name)
+  (:method ((mode-name symbol))))
+
+(defgeneric disable-aux (mode-name)
+  (:method ((mode-name symbol))))
+
+(defmethod update-instance-for-different-class
+    :after ((previous buffer) (current buffer) &key)
+  (let ((previous (sb-mop:class-precedence-list (class-of previous)))
+        (current (sb-mop:class-precedence-list (class-of current))))
+    (dolist (old (remove-if (alex:rcurry #'member current) previous))
+      (disable-aux (class-name old)))
+    (dolist (new (reverse (remove-if (alex:rcurry #'member previous) current)))
+      (enable-aux (class-name new)))))
+
 (defun focus (&optional (buffer (current-buffer)))
   (focus-marker buffer))
-
-(defvar *locked-buffers* nil)
 
 (defun buffer-alive-p (buffer)
   (eql (gethash (slot-value buffer 'id) *buffer-table*) buffer))
 
 (defun call-with-current-buffer (buffer thunk)
-  (if (member buffer *locked-buffers*)
-      (let ((*current-buffer* buffer))
-        (funcall thunk))
-      (let ((*current-buffer* buffer)
-            (*locked-buffers* (cons buffer *locked-buffers*)))
-        (bt:with-lock-held ((lock buffer))
-          (hooks:run-hook (pre-command-hook buffer))
-          (unwind-protect
-               ;; Force evaluation at the end
-               (let (lwcells::*delay-evaluation-p*)
-                 (with-delayed-evaluation
-                   (funcall thunk)))
-            (when (buffer-alive-p buffer)
-              (case *adjust-marker-direction*
-                ((forward) (ensure-selectable (focus)))
-                ((backward) (ensure-selectable (focus) t)))
-              (hooks:run-hook (post-command-hook buffer))
-              (render-focus (focus buffer))))))))
+  (let ((*current-buffer* buffer)
+        (*adjust-marker-direction* *adjust-marker-direction*))
+    (bt:with-recursive-lock-held ((lock buffer))
+      (on-pre-command buffer)
+      ;; Force evaluation at the end
+      (let (lwcells::*delay-evaluation-p*)
+        (unwind-protect
+             (with-delayed-evaluation
+               (funcall thunk))
+          (when (buffer-alive-p buffer)
+            (case *adjust-marker-direction*
+              ((forward) (ensure-selectable (focus)))
+              ((backward) (ensure-selectable (focus) t)))
+            (render-focus (focus buffer))
+            (on-post-command buffer)))))))
 
-(defvar *inhibit-dom-update* nil)
-
-(defun send-dom-update (parenscript)
+(defun send-dom-update (parenscript anchor-node)
   (unless *inhibit-dom-update*
     (evaluate-javascript
      (let (ps:*parenscript-stream*)
        (ps:ps* parenscript))
-     (current-buffer))
+     (if (typep anchor-node 'buffer)
+         anchor-node
+         (host anchor-node)))
     #+nil (if *inside-dom-update-p*
         (let ((ps:*parenscript-stream* *dom-update-stream*))
           (ps:ps* `(ignore-errors ,parenscript)))
@@ -131,6 +119,8 @@
     (setf (name buffer) (generate-buffer-name name)
           (gethash (name buffer) *buffer-name-table*) buffer)
     (setf (gethash (slot-value buffer 'id) *buffer-table*) buffer))
+  (dolist (new (reverse (sb-mop:class-precedence-list (class-of buffer))))
+    (enable-aux (class-name new)))
   (cera.d:js cera.d:*driver*
              (format nil "Ceramic.createBuffer(~S, ~S, {})"
                      (id buffer) (quri:render-uri (url buffer))))
@@ -149,11 +139,53 @@
                     (declare (ignore cell))
                     (update-style buffer style)))))
 
-(define-command delete-buffer (&optional (buffer (focused-buffer)))
+(defgeneric on-post-command (buffer)
+  (:method-combination progn)
+  (:method progn ((buffer buffer))))
+
+(defgeneric on-pre-command (buffer)
+  (:method-combination progn)
+  (:method progn ((buffer buffer))))
+
+(ps:defpsmacro js-buffer (buffer)
+  `(ps:getprop (ps:chain -ceramic buffers) (ps:lisp (id ,buffer))))
+
+(defgeneric on-buffer-loaded (buffer)
+  (:method-combination progn)
+  (:method progn ((buffer buffer))
+    (when (eql buffer (focused-buffer))
+      (evaluate-javascript
+       (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
+       nil))))
+
+(defgeneric on-buffer-delete (buffer)
+  (:method-combination progn)
+  (:method progn ((buffer buffer))))
+
+(defgeneric on-node-setup (buffer node)
+  (:method-combination progn)
+  (:method progn ((buffer buffer) (node t))))
+
+(defgeneric on-node-cleanup (buffer node)
+  (:method-combination progn)
+  (:method progn ((buffer buffer) (node t))))
+
+(defgeneric on-focus-move (buffer saved new)
+  (:method-combination progn)
+  (:method progn ((buffer buffer) (saved t) (new t))))
+
+(defgeneric keymaps (buffer)
+  (:method-combination append)
+  (:method append ((buffer buffer))
+    (list *global-keymap*)))
+
+#+nil (defgeneric compute-completion (buffer pos))
+
+(define-command delete-buffer (&optional (buffer (buffer-at-focus)))
   (when (frame-root buffer)
     (bury-buffer buffer))
   (with-current-buffer buffer
-    (hooks:run-hook (buffer-delete-hook buffer))
+    (on-buffer-delete buffer)
     (dolist (style (styles buffer))
       (remove-observer (css-cell style) buffer
                        :key (lambda (f) (and (typep f 'update-style)
@@ -178,18 +210,21 @@
 
 (ps:defpsmacro js-node (node)
   (cond ((text-node-p node)
-         (if-let (next (next-sibling node))
-           `(ps:chain (js-node ,next) previous-sibling)
-           `(ps:chain (js-node ,(parent node)) last-child)))
-        ((element-p node)
-         (if (equal (tag-name node) "body")
-             `(ps:chain document body)
-             (let ((id (attribute node "neomacs-identifier")))
-               `(ps:chain document
-                          (query-selector
-                           ,(format nil "[neomacs-identifier='~a']" id))))))
-        ((null node) nil)
-        (t (error "Unknown node type ~a." node))))
+          (if-let (next (next-sibling node))
+            `(ps:chain (js-node ,next) previous-sibling)
+            `(ps:chain (js-node ,(parent node)) last-child)))
+         ((element-p node)
+          (if (equal (tag-name node) "body")
+              `(ps:chain document body)
+              (let ((id (attribute node "neomacs-identifier")))
+                `(ps:chain document
+                           (query-selector
+                            ,(format nil "[neomacs-identifier='~a']" id))))))
+         ((null node) nil)
+         (t (error "Unknown node type ~a." node))))
+
+(ps:defpsmacro js-node-1 (node)
+  `(ps:lisp `(js-node ,,node)))
 
 (defun get-bounding-client-rect (node)
   (evaluate-javascript
@@ -255,7 +290,7 @@
                         (unless overlay
                           (setq overlay (ps:chain document (create-element "div")))
                           (setf (ps:chain overlay id) "neomacs-cursor")
-                          (ps:chain document document-element (append-child overlay)))
+                          (ps:chain document body (append-child overlay)))
                         (setf (ps:chain overlay style display) "inline")
                         (setf (ps:chain overlay style left)
                               (+ (ps:chain rect x) (ps:chain window scroll-x) "px")
@@ -279,13 +314,8 @@
                       (max (- anchor-x (* ,(- 1 scroll-margin) (ps:chain window inner-width))) 0))
                    (+ (ps:chain window scroll-y)
                       (min (- anchor-y (* ,scroll-margin (ps:chain window inner-height))) 0)
-                      (max (- anchor-y (* ,(- 1 scroll-margin) (ps:chain window inner-height))) 0))))))))
-
-(defun redisplay-focus (saved pos)
-  (declare (ignore saved))
-  (render-focus pos))
-
-(hooks:add-hook (default 'buffer 'focus-move-hook) 'redisplay-focus)
+                      (max (- anchor-y (* ,(- 1 scroll-margin) (ps:chain window inner-height))) 0))))))
+   pos))
 
 ;;; Read-only state
 
@@ -318,7 +348,8 @@
             (setf (ps:chain element id) ,id)
             (ps:chain document head (append-child element)))
           (setf (ps:chain element inner-h-t-m-l)
-                ,(cell-ref (css-cell style))))))))
+                ,(cell-ref (css-cell style))))
+       buffer))))
 
 (defun remove-style (buffer style)
   (let ((id (format nil "neomacs-style-~a" style)))
@@ -326,7 +357,8 @@
       (send-dom-update
        `(let ((element (ps:chain document (get-element-by-id ,id))))
           (when element
-            (ps:chain element (remove))))))))
+            (ps:chain element (remove))))
+       buffer))))
 
 (defmethod (setf styles) (new-val (buffer buffer))
   (dolist (style (set-difference new-val (slot-value buffer 'styles)))

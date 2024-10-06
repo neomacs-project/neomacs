@@ -8,7 +8,7 @@
   (super nil :type boolean)
   (hypher nil :type boolean)
   (shift nil :type boolean)
-  (sym (alex:required-argument) :type string))
+  (sym (alex:required-argument :sym) :type string))
 
 (defvar *key-constructor-cache* (make-hash-table :test 'equal))
 
@@ -18,7 +18,7 @@
         (setf (gethash hashkey *key-constructor-cache*)
               (apply #'%make-key args)))))
 
-(defvar *keymaps* nil)
+(defvar *keymap-table* (make-hash-table))
 
 (deftype key-sequence ()
   '(trivial-types:proper-list key))
@@ -28,7 +28,7 @@
   parent
   (table (make-hash-table :test 'eq))
   (function-table (make-hash-table :test 'eq))
-  name)
+  (name nil :type symbol))
 
 (defmethod print-object ((object keymap) stream)
   (print-unreadable-object (object stream :identity t :type t)
@@ -36,12 +36,15 @@
       (princ (keymap-name object) stream))))
 
 (defun make-keymap (&key undef-hook parent name)
-  (let ((keymap (%make-keymap
+  (unless name (alex:required-argument :name))
+  (lret ((keymap (%make-keymap
                  :undef-hook undef-hook
                  :parent parent
                  :name name)))
-    (push keymap *keymaps*)
-    keymap))
+    (setf (gethash name *keymap-table*) keymap)))
+
+(defun find-keymap (name)
+  (gethash name *keymap-table*))
 
 (defun prefix-command-p (command)
   (hash-table-p command))
@@ -67,14 +70,18 @@ Example: (define-key *global-keymap* \"C-'\" 'list-modes)"
        (define-key-internal keymap keys command))))
   (values))
 
-(defmacro define-keys (keymap &body bindings)
+(defmacro define-keys (keymap-name &body bindings)
   `(progn
      ,@ (iter (for (k v) on bindings by #'cddr)
-          (collect `(define-key ,keymap ,k ,v)))))
+          (collect `(define-key (find-keymap ',keymap-name) ,k ,v)))))
 
-(defmacro define-keymap (name parent &body bindings)
-  `(lret ((m (make-keymap :name ,name :parent ,parent)))
-     (define-keys m ,@bindings)))
+(defmacro define-keymap (mode-name parent &body bindings)
+  `(progn
+     (make-keymap :name ',mode-name :parent ,parent)
+     (define-keys ,mode-name ,@bindings)
+     (defmethod keymaps append ((buffer ,mode-name))
+       (list (find-keymap ',mode-name)))
+     ',mode-name))
 
 (defun define-key-internal (keymap keys symbol)
   (loop :with table := (keymap-table keymap)
@@ -234,14 +241,7 @@ Example: (define-key *global-keymap* \"C-'\" 'list-modes)"
             (keymap-undef-hook keymap)
             cmd)))))
 
-(defun all-keymaps (buffer)
-  (delete-duplicates
-   (append (iter (for mode in (modes buffer))
-             (when-let (keymap (keymap mode))
-               (collect keymap)))
-           (list *global-keymap*))))
-
-(defun lookup-keybind (key &optional (keymaps (all-keymaps)))
+(defun lookup-keybind (key &optional (keymaps (keymaps (current-buffer))))
   (let (cmd)
     (loop :for keymap :in (reverse keymaps)
           :do (setf cmd (keymap-find-keybind keymap key cmd)))
@@ -260,34 +260,4 @@ Example: (define-key *global-keymap* \"C-'\" 'list-modes)"
                          (push kseq bindings))))
     (nreverse bindings)))
 
-(defvar *global-keymap* (make-keymap :name "global"))
-
-;;; Default keybinds
-
-(define-keys *global-keymap*
-  "arrow-right" 'forward-node
-  "arrow-left" 'backward-node
-  "M-arrow-right" 'forward-word
-  "M-arrow-left" 'backward-word
-  "arrow-down" 'next-line
-  "arrow-up" 'previous-line
-  "end" 'end-of-line
-  "home" 'beginning-of-line)
-
-(define-keys *global-keymap*
-  "C-f" 'forward-node
-  "C-b" 'backward-node
-  "M-f" 'forward-word
-  "M-b" 'backward-word
-  "C-M-f" 'forward-element
-  "C-M-b" 'backward-element
-  "M-<" 'beginning-of-buffer
-  "M->" 'end-of-buffer
-  "C-a" 'beginning-of-line
-  "C-e" 'end-of-line
-  "M-a" 'beginning-of-defun
-  "M-e" 'end-of-defun
-  "C-n" 'next-line
-  "C-p" 'previous-line
-  "C-v" 'scroll-down-command
-  "M-v" 'scroll-up-command)
+(defvar *global-keymap* (make-keymap :name 'global))

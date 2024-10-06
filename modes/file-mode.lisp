@@ -1,12 +1,12 @@
 (in-package #:neomacs)
 
-(define-mode file-mode ()
+(define-class file-mode ()
   ((filename))
   (:documentation
    "Generic mode for buffer backed by files."))
 
 (defgeneric load-contents (file-mode)
-  (:method :after ((mode t))
+  (:method :after ((buffer t))
     (dolist (c (child-nodes *dom-output*))
       (do-dom (alex:rcurry #'node-setup (current-buffer)) c))))
 
@@ -20,10 +20,9 @@
 
 (defgeneric write-file (file-mode))
 
-(define-command save-buffer
-    (&optional (mode (find-submode 'file-mode)))
-  (write-file mode)
-  (echo "Wrote ~a" (filename mode)))
+(define-command save-buffer (&optional (buffer (current-buffer)))
+  (write-file buffer)
+  (echo "Wrote ~a" (filename buffer)))
 
 #+nil (define-internal-scheme "neomacs"
     (lambda (url)
