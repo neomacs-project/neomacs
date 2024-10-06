@@ -22,7 +22,7 @@
 
 (define-command save-buffer (&optional (buffer (current-buffer)))
   (write-file buffer)
-  (echo "Wrote ~a" (filename buffer)))
+  (message "Wrote ~a" (filename buffer)))
 
 #+nil (define-internal-scheme "neomacs"
     (lambda (url)

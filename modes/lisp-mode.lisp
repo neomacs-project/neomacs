@@ -172,7 +172,7 @@
 (define-command open-comment (&optional (marker (focus)))
   (labels ((cycle-level (n)
              (lret ((n (1+ (mod n 4))))
-               (echo "Comment Level -> ~a" n))))
+               (message "Comment Level -> ~a" n))))
     (if-let (node (comment-around marker))
       (setf (attribute node "comment-level")
             (prin1-to-string
@@ -309,7 +309,7 @@ before MARKER-OR-POS."
     (beginning-of-defun marker)
     (let* ((*package* (current-package marker))
            (result (eval (node-to-sexp (pos marker)))))
-      (echo "=> ~a" result))))
+      (message "=> ~a" result))))
 
 (defun last-expression (pos)
   (iter
@@ -322,7 +322,7 @@ before MARKER-OR-POS."
 (define-command eval-last-expression (&optional (marker (focus)))
   (let* ((*package* (current-package marker))
          (result (eval (node-to-sexp (last-expression (pos marker))))))
-    (echo "=> ~a" result)))
+    (message "=> ~a" result)))
 
 (define-command eval-print-last-expression (&optional (marker (focus)))
   (let* ((*package* (current-package marker))

@@ -502,14 +502,6 @@ NODE become the last child of NEW-NODE."
       (containers:insert-item *clipboard-ring* (extract-nodes pos end))
       (return))))
 
-(defgeneric revert-buffer-aux (buffer))
-
-(define-command revert-buffer ()
-  (revert-buffer-aux (current-buffer)))
-
-(define-keys global
-  "s-u" 'revert-buffer)
-
 ;;; Default key bindings
 
 (define-keys global

@@ -277,9 +277,10 @@
 (define-command find-file ()
   (let ((filename (read-from-minibuffer "Find file: ")))
     (with-current-buffer
-        (make-instance
-         (dynamic-mixins:mix 'lisp-mode 'lisp-file-mode 'buffer)
-         :name filename)
+        (switch-to-buffer
+         (make-instance
+          (dynamic-mixins:mix 'lisp-mode 'lisp-file-mode 'buffer)
+          :name filename))
       (setf (filename (current-buffer)) filename)
       (revert-buffer))))
 

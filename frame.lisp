@@ -144,7 +144,8 @@
     (setf (previous-buffer buffer) victim)
     (let ((pos (window-decoration victim)))
       (insert-nodes pos (window-decoration buffer))
-      (delete-nodes pos (pos-right pos)))))
+      (delete-nodes pos (pos-right pos))))
+  buffer)
 
 (define-command bury-buffer (&optional (buffer (current-buffer)))
   ;; A replacement buffer has to be alive and not already displayed.
@@ -183,15 +184,36 @@
    (only-elt
     (get-elements-by-class-name window-node "content"))))
 
+(defvar *message-log-max* 1000)
+
 (defun get-message-buffer ()
   (get-buffer-create "*Messages*"))
 
-(defun echo (control-string &rest format-arguments)
+(defun truncate-node (node n)
+  (iter
+    (with i = 1)
+    (for pos first (end-pos node)
+         then (npos-left pos))
+    (while pos)
+    (when (line-start-p pos)
+      (incf i))
+    (unless (< i n)
+      (delete-nodes (pos-down node) pos)
+      (return))))
+
+(defun message (control-string &rest format-arguments)
   (with-current-buffer (echo-area-buffer *current-frame-root*)
     (delete-nodes (pos-down (document-root (current-buffer))) nil)
     (when control-string
-      (insert-nodes (end-pos (document-root (current-buffer)))
-                    (apply #'format nil control-string format-arguments)))))
+      (let ((message (apply #'format nil control-string format-arguments)))
+        (insert-nodes (end-pos (document-root (current-buffer))) message)
+        (when *message-log-max*
+          (with-current-buffer (get-message-buffer)
+            (unless (eql *message-log-max* t)
+              (truncate-node (document-root (current-buffer)) *message-log-max*))
+            (insert-nodes (end-pos (document-root (current-buffer)))
+                          message
+                          (make-new-line-node))))))))
 
 (define-command open-dev-tools ()
   (evaluate-javascript

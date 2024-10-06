@@ -261,3 +261,7 @@ Example: (define-key *global-keymap* \"C-'\" 'list-modes)"
     (nreverse bindings)))
 
 (defvar *global-keymap* (make-keymap :name 'global))
+
+(define-keys global
+  "s-u" 'revert-buffer
+  "s-k" 'delete-this-buffer)

@@ -21,7 +21,7 @@
       (let ()
         (setf *last-command* *this-command*
               *this-command* command)
-        (echo nil)
+        (message nil)
         (call-with-buffer-transaction buffer command))
     (abort ()
       :report "Return to command loop")))
@@ -39,11 +39,11 @@
                    (evaluate-javascript
                     "new Audio('https://www.myinstants.com/media/sounds/vine-boom.mp3').play()"
                     (current-frame-root))
-                   (echo "Quit")
+                   (message "Quit")
                    (next-iteration)))
            (error (lambda (c)
                     (unless *debug-on-error*
-                      (echo "~a" c)
+                      (message "~a" c)
                       (next-iteration)))))
         (handler-case
             (let ((type (assoc-value event :type)))
@@ -63,13 +63,13 @@
                          (if-let (cmd (lookup-keybind prefix-keys (keymaps buffer)))
                            (if (prefix-command-p cmd)
                                (progn
-                                 (echo "~a-" (keys-description prefix-keys)))
+                                 (message "~a-" (keys-description prefix-keys)))
                                (progn
                                  (let ((*this-command-keys* prefix-keys))
                                    (setq prefix-keys nil)
                                    (run-command buffer cmd))))
                            (progn
-                             (echo "~a is undefined" (keys-description prefix-keys))
+                             (message "~a is undefined" (keys-description prefix-keys))
                              (setq prefix-keys nil))))))
                     ((equal type "load")
                      (with-current-buffer buffer

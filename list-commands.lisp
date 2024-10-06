@@ -17,10 +17,14 @@
 
 (define-class command-list-mode (list-mode) ())
 
+(defun short-doc (command)
+  (let ((doc (documentation command 'function)))
+    (subseq doc 0 (position #\Newline doc))))
+
 (defmethod generate-rows ((buffer command-list-mode))
   (iter (for c in *commands*)
     (for name = (string-downcase (symbol-name c)))
-    (for doc = (documentation c 'function))
+    (for doc = (short-doc c))
     (insert-nodes (focus)
                   (make-element
                    "tr" :class "row" :children
@@ -48,18 +52,16 @@
                                                         (list modes))))))))
 
 (define-command list-commands ()
-  (switch-to-buffer
-   (with-current-buffer
-       (get-buffer-create "*commands*" :mixins '(command-list-mode))
-     (revert-buffer)
-     (current-buffer))))
+  (with-current-buffer
+      (switch-to-buffer
+       (get-buffer-create "*commands*" :mixins '(command-list-mode)))
+    (revert-buffer)))
 
 (define-command list-buffers ()
-  (switch-to-buffer
-   (with-current-buffer
-       (get-buffer-create "*buffers*" :mixins '(buffer-list-mode))
-     (revert-buffer)
-     (current-buffer))))
+  (with-current-buffer
+      (switch-to-buffer
+       (get-buffer-create "*buffers*" :mixins '(buffer-list-mode)))
+    (revert-buffer)))
 
 (defun row-at-focus ()
   (pos-up-ensure (focus) (alex:rcurry #'class-p "row")))

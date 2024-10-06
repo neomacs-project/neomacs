@@ -32,6 +32,7 @@
           (sb-concurrency:send-message *event-queue* data)))))
 
 (define-command kill-neomacs ()
+  "Exit Neomacs."
   ;; Mark all buffer as non-alive to suppress post-command operations
   (clrhash *buffer-table*)
   (sb-concurrency:send-message *event-queue* 'quit)

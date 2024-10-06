@@ -25,7 +25,7 @@
          ((replace-range completions)
           (compute-completion (current-buffer) (pos marker))))
     (unless completions
-      (unless silent (echo "No completion."))
+      (unless silent (message "No completion."))
       (return-from show-completions))
     (labels ((emit-match (submatch)
                (spinneret:with-html
@@ -108,12 +108,12 @@
 (define-command next-completion (&optional (buffer (current-buffer)))
   (if (< (1+ (current-completion buffer)) (length (completions buffer)))
       (incf (current-completion buffer))
-      (echo "No next completion.")))
+      (message "No next completion.")))
 
 (define-command previous-completion (&optional (buffer (current-buffer)))
   (if (> (current-completion buffer) 0)
       (decf (current-completion buffer))
-      (echo "No previous completion.")))
+      (message "No previous completion.")))
 
 (define-command scroll-completion-down (&optional (buffer (current-buffer)))
   (setf (current-completion buffer)

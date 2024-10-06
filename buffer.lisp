@@ -128,8 +128,6 @@
     (setf (name buffer) (generate-buffer-name name)
           (gethash (name buffer) *buffer-name-table*) buffer)
     (setf (gethash (slot-value buffer 'id) *buffer-table*) buffer))
-  (dolist (new (reverse (sb-mop:class-precedence-list (class-of buffer))))
-    (enable-aux (class-name new)))
   (cera.d:js cera.d:*driver*
              (format nil "Ceramic.createBuffer(~S, ~S, {})"
                      (id buffer) (quri:render-uri (url buffer))))
@@ -142,11 +140,14 @@
          "div"
          :class "buffer" :selectable ""
          :children (list (make-element "div" :class "content" :buffer (id buffer)))))
-  (dolist (style (styles buffer))
-    (add-observer (css-cell style)
-                  (nclo update-style (cell)
-                    (declare (ignore cell))
-                    (update-style buffer style)))))
+  (with-current-buffer buffer
+    (dolist (new (reverse (sb-mop:class-precedence-list (class-of buffer))))
+      (enable-aux (class-name new)))
+    (dolist (style (styles buffer))
+      (add-observer (css-cell style)
+                    (nclo update-style (cell)
+                      (declare (ignore cell))
+                      (update-style buffer style))))))
 
 (defgeneric on-post-command (buffer)
   (:method-combination progn)
@@ -205,6 +206,9 @@
       (remhash (slot-value buffer 'id) *buffer-table*)
       (remhash (name buffer) *buffer-name-table*))))
 
+(define-command delete-this-buffer ()
+  (delete-buffer (current-buffer)))
+
 (defun get-buffer-create (name &key mixins)
   (bt:with-recursive-lock-held (*buffer-table-lock*)
     (or (gethash name *buffer-name-table*)
@@ -212,12 +216,12 @@
                               (append mixins (list 'buffer)))
                        :name name))))
 
-;;; Parenscript utils
+(defgeneric revert-buffer-aux (buffer))
 
-(defun assign-neomacs-id (node)
-  (setf (attribute node "neomacs-identifier")
-        (princ-to-string (incf (next-neomacs-id (find-submode 'neomacs-mode)))))
-  node)
+(define-command revert-buffer ()
+  (revert-buffer-aux (current-buffer)))
+
+;;; Parenscript utils
 
 (ps:defpsmacro js-node (node)
   (cond ((text-node-p node)

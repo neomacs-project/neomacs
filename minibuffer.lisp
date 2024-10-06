@@ -50,7 +50,7 @@
                        :key (alex:compose #'string-downcase #'symbol-name)
                        :test 'equal))
       (funcall cmd)
-      (echo "No such command"))))
+      (message "No such command"))))
 
 (define-key *global-keymap*
   "M-x" 'execute-command)
