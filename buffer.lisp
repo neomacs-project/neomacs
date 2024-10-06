@@ -78,8 +78,11 @@
 (defun buffer-alive-p (buffer)
   (eql (gethash (slot-value buffer 'id) *buffer-table*) buffer))
 
-(defun call-with-current-buffer (buffer thunk)
+(defvar *locked-buffers* nil)
+
+(defun call-with-buffer-transaction (buffer thunk)
   (let ((*current-buffer* buffer)
+        (*locked-buffers* (cons buffer *locked-buffers*))
         (*adjust-marker-direction* *adjust-marker-direction*))
     (bt:with-recursive-lock-held ((lock buffer))
       (on-pre-command buffer)
@@ -94,6 +97,12 @@
               ((backward) (ensure-selectable (focus) t)))
             (render-focus (focus buffer))
             (on-post-command buffer)))))))
+
+(defun call-with-current-buffer (buffer thunk)
+  (if (member buffer *locked-buffers*)
+      (let ((*current-buffer* buffer))
+        (funcall thunk))
+      (call-with-buffer-transaction buffer thunk)))
 
 (defun send-dom-update (parenscript anchor-node)
   (unless *inhibit-dom-update*
@@ -196,10 +205,12 @@
       (remhash (slot-value buffer 'id) *buffer-table*)
       (remhash (name buffer) *buffer-name-table*))))
 
-(defun get-buffer-create (name)
+(defun get-buffer-create (name &key mixins)
   (bt:with-recursive-lock-held (*buffer-table-lock*)
     (or (gethash name *buffer-name-table*)
-        (make-instance 'buffer :name name))))
+        (make-instance (apply #'dynamic-mixins:mix
+                              (append mixins (list 'buffer)))
+                       :name name))))
 
 ;;; Parenscript utils
 

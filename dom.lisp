@@ -222,8 +222,8 @@ This includes `element's and `text-node's."
   "Find all descendant elements of NODE with CLASS."
   (let (nodes)
     (do-elements
-        (lambda (child)
-          (when (class-p child class)
-            (push child nodes)))
-      node)
+     (lambda (child)
+       (when (class-p child class)
+         (push child nodes)))
+     node)
     (nreverse nodes)))

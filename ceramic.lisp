@@ -30,3 +30,12 @@
                   (assoc-value data :result))
             (bt:condition-notify cera.d::js-cond))
           (sb-concurrency:send-message *event-queue* data)))))
+
+(define-command kill-neomacs ()
+  ;; Mark all buffer as non-alive to suppress post-command operations
+  (clrhash *buffer-table*)
+  (sb-concurrency:send-message *event-queue* 'quit)
+  (ceramic:quit))
+
+(define-keys global
+  "C-x C-c" 'kill-neomacs)

@@ -45,7 +45,15 @@
       (symbol
        (if (fboundp syntax-class)
            (funcall syntax-class stream (read-char stream))
-           (read-constituent stream syntax-class))))))
+           (read-constituent
+            stream syntax-class
+            (or (get syntax-class 'read-filter)
+                (lambda (result)
+                  (append-child
+                   *dom-output*
+                   (make-atom-node
+                    (string-downcase (symbol-name syntax-class))
+                    result))))))))))
 
 (defun read-from-file (file)
   (with-open-file (s file :direction :input)
@@ -72,9 +80,10 @@
                 t))
        (read-dom stream t)))))
 
-(defun read-constituent (stream syntax-class)
+(defun read-constituent (stream syntax-class filter)
   (iter (for c = (read-char stream nil nil t))
     (when (eql (get-syntax-table c *syntax-table*) 'single-escape)
+      (collect c result-type string into result)
       (collect (read-char stream nil nil t) result-type string into result)
       (setq c (read-char stream nil nil t)))
     (while c)
@@ -84,13 +93,7 @@
        t))
     (collect c result-type string into result)
     (finally
-     (if-let (filter (get syntax-class 'read-filter))
-       (funcall filter result)
-       (append-child
-        *dom-output*
-        (make-atom-node
-         (string-downcase (symbol-name syntax-class))
-         result))))))
+     (funcall filter result))))
 
 (defun whitespace-filter (result)
   (let ((line-count (count #\Newline result)))
@@ -248,8 +251,14 @@
 (define-class lisp-file-mode (file-mode)
   () (:documentation "Lisp source files."))
 
-(defmethod load-contents ((buffer lisp-file-mode))
-  (read-from-file (filename buffer)))
+(defmethod revert-buffer-aux ((buffer lisp-file-mode))
+  (erase-buffer buffer)
+  (let ((doc-node (make-element "div" :class "doc")))
+    (insert-nodes (end-pos (document-root buffer)) doc-node)
+    (setf (restriction buffer) doc-node
+          (pos (focus buffer)) (end-pos doc-node))
+    (apply #'insert-nodes (end-pos doc-node)
+           (read-from-file (filename buffer)))))
 
 (defmethod write-file ((buffer lisp-file-mode))
   (with-open-file (s (filename buffer)
@@ -258,9 +267,21 @@
       (let ((*print-pretty* t)
             (*print-pprint-dispatch* *lisp-pprint-dispatch*)
             (*package* (find-package "NEOMACS")))
-        (dolist (c (child-nodes (document-root buffer)))
+        (dolist (c (child-nodes
+                    (only-elt (get-elements-by-class-name
+                               (document-root buffer)
+                               "doc"))))
           (prin1 c s))
         nil))))
+
+(define-command find-file ()
+  (let ((filename (read-from-minibuffer "Find file: ")))
+    (with-current-buffer
+        (make-instance
+         (dynamic-mixins:mix 'lisp-mode 'lisp-file-mode 'buffer)
+         :name filename)
+      (setf (filename (current-buffer)) filename)
+      (revert-buffer))))
 
 #+nil (define-auto-rule '(match-regex ".*lisp")
   :included '(lisp-file-mode lisp-mode))

@@ -2,19 +2,12 @@
 
 (define-class list-mode () ())
 
-(defgeneric revert-buffer (buffer))
 (defgeneric generate-rows (buffer))
 
 (defmethod enable-aux ((mode (eql 'list-mode)))
   (pushnew 'buffer-list (styles (current-buffer))))
 
-(defun make-list-buffer (name mode-symbol)
-  (lret ((buffer (get-buffer-create name)))
-    (with-current-buffer buffer
-      (enable mode-symbol)
-      (revert-buffer buffer))))
-
-(defmethod revert-buffer ((buffer list-mode))
+(defmethod revert-buffer-aux ((buffer list-mode))
   (erase-buffer buffer)
   (let ((body-node (make-element "tbody")))
     (insert-nodes (end-pos (document-root buffer))
@@ -56,11 +49,17 @@
 
 (define-command list-commands ()
   (switch-to-buffer
-   (make-list-buffer "*commands*" 'command-list-mode)))
+   (with-current-buffer
+       (get-buffer-create "*commands*" :mixins '(command-list-mode))
+     (revert-buffer)
+     (current-buffer))))
 
 (define-command list-buffers ()
   (switch-to-buffer
-   (make-list-buffer "*buffers*" 'buffer-list-mode)))
+   (with-current-buffer
+       (get-buffer-create "*buffers*" :mixins '(buffer-list-mode))
+     (revert-buffer)
+     (current-buffer))))
 
 (defun row-at-focus ()
   (pos-up-ensure (focus) (alex:rcurry #'class-p "row")))
