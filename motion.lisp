@@ -107,7 +107,10 @@
                                  (npos-next-until
                                   (pos-down (restriction (host marker)))
                                   #'selectable-p))
-                             (pos marker))))))
+                             (progn
+                               (warn "Failed to ensure-selectable: ~a"
+                                     (host marker))
+                               (pos marker)))))))
 
 (define-command backward-up-node (&optional (marker (focus)))
   "Move to closest selectable parent."

@@ -79,7 +79,8 @@
        nil))))
 
 (defun make-frame-root (init-buffer)
-  (lret ((buffer (make-instance 'buffer :name " *frame-root*" :styles '(frame-root))))
+  (lret ((buffer (make-instance 'buffer :name " *frame-root*"
+                                        :styles '(frame-root buffer))))
     (with-current-buffer buffer
       (enable 'frame-root-mode)
       (let* ((echo-area (make-echo-area))
@@ -223,7 +224,8 @@
 (defstyle frame-root `((".vertical" :display "flex" :flex-flow "row" :width "100%" :height "100%")
                        (".horizontal" :display "flex" :flex-flow "column" :height "100%" :width "100%")
                        (".content" :width "100%" :height "100%")
-                       (".buffer" :flex "1 0 1em")
+                       (".buffer" :flex "1 0 1em" :display "flex"
+                                  :flex-flow "column")
                        (".minibuffer" :flex "0 0 2em")
                        (".focus" :inherit focus)))
 

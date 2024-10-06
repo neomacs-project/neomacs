@@ -41,7 +41,7 @@
     :type (real 0 0.5)
     :documentation "With value s, try to keep cursor within [s,1-s] portion of the viewport.")
    (scroll-lines :default 10 :type (integer 1))
-   (styles :default (list 'buffer 'completion) :initarg :styles)
+   (styles :default (list 'buffer) :initarg :styles)
    (modes :initform nil)
    (lock :initform (bt:make-recursive-lock) :reader lock)
    (window-decoration)
@@ -78,40 +78,27 @@
 (defun buffer-alive-p (buffer)
   (eql (gethash (slot-value buffer 'id) *buffer-table*) buffer))
 
-(defvar *locked-buffers* nil)
-
-(defun call-with-buffer-transaction (buffer thunk)
+(defun call-with-current-buffer (buffer thunk)
   (let ((*current-buffer* buffer)
-        (*locked-buffers* (cons buffer *locked-buffers*))
         (*adjust-marker-direction* *adjust-marker-direction*))
     (bt:with-recursive-lock-held ((lock buffer))
       (on-pre-command buffer)
-      ;; Force evaluation at the end
-      (let (lwcells::*delay-evaluation-p*)
-        (unwind-protect
-             (with-delayed-evaluation
-               (funcall thunk))
-          (when (buffer-alive-p buffer)
-            (case *adjust-marker-direction*
-              ((forward) (ensure-selectable (focus)))
-              ((backward) (ensure-selectable (focus) t)))
-            (render-focus (focus buffer))
-            (on-post-command buffer)))))))
+      (unwind-protect
+           (with-delayed-evaluation
+             (funcall thunk))
+        (when (buffer-alive-p buffer)
+          (on-post-command buffer)
+          (case *adjust-marker-direction*
+            ((forward) (ensure-selectable (focus)))
+            ((backward) (ensure-selectable (focus) t)))
+          (render-focus (focus buffer)))))))
 
-(defun call-with-current-buffer (buffer thunk)
-  (if (member buffer *locked-buffers*)
-      (let ((*current-buffer* buffer))
-        (funcall thunk))
-      (call-with-buffer-transaction buffer thunk)))
-
-(defun send-dom-update (parenscript anchor-node)
+(defun send-dom-update (parenscript buffer)
   (unless *inhibit-dom-update*
     (evaluate-javascript
      (let (ps:*parenscript-stream*)
        (ps:ps* parenscript))
-     (if (typep anchor-node 'buffer)
-         anchor-node
-         (host anchor-node)))
+     buffer)
     #+nil (if *inside-dom-update-p*
         (let ((ps:*parenscript-stream* *dom-update-stream*))
           (ps:ps* `(ignore-errors ,parenscript)))
@@ -139,7 +126,8 @@
         (make-element
          "div"
          :class "buffer" :selectable ""
-         :children (list (make-element "div" :class "content" :buffer (id buffer)))))
+         :children (list (make-element "div" :class "header" :children (list (name buffer)))
+                         (make-element "div" :class "content" :buffer (id buffer)))))
   (with-current-buffer buffer
     (dolist (new (reverse (sb-mop:class-precedence-list (class-of buffer))))
       (enable-aux (class-name new)))
@@ -200,6 +188,7 @@
       (remove-observer (css-cell style) buffer
                        :key (lambda (f) (and (typep f 'update-style)
                                              (slot-value f 'buffer)))))
+    (do-dom #'node-cleanup (document-root buffer))
     (cera.d:js cera.d:*driver*
                (format nil "Ceramic.closeBuffer(~S)" (id buffer)))
     (bt:with-recursive-lock-held (*buffer-table-lock*)
@@ -330,7 +319,7 @@
                    (+ (ps:chain window scroll-y)
                       (min (- anchor-y (* ,scroll-margin (ps:chain window inner-height))) 0)
                       (max (- anchor-y (* ,(- 1 scroll-margin) (ps:chain window inner-height))) 0))))))
-   pos))
+   (host pos)))
 
 ;;; Read-only state
 

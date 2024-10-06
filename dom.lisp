@@ -59,7 +59,7 @@ which ensures renderer side ATTRIBUTE of NODE matches value of CELL."
                                  (set-attribute ,attribute ,value))
                       `(ps:chain (js-node ,node)
                                  (remove-attribute ,attribute)))
-                  node)))))
+                  host)))))
     (add-observer cell #'update)
     cell))
 

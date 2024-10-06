@@ -24,6 +24,7 @@
   (bind ((buffer (current-buffer))
          ((replace-range completions)
           (compute-completion (current-buffer) (pos marker))))
+    (pushnew 'completion (styles buffer))
     (unless completions
       (unless silent (message "No completion."))
       (return-from show-completions))

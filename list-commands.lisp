@@ -63,6 +63,9 @@
        (get-buffer-create "*buffers*" :mixins '(buffer-list-mode)))
     (revert-buffer)))
 
+(define-command new-buffer ()
+  (switch-to-buffer (get-buffer-create "*new*")))
+
 (defun row-at-focus ()
   (pos-up-ensure (focus) (alex:rcurry #'class-p "row")))
 

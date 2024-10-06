@@ -56,7 +56,7 @@ If LENGTH is NIL, move everything after SRC-OFFSET."
         (ps:chain prev (append-data (ps:chain node data)))
         (ps:chain parent (remove-child node))
         nil)
-     node)
+     (host node))
 
     (setf (text prev)
           (sera:concat (text prev) (text node)))
@@ -80,7 +80,7 @@ If LENGTH is NIL, move everything after SRC-OFFSET."
         (host (host node)))
     (send-dom-update
      `(ps:chain (js-node ,node) (split-text ,offset))
-     node)
+     (host node))
     (insert-before parent next (next-sibling node))
     (psetf (text node) (subseq (text node) 0 offset)
            (text next) (subseq (text node) offset))
@@ -120,7 +120,7 @@ Returns the node after the position after this operation."
                 (for-each (lambda (c)
                             (ps:chain parent (insert-before c reference)))))
       nil)
-   parent)
+   (host parent))
 
   (dolist (c nodes)
     (insert-before parent c reference))
@@ -196,7 +196,7 @@ THINGS can be DOM nodes or strings, which are converted to text nodes."
               (ps:chain parent (remove-child
                                 (ps:chain parent first-child))))
             nil))
-     parent)
+     (host parent))
     (let ((nodes
             (iter (for node = (if reference (next-sibling reference)
                                   (first-child parent)))
@@ -331,7 +331,7 @@ starting from BEG till the end of its parent."
                          (ps:chain src-parent first-child)
                          dst-reference)))
             nil))
-     dst-parent)
+     (host dst-parent))
 
     (iter (for node = (if src-reference (next-sibling src-reference)
                           (first-child src-parent)))

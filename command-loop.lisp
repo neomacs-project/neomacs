@@ -22,7 +22,7 @@
         (setf *last-command* *this-command*
               *this-command* command)
         (message nil)
-        (call-with-buffer-transaction buffer command))
+        (call-with-current-buffer buffer command))
     (abort ()
       :report "Return to command loop")))
 
