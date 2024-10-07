@@ -22,7 +22,10 @@
         (setf *last-command* *this-command*
               *this-command* command)
         (message nil)
-        (call-with-current-buffer buffer command))
+        (unless (eql (focused-buffer) buffer)
+          (warn "Neomacs and Electron has different idea of focused buffer:~% ~a vs ~a"
+                (focused-buffer) buffer))
+        (call-with-current-buffer (focused-buffer) command))
     (abort ()
       :report "Return to command loop")))
 
@@ -73,10 +76,6 @@
                              (setq prefix-keys nil))))))
                     ((equal type "load")
                      (with-current-buffer buffer
-                       (let ((marker (focus-marker buffer)))
-                         (setf (pos marker) (pos marker))
-                         (dolist (style (styles buffer))
-                           (update-style buffer style)))
                        (on-buffer-loaded buffer)))))
           (top-level ()
             (when recursive-p (error 'top-level)))

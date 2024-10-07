@@ -16,7 +16,7 @@
   (error 'exit-recursive-edit :condition 'quit))
 
 (defun make-minibuffer ()
-  (lret ((buffer (make-instance 'buffer :name " *minibuffer*" :styles '(buffer minibuffer))))
+  (lret ((buffer (make-instance 'buffer :name " *minibuffer*" :styles '(minibuffer))))
     (setf (window-decoration buffer)
           (make-element
            "div" :class "minibuffer" :selectable ""
@@ -25,8 +25,8 @@
 (defun read-from-minibuffer (prompt)
   (with-current-buffer (current-frame-root)
     (let* ((minibuf (make-minibuffer))
-           (pos (npos-prev-ensure (end-pos (document-root (current-buffer)))
-                                  (alex:compose (alex:rcurry #'class-p "buffer") #'node-before)))
+           (pos (npos-next-until (pos-down (document-root (current-buffer)))
+                                 (alex:rcurry #'class-p "minibuffer")))
            (window-node (window-decoration minibuf)))
       (insert-nodes pos window-node)
       (redisplay-windows)
@@ -35,7 +35,7 @@
            (with-current-buffer minibuf
              (let ((input (make-element "span" :class "input")))
                (insert-nodes (end-pos (document-root (current-buffer)))
-                             (make-element "span" :children (list prompt))
+                             (make-element "span" :class "prompt" :children (list prompt))
                              input)
                (setf (pos (focus)) (end-pos input))
                (enable 'minibuffer-mode)
@@ -54,3 +54,8 @@
 
 (define-key *global-keymap*
   "M-x" 'execute-command)
+
+(defstyle minibuffer-prompt `(:inherit bold))
+
+(defstyle minibuffer `(("body" :inherit default)
+                       (".prompt" :inherit minibuffer-prompt)))

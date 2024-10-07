@@ -9,6 +9,5 @@
   (:local-nicknames
    (#:sera #:serapeum)
    (#:alex #:alexandria)
-   (#:hooks #:nhooks)
    (#:cera.d #:ceramic.driver)))
 (in-package #:neomacs)

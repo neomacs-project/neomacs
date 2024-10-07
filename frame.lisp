@@ -13,7 +13,12 @@
   (redisplay-windows))
 
 (defmethod on-post-command progn ((buffer frame-root-mode))
-  (redisplay-windows))
+  (redisplay-windows)
+  (when-let (window-node (node-after (focus)))
+    (when-let (buffer (window-buffer window-node))
+      (evaluate-javascript
+       (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
+       nil))))
 
 (ps:defpsmacro js-frame (buffer)
   `(ps:getprop (ps:chain -ceramic frames) (ps:lisp (id ,buffer))))
@@ -70,14 +75,6 @@
 (defun current-buffer ()
   (or *current-buffer* (focused-buffer)))
 
-(defmethod on-focus-move progn ((buffer frame-root-mode) saved new)
-  (declare (ignore saved))
-  (when-let (window-node (node-after new))
-    (when-let (buffer (window-buffer window-node))
-      (evaluate-javascript
-       (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
-       nil))))
-
 (defun make-frame-root (init-buffer)
   (lret ((buffer (make-instance 'buffer :name " *frame-root*"
                                         :styles '(frame-root))))
@@ -104,16 +101,20 @@
   (with-current-buffer (current-frame-root)
     (backward-node-cycle)))
 
-(define-keys global
-  "C-x o" 'other-window)
-
 (defmethod on-node-setup progn ((buffer frame-root-mode) node)
   (when (class-p node "content")
     (evaluate-javascript
      (ps:ps (ps:chain (js-frame (current-buffer)) content-view
                       (add-child-view (ps:getprop (ps:chain -ceramic buffers)
                                                   (ps:lisp (attribute node "buffer"))))))
-     nil)))
+     nil))
+  (when (class-p node "vertical" "horizontal")
+    (flet ((observer (cell)
+             (declare (ignore cell))
+             (when (eql (first-child node) (last-child node))
+               (splice-node node))))
+      (add-observer (slot-value node 'first-child) #'observer)
+      (add-observer (slot-value node 'last-child) #'observer))))
 
 (defmethod on-node-cleanup progn ((buffer frame-root-mode) node)
   (when (class-p node "content")
@@ -122,13 +123,6 @@
                       (remove-child-view (ps:getprop (ps:chain -ceramic buffers)
                                                      (ps:lisp (attribute node "buffer"))))))
      nil)))
-
-(defun split-window (buffer class)
-  (unless (class-p (node-containing (focus)) class)
-    (wrap-node (focus) (make-element "div" :class class)))
-  (insert-nodes (pos-right (focus)) (window-decoration buffer))
-  (frame-add-buffer buffer)
-  (setf (pos (focus)) (pos-right (focus))))
 
 (defun frame-root (buffer)
   (host (window-decoration buffer)))
@@ -148,24 +142,50 @@
       (delete-nodes pos (pos-right pos))))
   buffer)
 
-(define-command bury-buffer (&optional (buffer (current-buffer)))
-  ;; A replacement buffer has to be alive and not already displayed.
-  ;; First try to find a replacement from display history
+(defun replacement-buffer (&optional (buffer (current-buffer)))
+  "Find a buffer to display in place of BUFFER.
+
+A replacement buffer has to be alive and not already displayed."
   (let ((replacement (previous-buffer buffer)))
     (iter
       (while replacement)
       (until (and (buffer-alive-p replacement)
-                  (not (frame-root replacement))))
+                  (not (frame-root replacement))
+                  (not (typep replacement 'frame-root-mode))))
       (setq replacement (previous-buffer replacement)))
     ;; Try to find any buffer for replacement.
+    (print replacement)
     (unless replacement
       (iter (for (_ buffer) in-hashtable *buffer-name-table*)
-        (unless (frame-root buffer)
+        (unless (or (frame-root buffer)
+                    (typep buffer 'frame-root-mode))
           (setq replacement buffer)
           (return))))
     (unless replacement
       (error "TODO"))
-    (switch-to-buffer replacement buffer)))
+    replacement))
+
+(define-command bury-buffer (&optional (buffer (current-buffer)))
+  "Stop displaying BUFFER."
+  (switch-to-buffer (replacement-buffer buffer) buffer))
+
+(define-command close-buffer-display (&optional (buffer (current-buffer)))
+  (with-current-buffer (frame-root buffer)
+    (let ((node (window-decoration buffer)))
+      (delete-nodes node (pos-right node)))))
+
+(define-command display-buffer-right (&optional (buffer (replacement-buffer)))
+  (with-current-buffer (current-frame-root)
+    (unless (class-p (node-containing (focus)) "vertical")
+      (wrap-node (focus) (make-element "div" :class "vertical")))
+    (let ((node (window-decoration buffer)))
+      (insert-nodes (pos-right (focus)) node)
+      (setf (pos (focus)) node))))
+
+(define-keys global
+  "C-x o" 'other-window
+  "C-x 0" 'close-buffer-display
+  "C-x 2" 'display-buffer-right)
 
 (defun redisplay-windows ()
   (evaluate-javascript
@@ -223,19 +243,20 @@
 
 (defstyle frame-root `((".vertical" :display "flex" :flex-flow "row" :width "100%" :height "100%")
                        (".horizontal" :display "flex" :flex-flow "column" :height "100%" :width "100%")
-                       (".content"
-                        :backdrop-filter "blur(10px)"
-                        :width "100%" :height "100%")
+                       (".content" :width "100%" :height "100%")
                        (".buffer" :flex "1 0 1em" :display "flex"
                                   :flex-flow "column"
-                                  :margin "8px")
+                                  :margin "8px"
+                                  :backdrop-filter "blur(10px)")
                        (".minibuffer"
                         :flex "0 0 2em"
-                        :margin "8px")
-                       #+nil (".focus" :inherit focus)
+                        :margin "8px"
+                        :backdrop-filter "blur(10px)")
                        (".header" :inherit header)
+                       (".focus .header" :inherit header-focus)
                        ("body"
                         :padding "16px"
+                        :margin 0
                         :inherit default
                         :background-size "contain"
                         :background-image "url(https://sozaino.site/wp-content/uploads/2021/08/sf35.png)")))
@@ -244,11 +265,8 @@
                               :margin-top 0
                               :margin-bottom 0)))
 
-(defstyle minibuffer `(("body" :margin-top 0
-                               :margin-bottom 0)))
-
-(defstyle header `(:margin-left "8px"
-                   :margin-right "8px"
-                   :padding "8px"
-                   :backdrop-filter "blur(10px)"
+(defstyle header `(:padding "8px"
+                   :margin-bottom "8px"
                    :background-color "rgba(169,151,160,0.2)"))
+
+(defstyle header-focus `(:background-color "rgba(169,151,160,0.4)"))

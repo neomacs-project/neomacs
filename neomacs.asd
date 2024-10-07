@@ -31,7 +31,7 @@
                (:file "modes/lisp-file"))
   :depends-on (:lwcells
                :ceramic
-               :nhooks
+               :str
                :dynamic-mixins
                :parenscript
                :plump

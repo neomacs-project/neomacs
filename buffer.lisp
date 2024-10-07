@@ -62,13 +62,16 @@
 (defgeneric disable-aux (mode-name)
   (:method ((mode-name symbol))))
 
+(defun stable-set-difference (list-1 list-2)
+  (remove-if (alex:rcurry #'member list-2) list-1))
+
 (defmethod update-instance-for-different-class
     :after ((previous buffer) (current buffer) &key)
   (let ((previous (sb-mop:class-precedence-list (class-of previous)))
         (current (sb-mop:class-precedence-list (class-of current))))
-    (dolist (old (remove-if (alex:rcurry #'member current) previous))
+    (dolist (old (stable-set-difference previous current))
       (disable-aux (class-name old)))
-    (dolist (new (reverse (remove-if (alex:rcurry #'member previous) current)))
+    (dolist (new (reverse (stable-set-difference current previous)))
       (enable-aux (class-name new)))))
 
 (defun focus (&optional (buffer (current-buffer)))
@@ -108,6 +111,8 @@
   (cond ((not *locked-buffers*)
          (let ((*locked-buffers* (list buffer))
                (*current-buffer* buffer))
+           (bt:acquire-recursive-lock (lock buffer))
+           (setf (adjust-marker-direction buffer) 'forward)
            (unwind-protect
                 (with-delayed-evaluation
                   (funcall thunk))
@@ -121,6 +126,7 @@
         (t
          (push buffer *locked-buffers*)
          (bt:acquire-recursive-lock (lock buffer))
+         (setf (adjust-marker-direction buffer) 'forward)
          (let ((*current-buffer* buffer))
            (funcall thunk)))))
 
@@ -139,6 +145,10 @@
              (ps:ps* `(progn ,parenscript nil)))
            (current-buffer))
           nil))))
+
+(defmethod print-object ((buffer buffer) stream)
+  (print-unreadable-object (buffer stream)
+    (format stream "BUFFER ~s {~a}" (name buffer) (id buffer))))
 
 (defmethod initialize-instance :after ((buffer buffer) &key name)
   (unless name (alex:required-argument :name))
@@ -164,6 +174,8 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
   (with-current-buffer buffer
     (dolist (new (reverse (sb-mop:class-precedence-list (class-of buffer))))
       (enable-aux (class-name new)))
+    (unless (member 'common (styles buffer))
+      (alex:appendf (styles buffer) (list 'common)))
     (dolist (style (styles buffer))
       (add-observer (css-cell style)
                     (nclo update-style (cell)
@@ -184,6 +196,10 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
 (defgeneric on-buffer-loaded (buffer)
   (:method-combination progn)
   (:method progn ((buffer buffer))
+    (let ((marker (focus-marker buffer)))
+      (setf (pos marker) (pos marker))
+      (dolist (style (reverse (styles buffer)))
+        (update-style buffer style)))
     (when (eql buffer (focused-buffer))
       (evaluate-javascript
        (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
@@ -398,7 +414,7 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
        buffer))))
 
 (defmethod (setf styles) (new-val (buffer buffer))
-  (dolist (style (set-difference new-val (slot-value buffer 'styles)))
+  (dolist (style (stable-set-difference new-val (slot-value buffer 'styles)))
     (update-style buffer style)
     (add-observer (css-cell style)
                   (nclo update-style (cell)
@@ -421,14 +437,16 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
  (defstyle string `(:color "#a29bfe"))
  (defstyle comment `(:color "#777")))
 
-(defstyle default `(:font-family "Verdana" :color "#54454d"))
+(defstyle default `(:font-family "Yomogi" :color "#54454d"))
 (defstyle focus `(:background-color "rgba(169,151,160,0.1)"))
-(defstyle selection `(:background-color "rgba(169,151,160,0.5)"))
+(defstyle selection `(:background-color "rgba(169,151,160,0.5)"
+                      :color "#54454d"))
 (defstyle keyword `(:color "#d29fa8"))
 (defstyle macro `(:color "#d29fa8"))
 (defstyle special-operator `(:color "#d29fa8"))
 (defstyle string `(:color "#d29fa8"))
 (defstyle comment `(:color "#a997a0"))
+(defstyle bold `(:color "#000"))
 
 (defstyle focus-tail
     `(((:append "::after") :content " " :inherit selection)
@@ -440,12 +458,15 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
       :z-index "-1"
       :inherit selection))
 
+(defstyle common
+    `((:import (url "https://fonts.googleapis.com/css2?family=Yomogi&display=swap"))))
+
 (defstyle buffer
     `(("body"
-       ;:margin-top 0
-       :margin-bottom 0
+       :margin 0
        :inherit default)
       (".focus" :inherit focus)
       (".focus-tail" :inherit focus-tail)
       ("::highlight(neomacs)" :inherit cursor)
-      ("#neomacs-cursor" :inherit cursor)))
+      ("#neomacs-cursor" :inherit cursor)
+      ("::-webkit-scrollbar" :display "none")))
