@@ -24,7 +24,11 @@
         (message nil)
         (unless (eql (focused-buffer) buffer)
           (warn "Neomacs and Electron has different idea of focused buffer:~% ~a vs ~a"
-                (focused-buffer) buffer))
+                (focused-buffer) buffer)
+          (when (focused-buffer)
+            (evaluate-javascript
+             (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
+             nil)))
         (call-with-current-buffer (focused-buffer) command))
     (abort ()
       :report "Return to command loop")))
