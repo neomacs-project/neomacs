@@ -27,6 +27,14 @@
 (defun handle-event (buffer event)
   (let ((type (assoc-value event :type)))
     (cond ((equal type "keyDown")
+           (unless (eql (focused-buffer) buffer)
+             (warn "Neomacs and Electron has different idea of focused buffer:~% ~a vs ~a"
+                   (focused-buffer) buffer)
+             (setq buffer (focused-buffer))
+             (when (focused-buffer)
+               (evaluate-javascript
+                (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
+                nil)))
            (let ((key (make-key :ctrl (assoc-value event :control)
                                 :meta (assoc-value event :alt)
                                 :super (assoc-value event :meta)
@@ -49,7 +57,8 @@
                    (setq *this-command-keys* nil))))))
           ((equal type "load")
            (with-current-buffer buffer
-             (on-buffer-loaded buffer))))))
+             (on-buffer-loaded buffer)))
+          (t (warn "Unrecoginized Electron event: ~a" event)))))
 
 (defun command-loop (&optional recursive-p)
   (let (exit-condition *this-command-keys*)
@@ -57,14 +66,6 @@
       (until (eql data 'quit))
       (for buffer = (gethash (parse-integer (assoc-value data :buffer)) *buffer-table*))
       (for event = (assoc-value data :input-event))
-      (unless (eql (focused-buffer) buffer)
-        (warn "Neomacs and Electron has different idea of focused buffer:~% ~a vs ~a"
-              (focused-buffer) buffer)
-        (setq buffer (focused-buffer))
-        (when (focused-buffer)
-          (evaluate-javascript
-           (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
-           nil)))
       (restart-case
           (handler-bind
               ((quit (lambda (c)
