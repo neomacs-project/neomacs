@@ -14,24 +14,42 @@
 (defvar *last-command* nil)
 (defvar *this-command* nil)
 (defvar *this-command-keys* nil)
-(defvar *debug-on-error* t)
+(defvar *debug-on-error* nil)
 
-(defun run-command (buffer command)
-  (restart-case
-      (let ()
-        (setf *last-command* *this-command*
-              *this-command* command)
-        (message nil)
-        (unless (eql (focused-buffer) buffer)
-          (warn "Neomacs and Electron has different idea of focused buffer:~% ~a vs ~a"
-                (focused-buffer) buffer)
-          (when (focused-buffer)
-            (evaluate-javascript
-             (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
-             nil)))
-        (call-with-current-buffer (focused-buffer) command))
-    (abort ()
-      :report "Return to command loop")))
+(defun run-command (command)
+  (setf *last-command* *this-command*
+        *this-command* command)
+  (message nil)
+  (unwind-protect
+       (call-with-current-buffer (focused-buffer) command)
+    (setq *this-command-keys* nil)))
+
+(defun handle-event (buffer event)
+  (let ((type (assoc-value event :type)))
+    (cond ((equal type "keyDown")
+           (let ((key (make-key :ctrl (assoc-value event :control)
+                                :meta (assoc-value event :alt)
+                                :super (assoc-value event :meta)
+                                :shift (assoc-value event :shift)
+                                :sym (assoc-value event :code))))
+             (unless (member (key-sym key)
+                             '("ControlLeft" "ControlRight"
+                               "MetaLeft" "MetaRight"
+                               "AltLeft" "AltRight"
+                               "ShiftLeft" "ShiftRight")
+                             :test 'equal)
+               (alex:nconcf *this-command-keys* (list key))
+               (if-let (cmd (lookup-keybind *this-command-keys* (keymaps buffer)))
+                 (if (prefix-command-p cmd)
+                     (let ((*message-log-max* nil))
+                       (message "~a-" (keys-description *this-command-keys*)))
+                     (run-command cmd))
+                 (progn
+                   (message "~a is undefined" (keys-description *this-command-keys*))
+                   (setq *this-command-keys* nil))))))
+          ((equal type "load")
+           (with-current-buffer buffer
+             (on-buffer-loaded buffer))))))
 
 (defun command-loop (&optional recursive-p)
   (let (exit-condition)
@@ -39,54 +57,37 @@
       (until (eql data 'quit))
       (for buffer = (gethash (parse-integer (assoc-value data :buffer)) *buffer-table*))
       (for event = (assoc-value data :input-event))
-      (with prefix-keys = nil)
-      (handler-bind
-          ((quit (lambda (c)
-                   (declare (ignore c))
-                   (evaluate-javascript
-                    "new Audio('https://www.myinstants.com/media/sounds/vine-boom.mp3').play()"
-                    (current-frame-root))
-                   (message "Quit")
-                   (next-iteration)))
-           (error (lambda (c)
-                    (unless *debug-on-error*
-                      (message "~a" c)
-                      (next-iteration)))))
-        (handler-case
-            (let ((type (assoc-value event :type)))
-              (cond ((equal type "keyDown")
-                     (let ((key (make-key :ctrl (assoc-value event :control)
-                                          :meta (assoc-value event :alt)
-                                          :super (assoc-value event :meta)
-                                          :shift (assoc-value event :shift)
-                                          :sym (assoc-value event :code))))
-                       (unless (member (key-sym key)
-                                       '("ControlLeft" "ControlRight"
-                                         "MetaLeft" "MetaRight"
-                                         "AltLeft" "AltRight"
-                                         "ShiftLeft" "ShiftRight")
-                                       :test 'equal)
-                         (alex:nconcf prefix-keys (list key))
-                         (if-let (cmd (lookup-keybind prefix-keys (keymaps buffer)))
-                           (if (prefix-command-p cmd)
-                               (progn
-                                 (message "~a-" (keys-description prefix-keys)))
-                               (progn
-                                 (let ((*this-command-keys* prefix-keys))
-                                   (setq prefix-keys nil)
-                                   (run-command buffer cmd))))
-                           (progn
-                             (message "~a is undefined" (keys-description prefix-keys))
-                             (setq prefix-keys nil))))))
-                    ((equal type "load")
-                     (with-current-buffer buffer
-                       (on-buffer-loaded buffer)))))
-          (top-level ()
-            (when recursive-p (error 'top-level)))
-          (exit-recursive-edit (c)
-            (when recursive-p
-              (setq exit-condition (slot-value c 'condition))
-              (return))))))
+      (unless (eql (focused-buffer) buffer)
+        (warn "Neomacs and Electron has different idea of focused buffer:~% ~a vs ~a"
+              (focused-buffer) buffer)
+        (setq buffer (focused-buffer))
+        (when (focused-buffer)
+          (evaluate-javascript
+           (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
+           nil)))
+      (restart-case
+          (handler-bind
+              ((quit (lambda (c)
+                       (declare (ignore c))
+                       (evaluate-javascript
+                        "new Audio('https://www.myinstants.com/media/sounds/vine-boom.mp3').play()"
+                        (current-frame-root))
+                       (message "Quit")
+                       (next-iteration)))
+               (error (lambda (c)
+                        (unless *debug-on-error*
+                          (message "~a" c)
+                          (next-iteration)))))
+            (handler-case
+                (handle-event buffer event)
+              (top-level ()
+                (when recursive-p (error 'top-level)))
+              (exit-recursive-edit (c)
+                (when recursive-p
+                  (setq exit-condition (slot-value c 'condition))
+                  (return)))))
+        (abort ()
+          :report "Return to command loop")))
     (when exit-condition (error exit-condition))))
 
 (defun recursive-edit ()

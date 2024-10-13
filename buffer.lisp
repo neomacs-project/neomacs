@@ -462,9 +462,7 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
     `((:import (url "https://fonts.googleapis.com/css2?family=Yomogi&display=swap"))))
 
 (defstyle buffer
-    `(("body"
-       :margin 0
-       :inherit default)
+    `(("body" :inherit default)
       (".focus" :inherit focus)
       (".focus-tail" :inherit focus-tail)
       ("::highlight(neomacs)" :inherit cursor)

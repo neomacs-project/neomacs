@@ -16,7 +16,7 @@
 (defclass driver (ceramic.driver:driver) ())
 
 (setq cera.d:*driver* (make-instance 'driver)
-      trivial-ws:+default-timeout+ 100000000
+      trivial-ws:+default-timeout+ 1000000
       ceramic.setup::+main-javascript+ (asdf:system-relative-pathname :neomacs #p"main.js")
       ceramic.setup::*electron-version* "32.1.2")
 
