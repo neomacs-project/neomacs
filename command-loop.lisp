@@ -52,7 +52,7 @@
              (on-buffer-loaded buffer))))))
 
 (defun command-loop (&optional recursive-p)
-  (let (exit-condition)
+  (let (exit-condition *this-command-keys*)
     (iter (for data = (sb-concurrency:receive-message *event-queue*))
       (until (eql data 'quit))
       (for buffer = (gethash (parse-integer (assoc-value data :buffer)) *buffer-table*))
