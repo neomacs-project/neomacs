@@ -46,4 +46,5 @@
                :cl-containers
                :quri
                :trivial-types
+               :local-time
                :sb-concurrency))

@@ -126,19 +126,33 @@ This should always be a directory pathname (with NIL name and type fields).")))
                   (if (equal prefixed-unit "") "" (or space ""))
                   prefixed-unit)))))
 
+(defun file-date-readable (unix-time)
+  (local-time:format-timestring
+   nil (local-time:unix-to-timestamp unix-time)
+   :format local-time:+asctime-format+))
+
 (defmethod generate-rows ((buffer file-list-mode))
   (iter (for path in (uiop:subdirectories (file-path buffer)))
+    (for stat = (osicat-posix:stat path))
     (insert-nodes (focus)
                   (dom `(:tr
                          ((:td :class "directory")
                           ,(lastcar (pathname-directory path)))
-                         (:td)))))
+                         (:td)
+                         (:td ,(osicat-posix:getpwuid
+                                (osicat-posix:stat-uid stat)))
+                         (:td ,(file-date-readable
+                                (osicat-posix:stat-mtime stat)))))))
   (iter (for path in (uiop:directory-files (file-path buffer)))
     (for stat = (osicat-posix:stat path))
     (insert-nodes (focus)
                   (dom `(:tr
                          (:td ,(file-namestring path))
-                         (:td ,(file-size-readable (osicat-posix:stat-size stat))))))))
+                         (:td ,(file-size-readable (osicat-posix:stat-size stat)))
+                         (:td ,(osicat-posix:getpwuid
+                                (osicat-posix:stat-uid stat)))
+                         (:td ,(file-date-readable
+                                (osicat-posix:stat-mtime stat))))))))
 
 (defmethod (setf file-path) (new-val (buffer file-list-mode))
   (let ((old-val (slot-value buffer 'file-path)))
