@@ -36,12 +36,16 @@
                          (:td ,name)
                          (:td ,@(when doc (list doc))))))))
 
-(define-class buffer-list-mode (list-mode) ())
+(define-class buffer-list-mode (list-mode)
+  ((show-hidden
+    :initform nil :initarg :show-hidden
+    :documentation "Whether to show hidden buffers, i.e. those with name started with a space.")))
 
 (define-keymap buffer-list-mode ()
   "enter" 'buffer-list-switch-to-buffer
   "k" 'buffer-list-delete-buffer
-  "d" 'buffer-list-delete-buffer)
+  "d" 'buffer-list-delete-buffer
+  "t" 'buffer-list-toggle-hidden)
 
 (define-command buffer-list-switch-to-buffer ()
   (switch-to-buffer (focused-item (current-buffer))))
@@ -49,12 +53,18 @@
 (define-command buffer-list-delete-buffer ()
   (delete-buffer (focused-item (current-buffer))))
 
+(define-command buffer-list-toggle-hidden ()
+  (setf (show-hidden (current-buffer))
+        (not (show-hidden (current-buffer))))
+  (revert-buffer))
+
 (defmethod generate-rows ((buffer buffer-list-mode))
   (iter (for (name buf) in-hashtable *buffer-name-table*)
     (for modes =
          (sera:mapconcat (alex:compose #'string-downcase #'symbol-name)
                          (modes buf) " "))
-    (unless (sera:string-prefix-p " " name)
+    (unless (and (not (show-hidden buffer))
+                 (sera:string-prefix-p " " name))
       (insert-nodes (focus)
                     (dom `((:tr :buffer ,(id buf))
                            (:td ,name)
