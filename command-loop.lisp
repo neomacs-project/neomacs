@@ -16,6 +16,10 @@
 (defvar *this-command-keys* nil)
 (defvar *debug-on-error* nil)
 
+(define-command toggle-debug-on-error ()
+  (setq *debug-on-error* (not *debug-on-error*))
+  (message "Debug on error ~:[disabled~;enabled~]" *debug-on-error*))
+
 (defun run-command (command)
   (setf *last-command* *this-command*
         *this-command* command)
@@ -58,6 +62,7 @@
           ((equal type "load")
            (with-current-buffer buffer
              (on-buffer-loaded buffer)))
+          ((equal type "keyUp"))
           (t (warn "Unrecoginized Electron event: ~a" event)))))
 
 (defun command-loop (&optional recursive-p)
@@ -77,6 +82,9 @@
                        (next-iteration)))
                (error (lambda (c)
                         (unless *debug-on-error*
+                          (evaluate-javascript
+                           "new Audio('https://www.myinstants.com/media/sounds/amogus.mp3').play()"
+                           (current-frame-root))
                           (message "~a" c)
                           (next-iteration)))))
             (handler-case
@@ -93,7 +101,8 @@
 
 (defun recursive-edit ()
   (cleanup-locked-buffers)
-  (let (*locked-buffers*)
+  (lwcells::evaluate-activations)
+  (let (*locked-buffers* lwcells::*delay-evaluation-p*)
     (command-loop t)))
 
 (defvar *command-loop-thread* nil)

@@ -146,7 +146,7 @@ Returns the node after the position after this operation."
 This assigns a neomacs-id attribute and run `on-node-setup'.
 
 This function should be called on all nodes entering HOST's DOM
-tree (which is usually taken care of by `inset-nodes')."
+tree (which is usually taken care of by `insert-nodes')."
   (setf (host node) host)
   (when (element-p node)
     (assign-neomacs-id node)
@@ -161,11 +161,13 @@ THINGS can be DOM nodes or strings, which are converted to text nodes."
     (unless host
       (error "~a does not point inside an active document." pos))
     (check-read-only host)
-    (let ((nodes (mapcar (lambda (n)
-                           (if (stringp n)
-                               (make-instance 'text-node :text n)
-                               n))
-                         things)))
+    (let ((nodes
+            ;; TODO: do more cleanup, like merging adjacent text nodes
+            (iter (for n in things)
+              (if (stringp n)
+                  (when (> (length n) 0)
+                    (collect (make-instance 'text-node :text n)))
+                  (collect n)))))
       (record-undo
        (nclo undo-node-setup ()
          (mapc (alex:curry #'do-dom #'node-cleanup) nodes))
@@ -284,7 +286,8 @@ tree (which is usually taken care of by `delete-nodes' and
     (unless host
       (error "~a does not point inside an active document." beg))
     (check-read-only host)
-    (unless (equalp beg end)
+    ;; Account for this edge case
+    (unless (or (end-pos-p beg) (equalp beg end))
       (let ((nodes (delete-nodes-1 beg end)))
         (mapc (alex:curry #'do-dom #'node-cleanup)
               nodes)
@@ -356,6 +359,9 @@ starting from BEG till the end of its parent."
          (src-parent (node-containing beg))
          (dst-parent (node-containing to))
          (host (host to)))
+    ;; Account for this edge case
+    (when (or (end-pos-p beg) (equalp beg end))
+      (return-from move-nodes nil))
     (unless (host beg)
       (error "~a does not point inside an active document." beg))
     (unless (eq (host beg) host)
@@ -389,7 +395,7 @@ This moves all children of SRC into DST and deletes SRC."
   (move-nodes node (pos-right node) (pos-up node))
   (delete-nodes (pos-right node) (pos-right (pos-right node))))
 
-(defun split-node (pos)
+(defun split-node (&optional (pos (focus)))
   "Split node containing POS at POS.
 
 Let parent be the node containing POS. This involves inserting a clone
@@ -408,9 +414,9 @@ NODE become the last child of NEW-NODE."
   (insert-nodes node new-node)
   (move-nodes node (pos-right node) (end-pos new-node)))
 
-(defun erase-buffer (buffer)
-  "Delete all content of BUFFER."
-  (delete-nodes (pos-down (document-root buffer)) nil))
+(defun erase-buffer ()
+  "Delete all content of current buffer."
+  (delete-nodes (pos-down (document-root (current-buffer))) nil))
 
 ;;; Editing commands
 
@@ -423,26 +429,53 @@ NODE become the last child of NEW-NODE."
   (undo-auto-amalgamate)
   (insert-nodes (focus) (string (self-insert-char))))
 
-(defvar *clipboard-ring* (containers:make-ring-buffer 1000 t))
-
 (define-command new-line (&optional (marker (focus)))
   (insert-nodes marker (make-new-line-node)))
 
+(defun trivial-p (node)
+  (or (characterp node) (new-line-node-p node)))
+
 (define-command backward-delete (&optional (marker (focus)))
   (undo-auto-amalgamate)
-  (backward-node marker)
-  (when-let (node (node-after marker))
-    (unless (and (element-p node) (first-child node))
-      (delete-nodes marker (pos-right marker)))))
+  (setf (adjust-marker-direction (host marker))
+        'backward)
+  (if-let (before (node-before marker))
+    (if (trivial-p before)
+        (delete-nodes (pos-left marker) marker)
+        (backward-node marker))
+    ;; We are at the beginning of NODE
+    (let* ((node (node-containing marker))
+           (prev (pos-left node)))
+      (cond ((null (first-child node))
+             (delete-nodes node (pos-right node)))
+            ((trivial-p prev)
+             (delete-nodes prev node))
+            ((and (element-p prev)
+                  (equal (attribute node "class")
+                         (attribute prev "class")))
+             (join-nodes prev node))
+            (t (backward-node marker))))))
 
 (define-command forward-delete (&optional (marker (focus)))
   (undo-auto-amalgamate)
-  (forward-node marker)
-  (when-let (node (node-before marker))
-    (unless (and (element-p node) (first-child node))
-      (delete-nodes (pos-left marker) marker))))
+  (if-let (after (node-after marker))
+    (if (trivial-p after)
+        (delete-nodes marker (pos-right marker))
+        (forward-node marker))
+    ;; We are at the beginning of NODE
+    (let* ((node (node-containing marker))
+           (next (pos-right node)))
+      (cond ((null (first-child node))
+             (delete-nodes node (pos-right node)))
+            ((trivial-p next)
+             (delete-nodes next (pos-right next)))
+            ((and (element-p next)
+                  (equal (attribute node "class")
+                         (attribute next "class")))
+             (join-nodes node next))
+            (t (forward-node marker))))))
 
-(define-command backward-cut-word (&optional (marker (focus)))
+(define-command backward-delete-word (&optional (marker (focus)))
   (let ((end (pos marker)))
     (backward-word marker)
     (let ((start (pos marker)))
@@ -451,6 +484,14 @@ NODE become the last child of NEW-NODE."
                     (text-pos-node start)))
           (delete-nodes start end)
           (delete-nodes start nil)))))
+
+(define-command backward-delete-element (&optional (marker (focus)))
+  (backward-element marker)
+  (delete-nodes marker (pos-right marker)))
+
+(defvar *clipboard-ring* (containers:make-ring-buffer 1000 t))
+
+(defvar *clipboard-ring-index* 0)
 
 (define-command cut-element (&optional (pos (focus)))
   (setq pos (or (pos-up-ensure pos #'element-p)
@@ -462,35 +503,18 @@ NODE become the last child of NEW-NODE."
                 (error 'top-of-subtree)))
   (containers:insert-item *clipboard-ring* (list (clone-node pos))))
 
-(define-command paste (&optional (neomacs (find-submode 'neomacs-mode)))
-  (let ((item (containers:current-item *clipboard-ring*))
-        (marker (focus neomacs)))
-    (setf (advance-p (selection-marker neomacs)) nil)
-    (setf (pos (selection-marker neomacs)) (pos marker))
-    (apply #'insert-nodes marker (mapcar #'clone-node item))))
+(define-command paste ()
+  (let ((item (containers:item-at *clipboard-ring* *clipboard-ring-index*)))
+    (setf (advance-p (selection-marker (current-buffer))) nil)
+    (setf (pos (selection-marker (current-buffer))) (pos (focus)))
+    (apply #'insert-nodes (focus) (mapcar #'clone-node item))))
 
-(defun rotate-ring (ring)
-  (with-slots (containers::buffer-start
-               containers::buffer-end
-               containers::total-size
-               containers::contents)
-      ring
-    (decf containers::buffer-start)
-    (decf containers::buffer-end)
-    (let ((start (mod containers::buffer-start containers::total-size))
-          (end (mod containers::buffer-end containers::total-size)))
-      (setf (svref containers::contents start)
-            (svref containers::contents end)
-            (svref containers::contents end)
-            0))))
-
-(define-command paste-pop (&optional (neomacs (find-submode 'neomacs-mode)))
-  (rotate-ring *clipboard-ring*)
-  (let ((marker (focus neomacs))
-        (item (containers:current-item *clipboard-ring*)))
-    (delete-nodes (selection-marker neomacs)
-                  (pos-right (selection-marker neomacs)))
-    (apply #'insert-nodes marker (mapcar #'clone-node item))))
+(define-command paste-pop ()
+  (incf *clipboard-ring-index*)
+  (let ((item (containers:item-at *clipboard-ring* *clipboard-ring-index*)))
+    (delete-nodes (selection-marker (current-buffer))
+                  (pos-right (selection-marker (current-buffer))))
+    (apply #'insert-nodes (focus) (mapcar #'clone-node item))))
 
 (define-command forward-cut (&optional (pos (focus)))
   (iter (with end = (copy-pos pos))
@@ -508,9 +532,10 @@ NODE become the last child of NEW-NODE."
   "backspace" 'backward-delete
   "space" 'self-insert-command
   "enter" 'new-line
-  "M-backspace" 'backward-cut-word
+  "M-backspace" 'backward-delete-word
+  "C-M-backspace" 'backward-delete-element
   "C-d" 'forward-delete
-  "M-d" 'forward-cut-word
+  "M-d" 'forward-delete-word
   "C-w" 'cut-element
   "M-w" 'copy-element
   "C-y" 'paste

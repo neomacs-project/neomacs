@@ -22,12 +22,22 @@
   "C-c C-p" 'eval-print-last-expression)
 
 (defmethod selectable-p-aux ((buffer lisp-mode) pos)
-  (let ((node (node-after pos))
-        (parent (node-containing pos)))
-    (or (characterp node)
-        (and node (not (symbol-node-p node)))
-        (and (not node)
-             (class-p parent "string" "list" "doc")))))
+  (if-let (node (node-after pos))
+    (and (not (symbol-node-p node))
+         (not (and (new-line-node-p node)
+                   (non-empty-symbol-node-p (node-before pos)))))
+    (not (non-empty-symbol-node-p (node-before pos)))))
+
+(defmethod render-focus-aux ((buffer lisp-mode) pos)
+  (match pos
+    ((end-pos node)
+     (if (non-empty-symbol-node-p node)
+         (let ((next (next-sibling node)))
+           (cond ((not next)
+                  (call-next-method buffer (end-pos (parent node))))
+                 (t (call-next-method))))
+         (call-next-method)))
+    (_ (call-next-method))))
 
 (defmethod block-element-p-aux ((buffer lisp-mode) element)
   (if (equal (tag-name element) "div")
@@ -63,24 +73,25 @@
 
 (defmethod on-node-setup progn ((buffer lisp-mode) node)
   (set-attribute-function node "operator" 'compute-operator)
-
   (add-observer (slot-value node 'parent)
                 (lambda (cell)
                   (let ((parent (cell-ref cell)))
                     (when (symbol-node-p parent)
-                      (let ((second-symbol (split-node node)))
-                        (move-nodes node (pos-right node) second-symbol))))))
+                      (let ((prev (previous-sibling node))
+                            (next (next-sibling node)))
+                        (cond ((and (not prev) (not next))
+                               (raise-node node))
+                              ((not prev)
+                               (move-nodes node (pos-right node)
+                                           parent))
+                              ((not next)
+                               (move-nodes node (pos-right node)
+                                           (pos-right parent)))
+                              (t (let ((second-symbol (split-node node)))
+                                   (move-nodes node (pos-right node)
+                                               second-symbol)))))))))
   (when (symbol-node-p node)
-    (set-attribute-function node "symbol-type" 'compute-symbol-type)
-    (add-observer (slot-value node 'next-sibling)
-                  (lambda (cell)
-                    (let ((next (cell-ref cell)))
-                      (when (symbol-node-p next)
-                        (join-nodes node next)))))
-    (add-observer (slot-value node 'first-child)
-                  (lambda (cell)
-                    (unless (cell-ref cell)
-                      (delete-nodes node (pos-right node)))))))
+    (set-attribute-function node "symbol-type" 'compute-symbol-type)))
 
 (defun make-list-node (children)
   (lret ((node (make-instance 'element :tag-name "div")))
@@ -104,22 +115,16 @@
   (class-p node "list" "symbol" "string" "object"))
 
 (defun symbol-node-p (node)
-  (and (element-p node)
-       (equal (attribute node "class") "symbol")))
+  (class-p node "symbol"))
+
+(defun non-empty-symbol-node-p (node)
+  (and (symbol-node-p node) (first-child node)))
 
 (defun atom-node-text (node)
   (ignore-errors (text (first-child node))))
 
 (defmethod print-dom ((cons cons) &key)
-  (make-list-node
-   (iter (with last-item)
-     (for item in cons)
-     (unless (or (first-iteration-p)
-                 (eql item '%br)
-                 (eql last-item '%br))
-       (collect (make-instance 'text-node :text " ")))
-     (setq last-item item)
-     (collect (print-dom item)))))
+  (make-list-node (mapcar #'print-dom cons)))
 
 (defmethod print-dom ((null null) &key)
   (make-list-node nil))
@@ -141,17 +146,14 @@
 (defun lisp-self-insert ()
   (let ((string (string (self-insert-char)))
         (marker (focus)))
-    (cond ((equal string " ")
-           (if (symbol-node-p (node-containing marker))
-               (lisp-split marker)
-               (insert-nodes marker string)))
-          ((atom-node-p (node-containing marker))
+    (cond ((atom-node-p (node-containing marker))
            (insert-nodes marker string))
           ((class-p (node-before marker) "comment")
            (insert-nodes (end-pos (node-before marker)) string))
           (t
            (let ((node (make-atom-node "symbol" string)))
-             (insert-nodes marker node))))))
+             (insert-nodes marker node)
+             (setf (pos marker) (end-pos node)))))))
 
 (define-command open-paren (&optional (marker (focus)))
   (let ((node (make-list-node nil)))
@@ -168,6 +170,13 @@
   (let ((node (make-atom-node "string" "")))
     (insert-nodes marker node)
     (setf (pos marker) (end-pos node))))
+
+(define-command open-space (&optional (marker (focus)))
+  (if (class-p (node-containing marker) "symbol")
+      (setf (pos marker) (pos-down (split-node marker)))
+      (let ((node (make-atom-node "symbol" "")))
+        (insert-nodes marker node)
+        (setf (pos marker) (end-pos node)))))
 
 (define-command open-comment (&optional (marker (focus)))
   (labels ((cycle-level (n)
@@ -200,23 +209,14 @@
                 (error 'top-of-subtree)))
   (splice-node pos))
 
-(define-command lisp-split (&optional (marker (focus)))
-  (insert-nodes (setf (pos marker) (split-node marker)) " "))
-
 (define-class sexp-editing-mode () ()
   (:documentation "Editing S-exp."))
 
 (define-keymap sexp-editing-mode ()
   "(" 'open-paren
   "\"" 'open-string
+  "space" 'open-space
   ";" 'open-comment)
-
-(defmethod enable-aux ((mode (eql 'lisp-mode)))
-  (pushnew 'lisp-mode (styles (current-buffer)))
-  #+nil (do-elements #'lisp-node-setup (restriction (current-buffer))))
-
-(defmethod disable-aux ((mode (eql 'lisp-mode)))
-  (alex:deletef (styles (current-buffer)) 'lisp-mode))
 
 (defun parse-prefix (string)
   "Parse prefix from STRING.
@@ -366,7 +366,9 @@ before MARKER-OR-POS."
 
 ;;; Style
 
-(defstyle sexp-node `(:display "inline-block"
+(defstyle sexp-node `(((:append ":not(:last-child):not(.focus-tail)")
+                       :margin-right "0.4em")
+                      :display "inline-block"
                       :vertical-align "top"
                       :position "relative"
                       :white-space "pre-wrap"))
@@ -377,8 +379,11 @@ before MARKER-OR-POS."
       ((:append "::after")
        :content ")"
        :vertical-align "bottom")
+      ((:append ":not(:last-child)")
+       :margin-right "0.4em")
       ((:append ".focus-tail::after")
        :content ")"
+       :width "auto"
        :inherit selection)
       ((:append ".focus::before")
        :inherit selection)
@@ -391,9 +396,18 @@ before MARKER-OR-POS."
                          :inherit selection)
                         ((:append ".focus-tail::after")
                          :content "\""
+                         :width "auto"
                          :inherit selection)
                         :inherit (sexp-node string)))
 (defstyle symbol-node `(:inherit sexp-node))
+(defstyle empty-symbol-node `(((:append "::after")
+                               :content "_")
+                              ((:append ":not(:last-child)")
+                               :margin-right "0.4em")
+                              ((:append ".focus-tail::after")
+                               :content "_"
+                               :width "auto"
+                               :inherit selection)))
 (defstyle comment-node `(((:append "::after") :content "⁣")
                          :display "inline-block"
                          :white-space "pre-wrap"))
@@ -418,17 +432,9 @@ before MARKER-OR-POS."
                            :font-size "1.1em"
                            :inherit comment))
 
-(defstyle doc-node `(((:append ".focus-tail::after")
-                      :content "  "
-                      :white-space "pre"
-                      :inherit selection)
-                     :left 0 :right 0
-                     :white-space "pre-wrap"
-                     :padding-left "1em"))
-
 (defstyle lisp-mode
-    `((".body" :inherit doc-node)
-      (".symbol" :inherit symbol-node)
+    `((".symbol" :inherit symbol-node)
+      (".symbol:empty" :inherit empty-symbol-node)
       (".string" :inherit string-node)
       (".object" :inherit symbol-node)
       (".symbol[symbol-type=\"macro\"][operator]" :inherit macro)

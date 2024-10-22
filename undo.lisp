@@ -34,7 +34,7 @@
 (defmethod read-only-p ((buffer active-undo-mode)) t)
 
 (define-class undo-entry ()
-  ((children :type (list-of undo-entry))))
+  ((child-entries :type (list-of undo-entry))))
 
 (define-class undo-root (undo-entry) ())
 
@@ -46,11 +46,11 @@
 (defmethod parent ((self undo-root)) nil)
 
 (defmethod initialize-instance :after ((self undo-child) &key parent)
-  (push self (children parent)))
+  (push self (child-entries parent)))
 
 (defgeneric leaf-p (undo-entry)
   (:method ((self undo-root)) nil)
-  (:method ((self undo-child)) (null (children self))))
+  (:method ((self undo-child)) (null (child-entries self))))
 
 (defgeneric undo-boundary-p (undo-entry)
   (:method ((self undo-root)) nil)
@@ -89,7 +89,7 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
   (let ((entry (undo-entry buffer)))
     (when (undo-boundary-p entry)
       (setf (undo-entry buffer) (parent entry))
-      (alex:deletef (children (parent entry)) entry)
+      (alex:deletef (child-entries (parent entry)) entry)
       nil)))
 
 (defun undo-auto-amalgamate ()
@@ -116,7 +116,7 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
 
 (defun redo (&optional (branch-index 0) (buffer (current-buffer)))
   "Move undo state down to BRANCH-INDEX-th child."
-  (let* ((entry (nth branch-index (children (undo-entry buffer))))
+  (let* ((entry (nth branch-index (child-entries (undo-entry buffer))))
          (*inhibit-record-undo* t))
     (if entry
         (setf (undo-entry buffer) entry)
@@ -139,8 +139,8 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
   (let* ((entry (undo-entry buffer))
          (parent (or (parent entry)
                      (error "No next branch.")))
-         (current-index (position entry (children parent))))
-    (unless (< (1+ current-index) (length (children parent)))
+         (current-index (position entry (child-entries parent))))
+    (unless (< (1+ current-index) (length (child-entries parent)))
       (error "No next branch."))
     (undo buffer)
     (redo (1+ current-index) buffer)
@@ -150,7 +150,7 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
   (let* ((entry (undo-entry buffer))
          (parent (or (parent entry)
                      (error "No next branch.")))
-         (current-index (position entry (children parent))))
+         (current-index (position entry (child-entries parent))))
     (unless (> current-index 0)
       (error "No previous branch."))
     (undo buffer)

@@ -1,7 +1,14 @@
 (in-package #:neomacs)
 
 (defgeneric selectable-p-aux (buffer pos)
-  (:method ((buffer buffer) (pos t)) t))
+  (:method ((buffer buffer) (pos t))
+    (not (new-line-node-p (node-containing pos))))
+  (:method :around ((buffer buffer) (pos t))
+    (unless (if (element-p (node-after pos))
+                (invisible-p (node-after pos))
+                (invisible-p (node-containing pos)))
+      (unless (new-line-node-p (node-containing pos))
+        (call-next-method)))))
 
 (defun selectable-p (pos)
   (selectable-p-aux (host pos) pos))
@@ -64,25 +71,35 @@
   (and (element-p node)
        (not (new-line-node-p node))))
 
+(defun ensure-element (pos)
+  (if (element-p pos) pos (node-containing pos)))
+
 (define-command forward-element (&optional (marker (focus)))
-  "Move after first element (exclude line break) to the right."
-  (setf (pos marker)
-        (or (iterate-pos-until
-             (alex:disjoin #'npos-right
-                           (alex:compose #'pos-right #'pos-up))
-             (pos marker)
-             (alex:compose #'graphic-element-p #'node-before))
-            (error 'top-of-subtree))))
+  "Move to first element (excluding line break) to the right."
+  (let ((pos (pos marker)))
+    (iter
+      (until (graphic-element-p pos))
+      (until (pos-left pos))
+      (setq pos (or (pos-up pos) (error 'top-of-subtree))))
+    (setf (pos marker)
+          (or (iterate-pos-until
+               (alex:disjoin #'npos-right
+                             (alex:compose #'pos-right #'pos-up))
+               pos #'graphic-element-p)
+              (error 'top-of-subtree)))))
 
 (define-command backward-element (&optional (marker (focus)))
-  "Move to first element (exclude line break) to the left."
-  (setf (pos marker)
-        (or (iterate-pos-until
-             (alex:disjoin #'npos-left #'pos-up)
-             (pos marker)
-             #'graphic-element-p)
-            (error 'top-of-subtree)))
-  (setf (adjust-marker-direction (current-buffer)) 'backward))
+  "Move to first element (excluding line break) to the left."
+  (let ((pos (pos marker)))
+    (iter
+      (until (graphic-element-p pos))
+      (until (pos-left pos))
+      (setq pos (or (pos-up pos) (error 'top-of-subtree))))
+    (setf (pos marker)
+          (or (iterate-pos-until
+               (alex:disjoin #'npos-left #'pos-up)
+               pos #'graphic-element-p)
+              (error 'top-of-subtree)))))
 
 (define-command beginning-of-buffer (&optional (marker (focus)))
   "Move to beginning of buffer."
@@ -158,8 +175,8 @@ non-interactive use."
   (let ((pos (pos marker))
         (n 0))
     (iter (until (line-start-p pos))
-      (when (selectable-p pos) (incf n))
-      (setq pos (or (npos-prev pos) (return))))
+      (setq pos (or (npos-prev pos) (return)))
+      (when (selectable-p pos) (incf n)))
     (setf (pos marker) (or pos (error 'top-of-subtree)))
     n))
 

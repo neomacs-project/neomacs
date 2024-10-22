@@ -24,7 +24,6 @@
   (bind ((buffer (current-buffer))
          ((replace-range completions)
           (compute-completion (current-buffer) (pos marker))))
-    (pushnew 'completion (styles buffer))
     (unless completions
       (unless silent (message "No completion."))
       (return-from show-completions))
@@ -106,22 +105,22 @@
       nil)
    buffer))
 
-(define-command next-completion (&optional (buffer (current-buffer)))
+#+nil (define-command next-completion (&optional (buffer (current-buffer)))
   (if (< (1+ (current-completion buffer)) (length (completions buffer)))
       (incf (current-completion buffer))
       (message "No next completion.")))
 
-(define-command previous-completion (&optional (buffer (current-buffer)))
+#+nil (define-command previous-completion (&optional (buffer (current-buffer)))
   (if (> (current-completion buffer) 0)
       (decf (current-completion buffer))
       (message "No previous completion.")))
 
-(define-command scroll-completion-down (&optional (buffer (current-buffer)))
+#+nil (define-command scroll-completion-down (&optional (buffer (current-buffer)))
   (setf (current-completion buffer)
         (min (+ (current-completion buffer) (scroll-lines buffer))
              (1- (length (completions buffer))))))
 
-(define-command scroll-completion-up (&optional (buffer (current-buffer)))
+#+nil (define-command scroll-completion-up (&optional (buffer (current-buffer)))
   (setf (current-completion buffer)
         (max (- (current-completion buffer) (scroll-lines buffer))
              0)))

@@ -16,7 +16,11 @@
        (last-child :cell nil)
        (tag-name :initform (error "Must supply :tag-name") :reader tag-name
                  :initarg :tag-name)
-       (attributes :initform (make-hash-table :test 'equal) :reader attributes))))
+       (attributes :initform (make-hash-table :test 'equal) :reader attributes)
+       (invisible-p :cell (or (when-let (parent (parent self))
+                                (invisible-p parent))
+                              (class-p self "invisible"))
+                  :reader invisible-p))))
 
 (defmethod parent ((_ null)))
 (defmethod next-sibling ((_ null)))
@@ -47,23 +51,44 @@ ELEMENT as a single argument."
 
 (defvar *inhibit-dom-update* nil)
 
+(ps:defpsmacro js-node-1 (node)
+  `(ps:lisp
+    (let ((node ,node))
+      (cond ((text-node-p node)
+             (if-let (next (next-sibling node))
+               `(ps:chain (js-node ,next) previous-sibling)
+               `(ps:chain (js-node ,(parent node)) last-child)))
+            ((element-p node)
+             (if (equal (tag-name node) "body")
+                 `(ps:chain document body)
+                 (let ((id (attribute node "neomacs-identifier")))
+                   `(ps:chain document
+                              (query-selector
+                               ,(format nil "[neomacs-identifier='~a']" id))))))
+            ((null node) nil)
+            (t (error "Unknown node type ~a." node))))))
+
 (defun add-attribute-observer (cell node attribute)
   "Add an observer to CELL,
 which ensures renderer side ATTRIBUTE of NODE matches value of CELL."
   (labels ((update (cell)
              (when-let (host (host node))
                (let ((value (cell-ref cell)))
-                 (send-dom-update
+                 (evaluate-javascript
                   (if value
-                      `(ps:chain (js-node ,node)
-                                 (set-attribute ,attribute ,value))
-                      `(ps:chain (js-node ,node)
-                                 (remove-attribute ,attribute)))
+                      (ps:ps
+                       (ps:chain (js-node-1 node)
+                                 (set-attribute (ps:lisp attribute)
+                                                (ps:lisp value))))
+                      (ps:ps
+                       (ps:chain (js-node-1 node)
+                                 (remove-attribute (ps:lisp attribute)))))
                   host)))))
     (add-observer cell #'update)
     cell))
 
-(declaim (inline element-p text-node-p make-element class-p))
+(declaim (inline element-p text-node-p make-element
+                 class-p tag-name-p))
 
 (defun element-p (object)
   (typep object 'element))
@@ -84,9 +109,28 @@ which ensures renderer side ATTRIBUTE of NODE matches value of CELL."
 (defun class-p (node class &rest more-classes)
   "Test if NODE is an element of one of CSS CLASS or MORE-CLASSES."
   (and (element-p node)
-       (member (attribute node "class")
-               (cons class more-classes)
-               :test 'equal)))
+       (intersection
+        (str:split #\Space (attribute node "class"))
+        (cons class more-classes)
+        :test 'equal)))
+
+(defun tag-name-p (node tag-name)
+  "Test if NODE is an element with TAG-NAME."
+  (and (element-p node)
+       (equal tag-name (tag-name node))))
+
+(defun add-class (element class)
+  "Add CSS CLASS to ELEMENT."
+  (unless (class-p element class)
+    (setf (attribute element "class")
+          (str:concat (attribute element "class") " " class))))
+
+(defun remove-class (element class)
+  "Remove CSS CLASS from ELEMENT."
+  (let ((class-list (str:split #\Space (attribute element "class"))))
+    (when (member class class-list :test 'equal)
+      (setf (attribute element "class")
+            (str:join #\space (remove class class-list :test 'equal))))))
 
 (defun make-new-line-node ()
   (make-instance 'element :tag-name "br"))
@@ -192,6 +236,15 @@ Returns CHILDREN."
       (while c)
       (collect c))))
 
+(defun children (node)
+  "Return immediate child elements of NODE as a list."
+  (when (element-p node)
+    (iter (for c first (first-child node)
+               then (next-sibling c))
+      (while c)
+      (when (element-p c)
+        (collect c)))))
+
 (defun map-dom (function node)
   (labels ((process (node)
              (funcall function node
@@ -217,6 +270,14 @@ This includes `element's and `text-node's."
              (when (element-p node)
                (funcall function node)))
            node))
+
+(defun text-content (node)
+  (map-dom
+   (lambda (node results)
+     (etypecase node
+       (text-node (text node))
+       (element (apply #'sera:concat results))))
+   node))
 
 (defun get-elements-by-class-name (node class)
   "Find all descendant elements of NODE with CLASS."

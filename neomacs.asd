@@ -12,6 +12,7 @@
                (:file "command")
                (:file "pos-marker")
                (:file "defstyle")
+               (:file "plump-hack")
                (:file "buffer")
                (:file "keymap")
                (:file "motion")
@@ -20,21 +21,25 @@
                (:file "frame")
                (:file "command-loop")
                (:file "minibuffer")
-               (:file "list-commands")
                (:file "undo")
                (:file "ceramic")
-               (:file "start")
                (:file "completion")
                #+nil (:file "manual")
+               (:file "modes/list-modes")
+               (:file "modes/occur-mode")
                (:file "modes/file-mode")
+               (:file "modes/text-file")
+               (:file "modes/file-syntax-mode")
                (:file "modes/lisp-mode")
-               (:file "modes/lisp-file"))
+               (:file "modes/lisp-file")
+               (:file "start"))
   :depends-on (:lwcells
                :ceramic
                :str
                :dynamic-mixins
                :parenscript
                :plump
+               :plump-sexp
                :lass
                :spinneret
                :metabang-bind

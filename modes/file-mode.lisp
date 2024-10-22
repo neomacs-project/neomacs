@@ -1,7 +1,107 @@
 (in-package #:neomacs)
 
+(define-class minibuffer-find-file-mode
+    (minibuffer-completion-mode)
+  ())
+
+(define-keymap minibuffer-find-file-mode ()
+  "/" 'split-node
+  'complete-minibuffer 'complete-find-file
+  'complete-exit-minibuffer 'complete-exit-find-file)
+
+(defmethod update-completion-buffer ((buffer minibuffer-find-file-mode))
+  (let ((path (path-before (focus))))
+    (setf (file-path (completion-buffer buffer))
+          (make-pathname :name nil :type nil :defaults path)
+          (occur-query (completion-buffer buffer))
+          (file-namestring path))))
+
+(defmethod selectable-p-aux ((buffer minibuffer-find-file-mode) pos)
+  (class-p (node-containing pos) "path-component"))
+
+(defmethod revert-buffer-aux ((buffer minibuffer-find-file-mode))
+  (call-next-method)
+  (let ((last (make-element "span" :class "path-component"))
+        (input (minibuffer-input-element buffer)))
+    (iter (for n in (cdr (pathname-directory *default-pathname-defaults*)))
+      (insert-nodes
+       (end-pos input)
+       (make-element "span" :class "path-component" :children (list n))))
+    (insert-nodes (end-pos input) last)
+    (setf (pos (focus)) (end-pos last))))
+
+(defun path-before (&optional (pos (focus)))
+  (let* ((component (node-containing pos))
+         (dir (make-pathname
+               :directory
+               (cons ':absolute
+                     (iter (for c in (child-nodes (parent component)))
+                       (until (eql c component))
+                       (if-let (c (text-content c))
+                         (collect c into result)
+                         (setq result nil))
+                       (finally (return result)))))))
+    (if-let (file (text-content component))
+      (merge-pathnames file dir)
+      dir)))
+
+(defmethod minibuffer-input ((buffer minibuffer-find-file-mode))
+  (path-before (end-pos (last-child (minibuffer-input-element buffer)))))
+
+(define-command complete-find-file ()
+  (when-let (selection (first-child (node-after (focus (completion-buffer (current-buffer))))))
+    (let ((path-component (node-containing (focus))))
+      (delete-nodes (pos-right path-component) nil)
+      (delete-nodes (pos-down path-component) nil)
+      (insert-nodes (pos-down path-component)
+                    (text-content selection))
+      (when (class-p selection "directory")
+        (let ((new (make-element "span" :class "path-component")))
+          (insert-nodes (pos-right path-component) new)
+          (setf (pos (focus)) (end-pos new)))))))
+
+(define-command complete-exit-find-file ()
+  (complete-find-file)
+  (exit-minibuffer))
+
+(defstyle minibuffer-find-file-mode
+    `((".path-component::before"
+       :content "/")))
+
+(defun set-auto-mode ()
+  (let ((type (pathname-type (file-path (current-buffer)))))
+    (cond ((uiop:directory-pathname-p (file-path (current-buffer)))
+           (enable 'file-list-mode))
+          ((equal type "lisp")
+           (enable 'lisp-file-mode))
+          (t (enable 'text-file-mode)))))
+
+(define-command find-file
+    (&optional (path
+                (read-from-minibuffer
+                 "Find file: "
+                 :modes 'minibuffer-find-file-mode
+                 :completion-buffer
+                 (make-completion-buffer
+                  '(file-list-mode completion-buffer-mode)))))
+  ;; If PATH points to a directory, ensure it is a directory
+  ;; pathname (with NIL name and type fields).
+  (when-let (dir (uiop:directory-exists-p path))
+    (setq path dir))
+  (switch-to-buffer
+   (with-current-buffer
+       (make-buffer
+        (if (uiop:directory-pathname-p path)
+            (lastcar (pathname-directory path))
+            (file-namestring path))
+        :modes 'file-mode)
+     (setf (file-path (current-buffer)) path)
+     (set-auto-mode)
+     (revert-buffer)
+     (current-buffer))))
+
 (define-class file-mode ()
-  ((filename))
+  ((file-path))
   (:documentation
    "Generic mode for buffer backed by files."))
 
@@ -22,53 +122,8 @@
 
 (define-command save-buffer (&optional (buffer (current-buffer)))
   (write-file buffer)
-  (message "Wrote ~a" (filename buffer)))
+  (message "Wrote ~a" (file-path buffer)))
 
-#+nil (define-internal-scheme "neomacs"
-    (lambda (url)
-      (let ((mode (current-neomacs))
-            (filename (quri.uri:uri-path (quri:uri url))))
-        (setf (history-file (current-buffer))
-              (make-instance 'history-file
-                             :profile (make-instance 'nofile-profile)))
-        (spinneret:with-html-string
-          (:head)
-          (:body
-           (:raw
-            (let* ((doc-node (make-instance 'element :tag-name "div"))
-                   (*inhibit-dom-update* t))
-              (setf (attribute doc-node "class") "doc")
-              (assign-neomacs-id doc-node)
-              (setf (host doc-node) mode
-                    (focus-marker mode)
-                    (make-instance 'marker :pos (end-pos doc-node))
-                    (selection-marker mode)
-                    (make-instance 'marker :pos (end-pos doc-node))
-                    (restriction mode) doc-node)
-              (when filename
-                (let ((*dom-output* doc-node)
-                      (mode (find-submode 'file-mode)))
-                  (setf (filename mode) filename)
-                  (load-contents mode)))
-              (serialize doc-node nil)))
-           (:div :id "neomacs-highlight" :style "display: none")
-           (:table (:tbody :id "completion-menu" :style "display: none")))))))
-
-#+nil (define-command-global open-file
-    (&optional
-     (filename
-      (uiop:native-namestring
-       (pathname
-        (prompt1
-         :prompt "Open file"
-         :extra-modes 'nyxt/mode/file-manager:file-manager-mode
-         :input (uiop:native-namestring (uiop:getcwd))
-         :sources
-         (list (make-instance 'nyxt/mode/file-manager:file-source
-                              :name "Existing file"
-                              :actions-on-return #'identity)
-               (make-instance 'prompter:raw-source
-                              :name "Create new file")))))))
-  "Open a new Neomacs buffer and query a FILE to edit in it."
-  (set-current-buffer
-   (make-buffer :url (quri:make-uri :scheme "neomacs" :path filename))))
+(define-keys global
+  "C-x C-f" 'find-file
+  "C-x C-s" 'save-buffer)

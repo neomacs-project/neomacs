@@ -26,7 +26,7 @@
   ((id :initform (generate-buffer-id) :type integer)
    (name :type string)
    (url :initarg :url :type quri:uri)
-   (word-boundary-list :default (list #\ ))
+   (word-boundary-list :default (list #\  #\-))
    (focus-marker)
    (selection-marker)
    (adjust-marker-direction :initform 'forward)
@@ -41,10 +41,8 @@
     :documentation "With value s, try to keep cursor within [s,1-s] portion of the viewport.")
    (scroll-lines :default 10 :type (integer 1))
    (styles :default (list 'buffer) :initarg :styles)
-   (modes :initform nil)
    (lock :initform (bt:make-recursive-lock) :reader lock)
-   (window-decoration)
-   (previous-buffer))
+   (window-decoration))
   (:default-initargs :url (quri:uri "about:blank")))
 
 (defmethod id ((buffer buffer))
@@ -57,10 +55,24 @@
   (dynamic-mixins:delete-from-mix (current-buffer) mode-name))
 
 (defgeneric enable-aux (mode-name)
-  (:method ((mode-name symbol))))
+  (:method ((mode-name symbol)))
+  (:method :after ((mode-name symbol))
+    (unless (eql mode-name 'buffer)
+      (when (get mode-name 'style)
+        (pushnew mode-name (styles (current-buffer))))))
+  (:documentation "Run when MODE-NAME is enabled.
+
+This generic function is run with `current-buffer' bound to the buffer
+for which MODE-NAME is being enabled."))
 
 (defgeneric disable-aux (mode-name)
-  (:method ((mode-name symbol))))
+  (:method ((mode-name symbol))
+    (when (get mode-name 'style)
+      (alex:deletef (styles (current-buffer)) mode-name)))
+  (:documentation "Run when MODE-NAME is disabled.
+
+This generic function is run with `current-buffer' bound to the buffer
+for which MODE-NAME is being disabled."))
 
 (defun stable-set-difference (list-1 list-2)
   (remove-if (alex:rcurry #'member list-2) list-1))
@@ -80,32 +92,19 @@
 (defun buffer-alive-p (buffer)
   (eql (gethash (slot-value buffer 'id) *buffer-table*) buffer))
 
-#+nil (defun call-with-current-buffer (buffer thunk)
-  (let ((*current-buffer* buffer)
-        (*adjust-marker-direction* *adjust-marker-direction*))
-    (bt:with-recursive-lock-held ((lock buffer))
-      (on-pre-command buffer)
-      (unwind-protect
-           (with-delayed-evaluation
-             (funcall thunk))
-        (when (buffer-alive-p buffer)
-          (on-post-command buffer)
-          (case *adjust-marker-direction*
-            ((forward) (ensure-selectable (focus)))
-            ((backward) (ensure-selectable (focus) t)))
-          (render-focus (focus buffer)))))))
-
 (defvar *locked-buffers* nil)
 
 (defun cleanup-locked-buffers ()
-  (dolist (buffer *locked-buffers*)
-    (when (buffer-alive-p buffer)
-      (let ((*current-buffer* buffer))
-        (on-post-command buffer)
-        (case (adjust-marker-direction buffer)
-          ((forward) (ensure-selectable (focus buffer)))
-          ((backward) (ensure-selectable (focus buffer) t)))
-        (render-focus (focus buffer))))))
+  (iter (for saved = *locked-buffers*)
+    (dolist (buffer saved)
+      (when (buffer-alive-p buffer)
+        (let ((*current-buffer* buffer))
+          (case (adjust-marker-direction buffer)
+            ((forward) (ensure-selectable (focus buffer)))
+            ((backward) (ensure-selectable (focus buffer) t)))
+          (on-post-command buffer)
+          (render-focus (focus buffer)))))
+    (until (eq saved *locked-buffers*))))
 
 (defun call-with-current-buffer (buffer thunk)
   (cond ((not *locked-buffers*)
@@ -135,16 +134,7 @@
     (evaluate-javascript
      (let (ps:*parenscript-stream*)
        (ps:ps* parenscript))
-     buffer)
-    #+nil (if *inside-dom-update-p*
-        (let ((ps:*parenscript-stream* *dom-update-stream*))
-          (ps:ps* `(ignore-errors ,parenscript)))
-        (progn
-          (evaluate-javascript
-           (let (ps:*parenscript-stream*)
-             (ps:ps* `(progn ,parenscript nil)))
-           (current-buffer))
-          nil))))
+     buffer)))
 
 (defmethod print-object ((buffer buffer) stream)
   (print-unreadable-object (buffer stream)
@@ -165,12 +155,18 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
         (make-instance 'element :tag-name "body" :host buffer)
         (restriction buffer) (document-root buffer)
         (focus-marker buffer) (make-instance 'marker :pos (end-pos (document-root buffer)))
+        (selection-marker buffer) (make-instance 'marker :pos (end-pos (document-root buffer)))
         (window-decoration buffer)
-        (make-element
-         "div"
-         :class "buffer" :selectable ""
-         :children (list (make-element "div" :class "header" :children (list (name buffer)))
-                         (make-element "div" :class "content" :buffer (id buffer)))))
+        (dom `((:div :class "buffer" :selectable "")
+               ((:div :class "header")
+                ((:div :class "header-buffer-name") ,(name buffer))
+                ((:div :class "header-buffer-modes")
+                      ,@(let ((modes
+                                (sera:mapconcat (alex:compose #'string-downcase #'symbol-name)
+                                                (modes buffer) " ")))
+                          (when (> (length modes) 0)
+                            (list modes)))))
+               ((:div :class "content" :buffer ,(id buffer))))))
   (with-current-buffer buffer
     (dolist (new (reverse (sb-mop:class-precedence-list (class-of buffer))))
       (enable-aux (class-name new)))
@@ -205,7 +201,7 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
        (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
        nil))))
 
-(defgeneric on-buffer-delete (buffer)
+(defgeneric on-delete-buffer (buffer)
   (:method-combination progn)
   (:method progn ((buffer buffer))))
 
@@ -228,11 +224,14 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
 
 #+nil (defgeneric compute-completion (buffer pos))
 
-(define-command delete-buffer (&optional (buffer (buffer-at-focus)))
+(define-command delete-buffer
+    (&optional (buffer
+                (get-buffer
+                 (completing-read "Delete buffer: " 'buffer-list-mode))))
   (when (frame-root buffer)
     (bury-buffer buffer))
   (with-current-buffer buffer
-    (on-buffer-delete buffer)
+    (on-delete-buffer buffer)
     (dolist (style (styles buffer))
       (remove-observer (css-cell style) buffer
                        :key (lambda (f) (and (typep f 'update-style)
@@ -247,17 +246,47 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
 (define-command delete-this-buffer ()
   (delete-buffer (current-buffer)))
 
-(defun get-buffer-create (name &key mixins)
+(defun make-buffer (name &rest args)
+  (let ((modes (uiop:ensure-list (getf args :modes))))
+    (remf args :modes)
+    (apply #'make-instance
+           (apply #'dynamic-mixins:mix
+                  (append modes (list 'buffer)))
+           :name name args)))
+
+(defun get-buffer-create (name &rest args)
   (bt:with-recursive-lock-held (*buffer-table-lock*)
     (or (gethash name *buffer-name-table*)
-        (make-instance (apply #'dynamic-mixins:mix
-                              (append mixins (list 'buffer)))
-                       :name name))))
+        (apply #'make-buffer name args))))
 
-(defgeneric revert-buffer-aux (buffer))
+(defun get-buffer (name)
+  (gethash name *buffer-name-table*))
+
+(defgeneric revert-buffer-aux (buffer)
+  (:documentation "Regenerate the content of BUFFER."))
 
 (define-command revert-buffer ()
-  (revert-buffer-aux (current-buffer)))
+  "Regenerate the content of current buffer.
+
+The behavior can be customized via `revert-buffer-aux'."
+  (let ((*inhibit-read-only* t))
+    (revert-buffer-aux (current-buffer))))
+
+(define-command new-buffer ()
+  (switch-to-buffer (get-buffer-create "*new*")))
+
+(defun doc-node (buffer)
+  "Find the doc node of BUFFER."
+  (only-elt (get-elements-by-class-name (document-root buffer) "doc")))
+
+(defun modes (buffer)
+  (ignore-errors
+   (remove
+    'buffer
+    (mapcar
+     #'class-name
+     (slot-value (class-of buffer)
+                 'dynamic-mixins::classes)))))
 
 ;;; Parenscript utils
 
@@ -275,9 +304,6 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
                             ,(format nil "[neomacs-identifier='~a']" id))))))
          ((null node) nil)
          (t (error "Unknown node type ~a." node))))
-
-(ps:defpsmacro js-node-1 (node)
-  `(ps:lisp `(js-node ,,node)))
 
 (defun get-bounding-client-rect (node)
   (evaluate-javascript
@@ -300,81 +326,126 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
       ((end-pos node)
        `(ps:chain (js-node ,node) (get-bounding-client-rect))))))
 
+(ps:defpsmacro clear-class (class-name)
+  `(ps:chain -array (from (ps:chain document (get-elements-by-class-name ,class-name)))
+             (for-each (lambda (e)
+                         (ps:chain e class-list (remove ,class-name))))))
+
+(ps:defpsmacro scroll-to-focus (x y)
+  `(ps:chain
+    window
+    (scroll-to
+     (+ (ps:chain window scroll-x)
+        (min (- ,x (* (ps:lisp (scroll-margin (current-buffer)))
+                      (ps:chain window inner-width)))
+             0)
+        (max (- ,x (* (ps:lisp (- 1 (scroll-margin (current-buffer))))
+                      (ps:chain window inner-width)))
+             0))
+     (+ (ps:chain window scroll-y)
+        (min (- ,y (* (ps:lisp (scroll-margin (current-buffer)))
+                      (ps:chain window inner-height)))
+             0)
+        (max (- ,y (* (ps:lisp (- 1 (scroll-margin (current-buffer))))
+                      (ps:chain window inner-height)))
+             0)))))
+
 ;;; Render focus
+
+(defun clear-focus (buffer)
+  (evaluate-javascript
+   (ps:ps
+    (clear-class "focus")
+     (clear-class "focus-tail")
+     (ps:chain
+      -array
+      (from (ps:chain document (get-elements-by-class-name "newline")))
+      (for-each
+       (lambda (e)
+         (let ((parent (ps:chain e parent-node))
+               (newline (ps:chain document (create-element "br"))))
+           (ps:chain newline
+                     (set-attribute "neomacs-identifier"
+                                    (ps:chain e (get-attribute
+                                                 "neomacs-identifier"))))
+           (ps:chain parent (replace-child newline e))))))
+    (let ((highlight (ps:chain -c-s-s highlights (get "neomacs"))))
+      (when highlight (ps:chain highlight (clear)))))
+   buffer))
+
+(defun render-element-focus (element)
+  (evaluate-javascript
+   (ps:ps
+     (let* ((element (js-node-1 element))
+            (rect (ps:chain element (get-bounding-client-rect))))
+       (ps:chain element class-list (add "focus"))
+       (scroll-to-focus (ps:chain rect left) (ps:chain rect top))))
+   (host element)))
+
+(defun render-element-focus-tail (element)
+  (evaluate-javascript
+   (ps:ps
+     (let* ((element (js-node-1 element))
+            (rect (ps:chain element (get-bounding-client-rect))))
+       (ps:chain element class-list (add "focus-tail"))
+       (scroll-to-focus (ps:chain rect right) (ps:chain rect bottom))))
+   (host element)))
+
+(defun render-br-focus (element)
+  (evaluate-javascript
+   (ps:ps
+     (let* ((element (js-node-1 element))
+            (parent (js-node-1 (parent element)))
+            (newline (ps:chain document (create-element "div")))
+            (rect (ps:chain element (get-bounding-client-rect))))
+       (ps:chain newline (set-attribute "class" "newline"))
+       (ps:chain newline
+                 (set-attribute "neomacs-identifier"
+                                (ps:chain element (get-attribute "neomacs-identifier"))))
+       (ps:chain parent (replace-child newline element))
+       (scroll-to-focus (ps:chain rect right) (ps:chain rect bottom))))
+   (host element)))
+
+(defun render-text-focus (pos)
+  (evaluate-javascript
+   (ps:ps
+    (let ((range (ps:new (-range)))
+          (text-node (js-node-1 (text-pos-node pos)))
+          (highlight (ps:chain -c-s-s highlights (get "neomacs"))))
+      (ps:chain range (set-start text-node
+                                 (ps:lisp (text-pos-offset pos))))
+      (ps:chain range (set-end text-node
+                               (ps:lisp (1+ (text-pos-offset pos)))))
+      (unless highlight
+        (setq highlight (ps:new (-highlight)))
+        (ps:chain -c-s-s highlights (set "neomacs" highlight)))
+      (ps:chain highlight (add range))
+      (let ((rect (ps:chain range (get-bounding-client-rect))))
+        (scroll-to-focus (ps:chain rect left) (ps:chain rect top)))))
+   (host pos)))
 
 (defun render-focus (pos)
   (setq pos (resolve-marker pos))
-  (send-dom-update
-   (bind ((node (node-after pos))
-          (parent (node-containing pos))
-          (scroll-margin (scroll-margin (host pos))))
-     `(let (anchor-x anchor-y)
-        (dolist (e (ps:chain document (get-elements-by-class-name "focus")))
-          (ps:chain e class-list (remove "focus")))
-        (dolist (e (ps:chain document (get-elements-by-class-name "focus-tail")))
-          (ps:chain e class-list (remove "focus-tail")))
-        (let ((overlay (ps:chain document (get-element-by-id "neomacs-cursor"))))
-          (when overlay (setf (ps:chain overlay style display) "none")))
-        (let ((highlight (ps:chain -c-s-s highlights (get "neomacs"))))
-          (when highlight (ps:chain highlight (clear))))
+  (clear-focus (host pos))
+  (render-focus-aux (host pos) pos))
 
-        ,(if (or (characterp node)
-                 (and node (equal (tag-name node) "br")))
-             `(let ((range (ps:new (-range))))
-                ,(if (characterp node)
-                     `(let* ((text-node (js-node ,(text-pos-node pos)))
-                             (parent (ps:chain text-node parent-node)))
-                        (ps:chain range (set-start text-node
-                                                   ,(text-pos-offset pos)))
-                        (ps:chain range (set-end text-node
-                                                 ,(1+ (text-pos-offset pos)))))
-                     `(let ((element (js-node ,node)))
-                        (ps:chain range (select-node element))))
-                (let ((rect (ps:chain range (get-bounding-client-rect))))
-                  (setq anchor-x (ps:chain rect x))
-                  (setq anchor-y (ps:chain rect y))
-                  (if (> (ps:chain rect width) 5)
-                      (let ((highlight (ps:chain -c-s-s highlights (get "neomacs"))))
-                        (unless highlight
-                          (setq highlight (ps:new (-highlight)))
-                          (ps:chain -c-s-s highlights (set "neomacs" highlight)))
-                        (ps:chain highlight (add range)))
-                      (let ((overlay (ps:chain document (get-element-by-id "neomacs-cursor"))))
-                        (unless overlay
-                          (setq overlay (ps:chain document (create-element "div")))
-                          (setf (ps:chain overlay id) "neomacs-cursor")
-                          (ps:chain document body (append-child overlay)))
-                        (setf (ps:chain overlay style display) "inline")
-                        (setf (ps:chain overlay style left)
-                              (+ (ps:chain rect x) (ps:chain window scroll-x) "px")
-                              (ps:chain overlay style top)
-                              (+ (ps:chain rect y) (ps:chain window scroll-y) "px")
-                              (ps:chain overlay style width)
-                              (+ (ps:chain rect width) "px")
-                              (ps:chain overlay style height)
-                              (+ (ps:chain rect height) "px")))))
-                nil)
-             `(let ((element (js-node ,(or node parent))))
-                (ps:chain element class-list
-                          (add ,(if node "focus" "focus-tail")))
-                (let ((rect (ps:chain element (get-bounding-client-rect))))
-                  (setq anchor-x (ps:chain rect ,(if node 'left 'right)))
-                  (setq anchor-y (ps:chain rect ,(if node 'top 'bottom))))))
-        (ps:chain window
-                  (scroll-to
-                   (+ (ps:chain window scroll-x)
-                      (min (- anchor-x (* ,scroll-margin (ps:chain window inner-width))) 0)
-                      (max (- anchor-x (* ,(- 1 scroll-margin) (ps:chain window inner-width))) 0))
-                   (+ (ps:chain window scroll-y)
-                      (min (- anchor-y (* ,scroll-margin (ps:chain window inner-height))) 0)
-                      (max (- anchor-y (* ,(- 1 scroll-margin) (ps:chain window inner-height))) 0))))))
-   (host pos)))
+(defgeneric render-focus-aux (buffer pos)
+  (:method ((buffer buffer) pos)
+    (ematch pos
+      ((element)
+       (if (new-line-node-p pos)
+           (render-br-focus pos)
+           (render-element-focus pos)))
+      ((end-pos node) (render-element-focus-tail node))
+      ((text-pos) (render-text-focus pos)))))
 
 ;;; Read-only state
 
 (define-condition read-only-error (error)
   ((buffer :initarg :buffer))
-  (:report "~a is read only." buffer))
+  (:report
+   (lambda (c stream)
+     (format stream "~a is read only." (slot-value c 'buffer)))))
 
 (defvar *inhibit-read-only* nil)
 
@@ -446,10 +517,15 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
 (defstyle special-operator `(:color "#d29fa8"))
 (defstyle string `(:color "#d29fa8"))
 (defstyle comment `(:color "#a997a0"))
-(defstyle bold `(:color "#000"))
+(defstyle bold `())
 
 (defstyle focus-tail
-    `(((:append "::after") :content " " :inherit selection)
+    `(((:append "::after")
+       :content " "
+       :display "inline-block"
+       :white-space "pre-wrap"
+       :width "0.4em"
+       :inherit selection)
       :inherit focus))
 (defstyle cursor
     `(:position "absolute"
@@ -461,10 +537,30 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
 (defstyle common
     `((:import (url "https://fonts.googleapis.com/css2?family=Yomogi&display=swap"))))
 
+(defstyle doc-node `(((:append ".focus-tail::after")
+                      :content "  "
+                      :white-space "pre"
+                      :inherit selection)
+                     :left 0 :right 0
+                     :white-space "pre-wrap"
+                     :padding-left "1em"))
+
+(define-class doc-mode () ())
+
+(defstyle doc-mode `(("body" :inherit doc-node)))
+
 (defstyle buffer
     `(("body" :inherit default)
+      (".doc" :inherit doc-node)
       (".focus" :inherit focus)
       (".focus-tail" :inherit focus-tail)
+      (".newline"
+       :display "inline"
+       :min-width "0.4em" :inherit selection)
+      (".newline::after"
+       :content " \\A"
+       :inherit selection)
+      (".invisible" :display "none")
       ("::highlight(neomacs)" :inherit cursor)
       ("#neomacs-cursor" :inherit cursor)
       ("::-webkit-scrollbar" :display "none")))

@@ -3,9 +3,8 @@
 (defun make-echo-area ()
   (lret ((buffer (make-instance 'buffer :name " *echo-area*" :styles '(echo-area))))
     (setf (window-decoration buffer)
-          (make-element
-           "div" :class "minibuffer"
-           :children (list (make-element "div" :class "content" :buffer (id buffer)))))))
+          (dom `((:div :class "minibuffer")
+                 ((:div :class "content" :buffer ,(id buffer))))))))
 
 (define-class frame-root-mode () ())
 
@@ -60,14 +59,15 @@
        (ps:chain frame (on "resize" resize))))
    nil))
 
-(defmethod on-buffer-delete progn ((buffer frame-root-mode))
+(defmethod on-delete-buffer progn ((buffer frame-root-mode))
   (evaluate-javascript
    (ps:ps (ps:chain -ceramic (close-frame (ps:lisp (id (current-buffer))))))
    nil))
 
 (defmethod selectable-p-aux ((buffer frame-root-mode) pos)
   (let ((node (node-after pos)))
-    (and (class-p node "buffer" "minibuffer") (attribute node "selectable"))))
+    (and (class-p node "buffer" "minibuffer")
+         (attribute node "selectable"))))
 
 (defun focused-buffer (&optional (frame-root (current-frame-root)))
   (window-buffer (node-after (focus frame-root))))
@@ -76,8 +76,7 @@
   (or *current-buffer* (focused-buffer)))
 
 (defun make-frame-root (init-buffer)
-  (lret ((buffer (make-instance 'buffer :name " *frame-root*"
-                                        :styles '(frame-root))))
+  (lret ((buffer (make-instance 'buffer :name " *frame-root*" :styles nil)))
     (with-current-buffer buffer
       (enable 'frame-root-mode)
       (let* ((echo-area (make-echo-area))
@@ -127,16 +126,27 @@
 (defun frame-root (buffer)
   (host (window-decoration buffer)))
 
-(defun switch-to-buffer (&optional (buffer (buffer-at-focus))
-                           (victim (current-buffer)))
-  (unless (frame-root victim)
-    (error "~A is not displayed" victim))
+(defun check-displayable (buffer)
+  "Signal error if BUFFER is not suitable for display."
   (when (typep buffer 'frame-root-mode)
-    (error "Cannot switch to frame root ~A" buffer))
+    (error "Cannot display frame root ~A" buffer))
   (when (frame-root buffer)
-    (error "~A is already displayed" buffer))
+    (error "~A is already displayed" buffer)))
+
+(defun check-displayed (buffer)
+  "Signal error if BUFFER is not already displayed."
+  (unless (frame-root buffer)
+    (error "~A is not displayed" buffer)))
+
+(define-command switch-to-buffer
+    (&optional
+     (buffer
+      (get-buffer
+       (completing-read "Switch to buffer: " 'buffer-list-mode)))
+     (victim (current-buffer)))
+  (check-displayed victim)
+  (check-displayable buffer)
   (with-current-buffer (frame-root victim)
-    (setf (previous-buffer buffer) victim)
     (let ((pos (window-decoration victim)))
       (insert-nodes pos (window-decoration buffer))
       (delete-nodes pos (pos-right pos))))
@@ -146,21 +156,14 @@
   "Find a buffer to display in place of BUFFER.
 
 A replacement buffer has to be alive and not already displayed."
-  (let ((replacement (previous-buffer buffer)))
-    (iter
-      (while replacement)
-      (until (and (buffer-alive-p replacement)
-                  (not (frame-root replacement))
-                  (not (typep replacement 'frame-root-mode))))
-      (setq replacement (previous-buffer replacement)))
+  (declare (ignore buffer))
+  (let (replacement)
     ;; Try to find any buffer for replacement.
-    (print replacement)
-    (unless replacement
-      (iter (for (_ buffer) in-hashtable *buffer-name-table*)
-        (unless (or (frame-root buffer)
-                    (typep buffer 'frame-root-mode))
-          (setq replacement buffer)
-          (return))))
+    (iter (for (_ buffer) in-hashtable *buffer-name-table*)
+      (unless (or (frame-root buffer)
+                  (typep buffer 'frame-root-mode))
+        (setq replacement buffer)
+        (return)))
     (unless replacement
       (error "TODO"))
     replacement))
@@ -175,21 +178,47 @@ A replacement buffer has to be alive and not already displayed."
       (delete-nodes node (pos-right node)))))
 
 (define-command display-buffer-right (&optional (buffer (replacement-buffer)))
+  (check-displayable buffer)
   (with-current-buffer (current-frame-root)
     (unless (class-p (node-containing (focus)) "vertical")
       (wrap-node (focus) (make-element "div" :class "vertical")))
     (let ((node (window-decoration buffer)))
-      (insert-nodes (pos-right (focus)) node)
-      (setf (pos (focus)) node))))
+      (insert-nodes (pos-right (focus)) node))))
+
+(define-command display-buffer-below (&optional (buffer (replacement-buffer)))
+  (check-displayable buffer)
+  (with-current-buffer (current-frame-root)
+    (unless (class-p (node-containing (focus)) "horizontal")
+      (wrap-node (focus) (make-element "div" :class "horizontal")))
+    (let ((node (window-decoration buffer)))
+      (insert-nodes (pos-right (focus)) node))))
+
+(defun display-child-buffer (buffer)
+  (check-displayable buffer)
+  (let ((parent (current-buffer)))
+    (with-current-buffer (frame-root parent)
+      (insert-nodes (end-pos (window-decoration parent))
+                    (window-decoration buffer)))))
+
+(defun focus-buffer (buffer)
+  "Give BUFFER focus.
+
+BUFFER must be already displayed"
+  (check-displayed buffer)
+  (with-current-buffer (frame-root buffer)
+    (setf (pos (focus)) (window-decoration buffer))))
 
 (define-keys global
   "C-x o" 'other-window
   "C-x 0" 'close-buffer-display
-  "C-x 2" 'display-buffer-right)
+  "C-x 2" 'display-buffer-below
+  "C-x 3" 'display-buffer-right
+  "C-x b" 'switch-to-buffer
+  "C-x k" 'delete-buffer)
 
-(defun redisplay-windows ()
+(defun redisplay-windows (&optional (frame-root (current-buffer)))
   (evaluate-javascript
-   (ps:ps (ps:chain (js-frame (current-buffer)) (emit "resize")))
+   (ps:ps (ps:chain (js-frame frame-root) (emit "resize")))
    nil))
 
 (defvar *current-frame-root*)
@@ -202,13 +231,12 @@ A replacement buffer has to be alive and not already displayed."
 
 (defun window-buffer (window-node)
   (content-node-buffer
-   (only-elt
-    (get-elements-by-class-name window-node "content"))))
+   (car (get-elements-by-class-name window-node "content"))))
 
 (defvar *message-log-max* 1000)
 
 (defun get-message-buffer ()
-  (get-buffer-create "*Messages*"))
+  (get-buffer-create "*Messages*" :modes '(doc-mode)))
 
 (defun truncate-node (node n)
   (iter
@@ -224,7 +252,7 @@ A replacement buffer has to be alive and not already displayed."
 
 (defun message (control-string &rest format-arguments)
   (with-current-buffer (echo-area-buffer *current-frame-root*)
-    (delete-nodes (pos-down (document-root (current-buffer))) nil)
+    (erase-buffer)
     (when control-string
       (let ((message (apply #'format nil control-string format-arguments)))
         (insert-nodes (end-pos (document-root (current-buffer))) message)
@@ -241,32 +269,46 @@ A replacement buffer has to be alive and not already displayed."
    (ps:ps (ps:chain (js-buffer (current-buffer)) web-contents (open-dev-tools)))
    nil))
 
-(defstyle frame-root `((".vertical" :display "flex" :flex-flow "row" :width "100%" :height "100%")
-                       (".horizontal" :display "flex" :flex-flow "column" :height "100%" :width "100%")
-                       (".content" :width "100%" :height "100%")
-                       (".buffer" :flex "1 0 1em" :display "flex"
-                                  :flex-flow "column"
-                                  :margin "8px"
-                                  :backdrop-filter "blur(10px)")
-                       (".minibuffer"
-                        :flex "0 0 2em"
-                        :margin "8px"
-                        :backdrop-filter "blur(10px)")
-                       (".header" :inherit header)
-                       (".focus .header" :inherit header-focus)
-                       ("body"
-                        :padding "16px"
-                        :margin 0
-                        :inherit default
-                        :background-size "contain"
-                        :background-image "url(https://sozaino.site/wp-content/uploads/2021/08/sf35.png)")))
+(defstyle frame-root-mode
+    `((".vertical"
+       :flex "1 0 1em" :display "flex" :flex-flow "row"
+       :gap "24px" :width "100%" :height "100%")
+      (".horizontal"
+       :flex "1 0 1em" :display "flex" :flex-flow "column"
+       :gap "24px" :height "100%" :width "100%")
+      (".content" :width "100%" :height "100%")
+      (".buffer" :flex "1 0 1em"
+                 :display "flex" :flex-flow "column"
+                 ;; :margin "8px"
+                 :backdrop-filter "blur(10px)")
+      (".minibuffer"
+       :flex "0 0 2em"
+       :display "flex" :flex-flow "column"
+       ;; :margin "8px"
+       :backdrop-filter "blur(10px)")
+      (".header" :inherit header)
+      (".focus .header" :inherit header-focus)
+      (".header-buffer-name" :inherit header-buffer-name)
+      (".header-buffer-modes" :inherit header-buffer-modes)
+      ("body"
+       :padding "32px"
+       :margin 0
+       :inherit default
+       :background-size "contain"
+       :background-image "url(https://sozaino.site/wp-content/uploads/2021/08/sf35.png)")))
 
 (defstyle echo-area `(("body" :inherit default
                               :margin-top 0
-                              :margin-bottom 0)))
+                              :margin-bottom 0
+                              :white-space "pre-wrap")))
 
 (defstyle header `(:padding "8px"
+                   :display "flex" :flex-flow "row"
                    :margin-bottom "8px"
                    :background-color "rgba(169,151,160,0.2)"))
+
+(defstyle header-buffer-name `(:flex "1 0 1em"))
+
+(defstyle header-buffer-modes `(:flex "1 0 1em" :text-align "right"))
 
 (defstyle header-focus `(:background-color "rgba(169,151,160,0.4)"))
