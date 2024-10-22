@@ -56,7 +56,8 @@
                                     (buffer result)
                                     (ps:chain (ps:getprop (ps:chain -ceramic buffers) buffer)
                                               (set-bounds (ps:getprop result buffer)))))))))))
-       (ps:chain frame (on "resize" resize))))
+       (ps:chain frame (on "resize" resize))
+       (ps:chain frame (on "maximize" resize))))
    nil))
 
 (defmethod on-delete-buffer progn ((buffer frame-root-mode))
