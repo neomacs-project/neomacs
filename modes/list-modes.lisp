@@ -92,7 +92,8 @@
     :initform *default-pathname-defaults*
     :documentation "Path of the directory this buffer is visiting.
 
-This should always be a directory pathname (with NIL name and type fields).")))
+This should always be a directory pathname (with NIL name and type fields).")
+   (header-p :initform t :initarg :header-p)))
 
 (define-keymap file-list-mode ()
   "enter" 'file-list-find-file)
@@ -154,6 +155,14 @@ This should always be a directory pathname (with NIL name and type fields).")))
                          (:td ,(file-date-readable
                                 (osicat-posix:stat-mtime stat))))))))
 
+(defmethod revert-buffer-aux ((buffer file-list-mode))
+  (call-next-method)
+  (when (header-p buffer)
+    (insert-nodes
+     (pos-down (document-root buffer))
+     (make-element "div" :class "header"
+                         :children (list (namestring (file-path (current-buffer))))))))
+
 (defmethod (setf file-path) (new-val (buffer file-list-mode))
   (let ((old-val (slot-value buffer 'file-path)))
     (setf (slot-value buffer 'file-path) new-val)
@@ -162,7 +171,8 @@ This should always be a directory pathname (with NIL name and type fields).")))
         (revert-buffer))))
   new-val)
 
-(defstyle file-list-mode `((".directory::after" :content "/")))
+(defstyle file-list-mode `((".directory::after" :content "/")
+                           (".header" :inherit bold)))
 
 (defmethod focused-item ((buffer file-list-mode))
   (or (when-let (row (focused-row))

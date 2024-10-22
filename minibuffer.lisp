@@ -133,8 +133,9 @@ This is a thin wrapper around `read-from-minibuffer' that creates a completion b
     (dotimes (_ (scroll-lines (current-buffer)))
       (backward-element))))
 
-(defun make-completion-buffer (modes)
-  (lret ((buffer (make-buffer "*completion*" :modes modes)))
+(defun make-completion-buffer (modes &rest args)
+  (lret ((buffer (apply #'make-buffer "*completion*" :modes modes
+                        args)))
     (with-current-buffer buffer
       (revert-buffer))))
 

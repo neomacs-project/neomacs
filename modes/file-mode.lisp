@@ -83,7 +83,8 @@
                  :modes 'minibuffer-find-file-mode
                  :completion-buffer
                  (make-completion-buffer
-                  '(file-list-mode completion-buffer-mode)))))
+                  '(file-list-mode completion-buffer-mode)
+                  :header-p nil))))
   ;; If PATH points to a directory, ensure it is a directory
   ;; pathname (with NIL name and type fields).
   (when-let (dir (uiop:directory-exists-p path))
