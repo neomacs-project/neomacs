@@ -262,23 +262,6 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
 (defun get-buffer (name)
   (gethash name *buffer-name-table*))
 
-(defgeneric revert-buffer-aux (buffer)
-  (:documentation "Regenerate the content of BUFFER."))
-
-(define-command revert-buffer ()
-  "Regenerate the content of current buffer.
-
-The behavior can be customized via `revert-buffer-aux'."
-  (let ((*inhibit-read-only* t))
-    (revert-buffer-aux (current-buffer))))
-
-(define-command new-buffer ()
-  (switch-to-buffer (get-buffer-create "*new*")))
-
-(defun doc-node (buffer)
-  "Find the doc node of BUFFER."
-  (only-elt (get-elements-by-class-name (document-root buffer) "doc")))
-
 (defun modes (buffer)
   (ignore-errors
    (remove

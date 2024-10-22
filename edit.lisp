@@ -418,6 +418,23 @@ NODE become the last child of NEW-NODE."
   "Delete all content of current buffer."
   (delete-nodes (pos-down (document-root (current-buffer))) nil))
 
+(defgeneric revert-buffer-aux (buffer)
+  (:documentation "Regenerate the content of BUFFER."))
+
+(define-command revert-buffer ()
+  "Regenerate the content of current buffer.
+
+The behavior can be customized via `revert-buffer-aux'."
+  (let ((*inhibit-read-only* t))
+    (revert-buffer-aux (current-buffer))))
+
+(define-command new-buffer ()
+  (switch-to-buffer (get-buffer-create "*new*")))
+
+(defun doc-node (buffer)
+  "Find the doc node of BUFFER."
+  (only-elt (get-elements-by-class-name (document-root buffer) "doc")))
+
 ;;; Editing commands
 
 (defun self-insert-char ()
