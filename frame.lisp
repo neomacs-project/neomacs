@@ -203,7 +203,7 @@ A replacement buffer has to be alive and not already displayed."
 (defun focus-buffer (buffer)
   "Give BUFFER focus.
 
-BUFFER must be already displayed"
+BUFFER must be already displayed."
   (check-displayed buffer)
   (with-current-buffer (frame-root buffer)
     (setf (pos (focus)) (window-decoration buffer))))

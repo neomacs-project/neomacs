@@ -154,7 +154,7 @@ This should always be a directory pathname (with NIL name and type fields).")))
   (or (when-let (row (focused-row))
         (merge-pathnames (text-content (first-child row))
                          (file-path buffer)))
-      (error "No focused buffer")))
+      (error "No focused file")))
 
 (define-command file-list-find-file ()
   (find-file (focused-item (current-buffer))))
