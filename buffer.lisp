@@ -492,6 +492,18 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
                      :key (lambda (f) (and (typep f 'update-style)
                                            (slot-value f 'buffer))))))
 
+(defmethod (setf name) :before (new-val (buffer buffer))
+  (unless (equal new-val (slot-value buffer 'name))
+    (when-let (name-field
+               (car (get-elements-by-class-name
+                     (window-decoration buffer)
+                     "header-buffer-name")))
+      (if (host name-field)
+          (with-current-buffer (host name-field)
+            (delete-nodes (pos-down name-field) nil)
+            (insert-nodes (end-pos name-field) new-val))
+          (setf (text name-field) new-val)))))
+
 #+nil (progn
         (defstyle default `(:font-family "Verdana" :color "rgb(169,151,160)"))
  (defstyle focus `(:background-color "#f0f7ff"))

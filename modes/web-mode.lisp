@@ -23,6 +23,8 @@
 (define-keymap web-mode ()
   'next-line 'web-next-line
   'previous-line 'web-previous-line
+  'backward-node 'web-go-backward
+  'forward-node 'web-go-forward
   'scroll-up-command 'web-scroll-up
   'scroll-down-command 'web-scroll-down
   'beginning-of-buffer 'web-scroll-to-top
@@ -80,3 +82,27 @@
 
 (defmethod on-buffer-title-updated progn ((buffer web-mode) title)
   (rename-buffer title))
+
+(define-command web-go-backward ()
+  (unless
+      (evaluate-javascript-sync
+       (ps:ps
+         (let ((h (ps:chain (js-buffer (current-buffer))
+                            web-contents navigation-history)))
+           (when (ps:chain h (can-go-back))
+             (ps:chain h (go-back))
+             t)))
+       nil)
+    (error "Can not go forward.")))
+
+(define-command web-go-forward ()
+  (unless
+      (evaluate-javascript-sync
+       (ps:ps
+         (let ((h (ps:chain (js-buffer (current-buffer))
+                            web-contents navigation-history)))
+           (when (ps:chain h (can-go-forward))
+             (ps:chain h (go-forward))
+             t)))
+       nil)
+    (error "Can not go forward.")))
