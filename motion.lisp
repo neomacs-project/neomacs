@@ -114,9 +114,13 @@
 (defun ensure-selectable (marker &optional backward)
   (let ((pos (pos marker)))
     (unless (selectable-p pos)
-      (setq pos (if backward
+      (setq pos
+            (or (if backward
                     (npos-prev-until pos #'selectable-p)
-                    (npos-next-until pos #'selectable-p)))
+                    (npos-next-until pos #'selectable-p))
+                (if backward
+                    (npos-next-until pos #'selectable-p)
+                    (npos-prev-until pos #'selectable-p))))
       (if pos
           (setf (pos marker) pos)
           (warn "Failed to ensure-selectable: ~a"
