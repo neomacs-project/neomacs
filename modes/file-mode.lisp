@@ -73,10 +73,10 @@
     (cond ((uiop:directory-pathname-p (file-path (current-buffer)))
            (enable 'file-list-mode))
           ((equal type "lisp")
-           (enable 'lisp-file-mode))
+           (enable 'lisp-mode))
           ((equal type "html")
            (enable 'html-doc-mode))
-          (t (enable 'text-file-mode)))))
+          (t (enable 'text-mode)))))
 
 (define-command find-file
     (&optional (path
@@ -108,20 +108,27 @@
   (:documentation
    "Generic mode for buffer backed by files."))
 
-(defgeneric load-contents (file-mode)
-  (:method :after ((buffer t))
-    (dolist (c (child-nodes *dom-output*))
-      (do-dom (alex:rcurry #'node-setup (current-buffer)) c))))
-
-(defvar *dom-output* nil)
-
-(defun call-with-dom-output (body)
-  (if *dom-output* (funcall body)
-      (let ((*dom-output* (make-instance 'element :tag-name "div")))
-        (funcall body)
-        (child-nodes *dom-output*))))
-
 (defgeneric write-file (file-mode))
+
+(defmethod revert-buffer-aux ((buffer file-mode))
+  (erase-buffer)
+  (let ((doc-node (make-element "div" :class "doc")))
+    (insert-nodes (end-pos (document-root buffer)) doc-node)
+    (apply #'insert-nodes (end-pos doc-node)
+           (read-from-file (file-path buffer)))
+    (setf (restriction buffer) doc-node
+          (pos (focus buffer)) (pos-down doc-node))))
+
+(defmethod write-file ((buffer file-mode))
+  (with-open-file (s (file-path buffer)
+                     :direction :output :if-exists :supersede)
+    (with-standard-io-syntax
+      (dolist (c (child-nodes
+                  (only-elt (get-elements-by-class-name
+                             (document-root buffer)
+                             "doc"))))
+        (write-dom-aux buffer c s))
+      nil)))
 
 (define-command save-buffer (&optional (buffer (current-buffer)))
   (write-file buffer)

@@ -2,7 +2,7 @@
 
 (defun start ()
   (ceramic:start)
-  (let* ((buffer (get-buffer-create "*scratch*" :modes '(lisp-file-mode)))
+  (let* ((buffer (get-buffer-create "*scratch*" :modes '(lisp-mode file-mode)))
          (frame (make-frame-root buffer)))
     (setf *current-frame-root* frame)
     (with-current-buffer buffer
