@@ -10,13 +10,12 @@
 (defun occur-p (query element)
   (occur-p-aux (current-buffer) query element))
 
-(defmethod (setf occur-query) (new-val (buffer occur-mode))
+(defmethod (setf occur-query) :around (new-val (buffer occur-mode))
   (let ((old-val (slot-value buffer 'occur-query)))
-    (setf (slot-value buffer 'occur-query) new-val)
-    (unless (equal old-val new-val)
-      (with-current-buffer buffer
-        (update-occur))))
-  new-val)
+    (prog1 (call-next-method)
+     (unless (equal old-val new-val)
+       (with-current-buffer buffer
+         (update-occur))))))
 
 (defun update-occur ()
   (iter (for c in (children (restriction (current-buffer))))

@@ -77,7 +77,9 @@ This is a thin wrapper around `read-from-minibuffer' that creates a completion b
   'next-line 'next-minibuffer-completion
   'previous-line 'previous-minibuffer-completion
   'scroll-down-command 'scroll-down-minibuffer-completion
-  'scroll-up-command 'scroll-up-minibuffer-completion)
+  'scroll-up-command 'scroll-up-minibuffer-completion
+  'beginning-of-buffer 'beginning-of-minibuffer-completion
+  'end-of-buffer 'end-of-minibuffer-completion)
 
 (defgeneric update-completion-buffer (buffer)
   (:method ((buffer minibuffer-completion-mode))
@@ -132,6 +134,14 @@ This is a thin wrapper around `read-from-minibuffer' that creates a completion b
   (with-current-buffer (completion-buffer (current-buffer))
     (dotimes (_ (scroll-lines (current-buffer)))
       (backward-element))))
+
+(define-command beginning-of-minibuffer-completion ()
+  (with-current-buffer (completion-buffer (current-buffer))
+    (beginning-of-buffer)))
+
+(define-command end-of-minibuffer-completion ()
+  (with-current-buffer (completion-buffer (current-buffer))
+    (end-of-buffer)))
 
 (defun make-completion-buffer (modes &rest args)
   (lret ((buffer (apply #'make-buffer "*completion*" :modes modes

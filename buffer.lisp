@@ -479,7 +479,7 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
             (ps:chain element (remove))))
        buffer))))
 
-(defmethod (setf styles) (new-val (buffer buffer))
+(defmethod (setf styles) :before (new-val (buffer buffer))
   (dolist (style (stable-set-difference new-val (slot-value buffer 'styles)))
     (update-style buffer style)
     (add-observer (css-cell style)
@@ -490,8 +490,7 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
     (remove-style buffer style)
     (remove-observer (css-cell style) buffer
                      :key (lambda (f) (and (typep f 'update-style)
-                                           (slot-value f 'buffer)))))
-  (setf (slot-value buffer 'styles) new-val))
+                                           (slot-value f 'buffer))))))
 
 #+nil (progn
         (defstyle default `(:font-family "Verdana" :color "rgb(169,151,160)"))

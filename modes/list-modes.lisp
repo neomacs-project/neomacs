@@ -173,13 +173,12 @@ This should always be a directory pathname (with NIL name and type fields).")
      (make-element "div" :class "header"
                          :children (list (namestring (file-path (current-buffer))))))))
 
-(defmethod (setf file-path) (new-val (buffer file-list-mode))
+(defmethod (setf file-path) :around (new-val (buffer file-list-mode))
   (let ((old-val (slot-value buffer 'file-path)))
-    (setf (slot-value buffer 'file-path) new-val)
-    (unless (equal old-val new-val)
-      (with-current-buffer buffer
-        (revert-buffer))))
-  new-val)
+    (prog1 (call-next-method)
+      (unless (equal old-val new-val)
+        (with-current-buffer buffer
+          (revert-buffer))))))
 
 (defstyle file-list-mode `((".directory::after" :content "/")
                            (".header" :inherit bold)))
