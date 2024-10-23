@@ -6,7 +6,8 @@
           (dom `((:div :class "minibuffer")
                  ((:div :class "content" :buffer ,(id buffer))))))))
 
-(define-class frame-root-mode () ())
+(define-class frame-root-mode ()
+  ((echo-area :initform (make-echo-area))))
 
 (defmethod on-buffer-loaded progn ((buffer frame-root-mode))
   (redisplay-windows))
@@ -63,7 +64,8 @@
 (defmethod on-delete-buffer progn ((buffer frame-root-mode))
   (evaluate-javascript
    (ps:ps (ps:chain -ceramic (close-frame (ps:lisp (id (current-buffer))))))
-   nil))
+   nil)
+  (delete-buffer (echo-area buffer)))
 
 (defmethod selectable-p-aux ((buffer frame-root-mode) pos)
   (let ((node (node-after pos)))
@@ -76,30 +78,41 @@
 (defun current-buffer ()
   (or *current-buffer* (focused-buffer)))
 
-(defun make-frame-root (init-buffer)
-  (lret ((buffer (make-instance 'buffer :name " *frame-root*" :styles nil)))
-    (with-current-buffer buffer
-      (enable 'frame-root-mode)
-      (let* ((echo-area (make-echo-area))
-             (root (document-root buffer))
-             (split (make-element "div" :class "horizontal")))
-        (insert-nodes (end-pos root) split)
-        (insert-nodes (end-pos split) (window-decoration echo-area))
-        (insert-nodes (pos-down split) (window-decoration init-buffer))
-        (setf (pos (focus buffer)) (pos-down split))))))
+(defun init-frame-root (init-buffer)
+  (let* ((root (document-root (current-buffer)))
+         (split (make-element "div" :class "horizontal")))
+    (insert-nodes (end-pos root) split)
+    (insert-nodes (end-pos split)
+                  (window-decoration (echo-area (current-buffer))))
+    (insert-nodes (pos-down split) (window-decoration init-buffer))
+    (setf (pos (focus)) (pos-down split))))
 
-(defun echo-area-buffer (&optional (frame-root (current-frame-root)))
-  "The buffer currently displayed in echo area window."
-  (window-buffer (npos-prev-ensure (end-pos (document-root frame-root))
-                                   (alex:rcurry #'class-p "minibuffer"))))
+(defun make-frame-root (init-buffer)
+  (lret ((buffer (make-buffer " *frame-root*" :styles nil)))
+    (with-current-buffer buffer
+      ;; FIXME: If I move (enable 'frame-root-mode) into (make-buffer
+      ;; ... :modes 'frame-root-mode), it stops working.
+      ;; Figure out why.
+      (enable 'frame-root-mode)
+      (init-frame-root init-buffer))))
 
 (define-command other-window ()
+  "Focus another buffer in cyclic order in current frame."
   (with-current-buffer (current-frame-root)
     (forward-node-cycle)))
 
 (define-command prev-other-window ()
+  "Focus another buffer in reverse cyclic order in current frame."
   (with-current-buffer (current-frame-root)
     (backward-node-cycle)))
+
+(define-command delete-other-windows
+    (&optional (buffer (current-buffer)))
+  "Make BUFFER fill its frame."
+  (check-displayed buffer)
+  (with-current-buffer (current-frame-root)
+    (erase-buffer)
+    (init-frame-root buffer)))
 
 (defmethod on-node-setup progn ((buffer frame-root-mode) node)
   (when (class-p node "content")
@@ -174,11 +187,13 @@ A replacement buffer has to be alive and not already displayed."
   (switch-to-buffer (replacement-buffer buffer) buffer))
 
 (define-command close-buffer-display (&optional (buffer (current-buffer)))
+  "Close the window which displays BUFFER."
   (with-current-buffer (frame-root buffer)
     (let ((node (window-decoration buffer)))
       (delete-nodes node (pos-right node)))))
 
 (define-command display-buffer-right (&optional (buffer (replacement-buffer)))
+  "Split a window to the right and display BUFFER in it."
   (check-displayable buffer)
   (with-current-buffer (current-frame-root)
     (unless (class-p (node-containing (focus)) "vertical")
@@ -187,19 +202,13 @@ A replacement buffer has to be alive and not already displayed."
       (insert-nodes (pos-right (focus)) node))))
 
 (define-command display-buffer-below (&optional (buffer (replacement-buffer)))
+  "Split a window to the bottom and display BUFFER in it."
   (check-displayable buffer)
   (with-current-buffer (current-frame-root)
     (unless (class-p (node-containing (focus)) "horizontal")
       (wrap-node (focus) (make-element "div" :class "horizontal")))
     (let ((node (window-decoration buffer)))
       (insert-nodes (pos-right (focus)) node))))
-
-(defun display-child-buffer (buffer)
-  (check-displayable buffer)
-  (let ((parent (current-buffer)))
-    (with-current-buffer (frame-root parent)
-      (insert-nodes (end-pos (window-decoration parent))
-                    (window-decoration buffer)))))
 
 (defun focus-buffer (buffer)
   "Give BUFFER focus.
@@ -212,6 +221,7 @@ BUFFER must be already displayed."
 (define-keys global
   "C-x o" 'other-window
   "C-x 0" 'close-buffer-display
+  "C-x 1" 'delete-other-windows
   "C-x 2" 'display-buffer-below
   "C-x 3" 'display-buffer-right
   "C-x b" 'switch-to-buffer
@@ -252,7 +262,7 @@ BUFFER must be already displayed."
       (return))))
 
 (defun message (control-string &rest format-arguments)
-  (with-current-buffer (echo-area-buffer *current-frame-root*)
+  (with-current-buffer (echo-area *current-frame-root*)
     (erase-buffer)
     (when control-string
       (let ((message (apply #'format nil control-string format-arguments)))
