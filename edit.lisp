@@ -368,10 +368,9 @@ starting from BEG till the end of its parent."
     ;; If END is nil, also move marker at (end-pos src-parent)
     (unless end
       (dolist (m (markers host))
-        (let ((pos (pos m)))
+        (let ((pos (slot-value m 'pos)))
           (when (and (end-pos-p pos)
                      (eq (end-pos-node pos) src-parent))
-            ;; TODO: account for advance-p correctly
             (setf (pos m) to)))))
     ;; Account for this edge case
     (when (or (end-pos-p beg) (equalp beg end))
