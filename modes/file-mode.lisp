@@ -74,6 +74,8 @@
            (enable 'file-list-mode))
           ((equal type "lisp")
            (enable 'lisp-file-mode))
+          ((equal type "html")
+           (enable 'html-doc-mode))
           (t (enable 'text-file-mode)))))
 
 (define-command find-file

@@ -136,11 +136,10 @@ which ensures renderer side ATTRIBUTE of NODE matches value of CELL."
   (make-instance 'element :tag-name "br"))
 
 (defun new-line-node-p (node)
-  (or (and (element-p node)
-           (or (equal (attribute node "class")
-                      "new-line")
-               (equal (tag-name node) "br")))
-      (eql node #\Newline)))
+  (and (element-p node)
+       (or (equal (attribute node "class")
+                  "newline")
+           (equal (tag-name node) "br"))))
 
 (defun serialize (node stream)
   "Serialize NODE to HTML and write to STREAM.

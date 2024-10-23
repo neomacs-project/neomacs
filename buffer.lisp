@@ -201,6 +201,10 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
        (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
        nil))))
 
+(defgeneric on-buffer-title-updated (buffer title)
+  (:method-combination progn)
+  (:method progn ((buffer buffer) (title t))))
+
 (defgeneric on-delete-buffer (buffer)
   (:method-combination progn)
   (:method progn ((buffer buffer))))
@@ -261,6 +265,14 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
 
 (defun get-buffer (name)
   (gethash name *buffer-name-table*))
+
+(defun rename-buffer (name)
+  (bt:with-recursive-lock-held (*buffer-table-lock*)
+    (remhash (name (current-buffer)) *buffer-name-table*)
+    (setq name (generate-buffer-name name))
+    (setf (name (current-buffer)) name)
+    (setf (gethash name *buffer-name-table*) (current-buffer))
+    name))
 
 (defun modes (buffer)
   (ignore-errors

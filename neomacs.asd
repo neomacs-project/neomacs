@@ -32,6 +32,8 @@
                (:file "modes/file-syntax-mode")
                (:file "modes/lisp-mode")
                (:file "modes/lisp-file")
+               (:file "modes/doc-mode")
+               (:file "modes/web-mode")
                (:file "start"))
   :depends-on (:lwcells
                :ceramic

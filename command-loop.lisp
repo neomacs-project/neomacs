@@ -62,6 +62,10 @@
           ((equal type "load")
            (with-current-buffer buffer
              (on-buffer-loaded buffer)))
+          ((equal type "title-updated")
+           (with-current-buffer buffer
+             (on-buffer-title-updated
+              buffer (assoc-value event :title))))
           ((equal type "keyUp"))
           (t (warn "Unrecoginized Electron event: ~a" event)))))
 

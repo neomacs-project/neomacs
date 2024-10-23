@@ -63,10 +63,12 @@ Ceramic.closeFrame = function(id) {
 Ceramic.createBuffer = function(id, url, options) {
     var buf = new WebContentsView(options);
     buf.webContents.on('before-input-event', (event, input) => {
-        RemoteJS.send(JSON.stringify({'inputEvent': input, 'buffer': id}));
+        RemoteJS.send(JSON.stringify({inputEvent: input, buffer: id}));
         event.preventDefault(); });
     buf.webContents.on('did-finish-load', () => {
-        RemoteJS.send(JSON.stringify({'inputEvent': {'type':"load"}, 'buffer': id}));});
+        RemoteJS.send(JSON.stringify({inputEvent: {type: "load"}, buffer: id}));});
+    buf.webContents.on('page-title-updated', (event, title, explicitSet) => {
+        RemoteJS.send(JSON.stringify({inputEvent: {type: "title-updated", title: title}, buffer: id}))});
     buf.webContents.loadURL(url);
     Ceramic.buffers[id] = buf;
     return buf;
