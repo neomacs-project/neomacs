@@ -359,14 +359,23 @@ starting from BEG till the end of its parent."
          (src-parent (node-containing beg))
          (dst-parent (node-containing to))
          (host (host to)))
-    ;; Account for this edge case
-    (when (or (end-pos-p beg) (equalp beg end))
-      (return-from move-nodes nil))
+
     (unless (host beg)
       (error "~a does not point inside an active document." beg))
     (unless (eq (host beg) host)
       (error "~a and ~a not point inside the same document." beg to))
     (check-read-only host)
+    ;; If END is nil, also move marker at (end-pos src-parent)
+    (unless end
+      (dolist (m (markers host))
+        (let ((pos (pos m)))
+          (when (and (end-pos-p pos)
+                     (eq (end-pos-node pos) src-parent))
+            ;; TODO: account for advance-p correctly
+            (setf (pos m) to)))))
+    ;; Account for this edge case
+    (when (or (end-pos-p beg) (equalp beg end))
+      (return-from move-nodes nil))
     (setq end (maybe-split-text-node end)
           beg (maybe-split-text-node beg)
           to (maybe-split-text-node to))
