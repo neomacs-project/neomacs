@@ -69,7 +69,8 @@
 
 (defun graphic-element-p (node)
   (and (element-p node)
-       (not (new-line-node-p node))))
+       (not (new-line-node-p node))
+       (not (invisible-p node))))
 
 (defun ensure-element (pos)
   (if (element-p pos) pos (node-containing pos)))
@@ -85,8 +86,7 @@
           (or (iterate-pos-until
                (alex:disjoin #'npos-right
                              (alex:compose #'pos-right #'pos-up))
-               pos (alex:conjoin #'graphic-element-p
-                                 #'selectable-p))
+               pos #'graphic-element-p)
               (error 'top-of-subtree)))))
 
 (define-command backward-element (&optional (marker (focus)))
@@ -99,8 +99,7 @@
     (setf (pos marker)
           (or (iterate-pos-until
                (alex:disjoin #'npos-left #'pos-up)
-               pos (alex:conjoin #'graphic-element-p
-                                 #'selectable-p))
+               pos #'graphic-element-p)
               (error 'top-of-subtree)))))
 
 (define-command beginning-of-buffer (&optional (marker (focus)))
