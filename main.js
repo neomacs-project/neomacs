@@ -34,12 +34,11 @@ Ceramic.startWebSockets = function(address, port) {
 };
 
 Ceramic.syncEval = function(id, fn) {
-    const result = fn();
-    RemoteJS.send(JSON.stringify({
-        id: id,
-        result: result
-    }))
-};
+    Promise.resolve(fn()).then(function(result){
+        RemoteJS.send(JSON.stringify({
+            id: id,
+            result: result
+        }))})};
 
 Ceramic.startCrashReporter = function (options) {
     electron.crashReporter.start(options);

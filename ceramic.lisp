@@ -5,13 +5,33 @@
   (ppcre:regex-replace-all "\\\\(?!\")" js-code "\\\\\\\\"))
 
 (defun evaluate-javascript (code buffer)
+  "Evaluate JavaScript CODE asynchronously.
+
+Evaluate CODE in BUFFER's webContents, or main Electron process if
+BUFFER is NIL. Returns NIL."
   (if buffer
       (cera.d:js
        cera.d:*driver*
-       (ps:ps (ps:chain (ps:getprop (ps:chain -ceramic buffers) (ps:lisp (id buffer)))
-                        web-contents
+       (ps:ps (ps:chain (js-buffer buffer) web-contents
                         (execute-java-script (ps:lisp code) ps:false))))
-      (cera.d:js cera.d:*driver* code)))
+      (cera.d:js cera.d:*driver* code))
+  nil)
+
+(defun evaluate-javascript-sync (code buffer)
+  "Evaluate JavaScript CODE synchronously and return the result.
+
+Evaluate CODE in BUFFER's webContents, or main Electron process if
+BUFFER is NIL."
+  (if buffer
+      (cera.d:sync-js
+       cera.d:*driver*
+       (ps:ps
+         (return
+           (ps:chain (js-buffer buffer) web-contents
+                     (execute-java-script (ps:lisp code) ps:false)))))
+      (cera.d:sync-js
+       cera.d:*driver*
+       (ps:ps (return (eval (ps:lisp code)))))))
 
 (defclass driver (ceramic.driver:driver) ())
 
