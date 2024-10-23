@@ -66,12 +66,14 @@
        (lambda () (read-dom-aux (current-buffer) stream)))))
 
 (defun read-from-file (file)
-  (with-open-file (s file :direction :input)
-    (call-with-dom-output
-     (lambda ()
-       (handler-case
-           (loop (read-dom s t))
-         (end-of-file ()))))))
+  (with-open-file (s file :direction :input
+                          :if-does-not-exist nil)
+    (when s
+      (call-with-dom-output
+       (lambda ()
+         (handler-case
+             (loop (read-dom s t))
+           (end-of-file ())))))))
 
 (defun append-text (parent string)
   (if (text-node-p (last-child parent))

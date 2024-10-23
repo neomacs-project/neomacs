@@ -67,7 +67,8 @@ This is a thin wrapper around `read-from-minibuffer' that creates a completion b
     (list list-mode 'completion-buffer-mode))))
 
 (define-class minibuffer-completion-mode (minibuffer-mode)
-  ((completion-buffer :initarg :completion-buffer))
+  ((completion-buffer :initarg :completion-buffer)
+   (require-match :initform t :initarg :require-match))
   (:documentation
    "Mode for minibuffer that supports completion."))
 
@@ -114,6 +115,8 @@ This is a thin wrapper around `read-from-minibuffer' that creates a completion b
                   (text-content (first-child (node-after (focus (completion-buffer (current-buffer)))))))))
 
 (define-command complete-exit-minibuffer ()
+  ;; TODO: in case of not require-match, perform completion depending
+  ;; on whether focus is on minibuf/completion buffer
   (complete-minibuffer)
   (exit-minibuffer))
 

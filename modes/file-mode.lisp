@@ -2,7 +2,7 @@
 
 (define-class minibuffer-find-file-mode
     (minibuffer-completion-mode)
-  ())
+  ((require-match :initform nil)))
 
 (define-keymap minibuffer-find-file-mode ()
   "/" 'split-node
@@ -61,7 +61,6 @@
           (setf (pos (focus)) (end-pos new)))))))
 
 (define-command complete-exit-find-file ()
-  (complete-find-file)
   (exit-minibuffer))
 
 (defstyle minibuffer-find-file-mode
