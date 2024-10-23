@@ -117,18 +117,10 @@
       (setq pos (if backward
                     (npos-prev-until pos #'selectable-p)
                     (npos-next-until pos #'selectable-p)))
-      (setf (pos marker) (or pos
-                             (if backward
-                                 (npos-prev-until
-                                  (pos-down-last (restriction (host marker)))
-                                  #'selectable-p)
-                                 (npos-next-until
-                                  (pos-down (restriction (host marker)))
-                                  #'selectable-p))
-                             (progn
-                               (warn "Failed to ensure-selectable: ~a"
-                                     (host marker))
-                               (pos marker)))))))
+      (if pos
+          (setf (pos marker) pos)
+          (warn "Failed to ensure-selectable: ~a"
+                (host marker))))))
 
 (define-command backward-up-node (&optional (marker (focus)))
   "Move to closest selectable parent."
