@@ -90,6 +90,7 @@
   ;; pathname (with NIL name and type fields).
   (when-let (dir (uiop:directory-exists-p path))
     (setq path dir))
+  (ensure-directories-exist path)
   (switch-to-buffer
    (with-current-buffer
        (make-buffer
