@@ -85,7 +85,8 @@
           (or (iterate-pos-until
                (alex:disjoin #'npos-right
                              (alex:compose #'pos-right #'pos-up))
-               pos #'graphic-element-p)
+               pos (alex:conjoin #'graphic-element-p
+                                 #'selectable-p))
               (error 'top-of-subtree)))))
 
 (define-command backward-element (&optional (marker (focus)))
@@ -98,7 +99,8 @@
     (setf (pos marker)
           (or (iterate-pos-until
                (alex:disjoin #'npos-left #'pos-up)
-               pos #'graphic-element-p)
+               pos (alex:conjoin #'graphic-element-p
+                                 #'selectable-p))
               (error 'top-of-subtree)))))
 
 (define-command beginning-of-buffer (&optional (marker (focus)))
