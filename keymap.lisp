@@ -193,7 +193,7 @@ Example: (define-key *global-keymap* \"C-'\" 'list-modes)"
     (mapcar #'parse (uiop:split-string string :separator " "))))
 
 (defun key-description (key &optional stream)
-  (match key
+  (ematch key
     ((key ctrl meta super hypher shift sym)
      (if-let (translation (gethash (cons sym shift) *event-to-char*))
        (setf shift nil sym (string translation))

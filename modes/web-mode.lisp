@@ -13,7 +13,9 @@
                 :styles nil)))
 
 (define-class web-mode ()
-  ((scroll-multiplier :default 16 :type (integer 1))))
+  ((scroll-multiplier :default 16 :type (integer 1))
+   (hints-selector :default "a, button, input, textarea, details, select"
+                   :type string)))
 
 (defmethod render-focus-aux ((buffer web-mode) (pos t)))
 
@@ -93,7 +95,7 @@
              (ps:chain h (go-back))
              t)))
        nil)
-    (error "Can not go forward.")))
+    (error "Can not go backward.")))
 
 (define-command web-go-forward ()
   (unless

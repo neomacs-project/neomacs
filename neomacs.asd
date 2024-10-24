@@ -33,6 +33,7 @@
                (:file "modes/lisp-mode")
                (:file "modes/doc-mode")
                (:file "modes/web-mode")
+               (:file "modes/web-hints")
                (:file "start"))
   :depends-on (:lwcells
                :ceramic

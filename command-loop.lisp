@@ -62,6 +62,9 @@
           ((equal type "load")
            (with-current-buffer buffer
              (on-buffer-loaded buffer)))
+          ((equal type "dom-ready")
+           (with-current-buffer buffer
+             (on-buffer-dom-ready buffer)))
           ((equal type "title-updated")
            (with-current-buffer buffer
              (on-buffer-title-updated

@@ -41,6 +41,7 @@
     :documentation "With value s, try to keep cursor within [s,1-s] portion of the viewport.")
    (scroll-lines :default 10 :type (integer 1))
    (styles :default (list 'buffer) :initarg :styles)
+   (content-scripts :default nil)
    (lock :initform (bt:make-recursive-lock) :reader lock)
    (window-decoration))
   (:default-initargs :url (quri:uri "about:blank")))
@@ -189,17 +190,23 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
 (ps:defpsmacro js-buffer (buffer)
   `(ps:getprop (ps:chain -ceramic buffers) (ps:lisp (id ,buffer))))
 
-(defgeneric on-buffer-loaded (buffer)
+(defgeneric on-buffer-dom-ready (buffer)
   (:method-combination progn)
   (:method progn ((buffer buffer))
     (let ((marker (focus-marker buffer)))
-      (setf (pos marker) (pos marker))
-      (dolist (style (reverse (styles buffer)))
-        (update-style buffer style)))
+      (setf (pos marker) (pos marker)))
+    (dolist (style (reverse (styles buffer)))
+      (update-style buffer style))
+    (dolist (script (content-scripts buffer))
+      (evaluate-javascript (get script 'content-script) buffer))
     (when (eql buffer (focused-buffer))
       (evaluate-javascript
        (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
        nil))))
+
+(defgeneric on-buffer-loaded (buffer)
+  (:method-combination progn)
+  (:method progn ((buffer buffer))))
 
 (defgeneric on-buffer-title-updated (buffer title)
   (:method-combination progn)
@@ -480,6 +487,7 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
        buffer))))
 
 (defmethod (setf styles) :before (new-val (buffer buffer))
+  ;; TODO: maintain order of the style sheets correctly
   (dolist (style (stable-set-difference new-val (slot-value buffer 'styles)))
     (update-style buffer style)
     (add-observer (css-cell style)
@@ -491,6 +499,19 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
     (remove-observer (css-cell style) buffer
                      :key (lambda (f) (and (typep f 'update-style)
                                            (slot-value f 'buffer))))))
+
+(defmethod (setf content-scripts) :before (new-val (buffer buffer))
+  (dolist (script (reverse
+                   (stable-set-difference
+                    new-val
+                    (slot-value buffer 'content-scripts))))
+    (evaluate-javascript (get script 'content-script) buffer)))
+
+(defmacro define-content-script (name &body body)
+  `(progn
+     (setf (get ',name 'content-script)
+           (ps:ps ,@body))
+     ',name))
 
 (defmethod (setf name) :before (new-val (buffer buffer))
   (unless (equal new-val (slot-value buffer 'name))

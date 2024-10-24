@@ -67,6 +67,8 @@ Ceramic.createBuffer = function(id, url, options) {
         event.preventDefault(); });
     buf.webContents.on('did-finish-load', () => {
         RemoteJS.send(JSON.stringify({inputEvent: {type: "load"}, buffer: id}));});
+    buf.webContents.on('dom-ready', () => {
+        RemoteJS.send(JSON.stringify({inputEvent: {type: "dom-ready"}, buffer: id}));});
     buf.webContents.on('page-title-updated', (event, title, explicitSet) => {
         RemoteJS.send(JSON.stringify({inputEvent: {type: "title-updated", title: title}, buffer: id}))});
     buf.webContents.loadURL(url);
