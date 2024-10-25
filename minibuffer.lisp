@@ -67,8 +67,7 @@ This is a thin wrapper around `read-from-minibuffer' that creates a completion b
     (list list-mode 'completion-buffer-mode))))
 
 (define-class minibuffer-completion-mode (minibuffer-mode)
-  ((completion-buffer :initarg :completion-buffer)
-   (require-match :initform t :initarg :require-match))
+  ((completion-buffer :initarg :completion-buffer))
   (:documentation
    "Mode for minibuffer that supports completion."))
 
@@ -85,12 +84,47 @@ This is a thin wrapper around `read-from-minibuffer' that creates a completion b
 (defgeneric update-completion-buffer (buffer)
   (:method ((buffer minibuffer-completion-mode))
     (setf (occur-query (completion-buffer buffer))
-        (minibuffer-input buffer))))
+          (minibuffer-input buffer))))
+
+(defgeneric complete-minibuffer-aux (buffer)
+  (:method ((buffer minibuffer-completion-mode))
+    (let ((input (only-elt (get-elements-by-class-name
+                            (document-root buffer) "input")))
+          (selection (node-after (focus (completion-buffer buffer)))))
+      (unless (class-p selection "dummy-row")
+        (delete-nodes (pos-down input) nil)
+        (insert-nodes (pos-down input)
+                      (text-content (first-child selection)))))))
 
 (defmethod on-post-command progn ((buffer minibuffer-completion-mode))
   (update-completion-buffer buffer))
 
-(define-class completion-buffer-mode (occur-mode) ())
+(define-class completion-buffer-mode (occur-mode)
+  ((require-match
+    :initform t :initarg :require-match
+    :documentation
+    "Whether a match is required.
+
+If this slot is NIL, an invisible selectable dummy row is inserted at
+the beginning of the completion buffer. No completion is performed
+when this row is selected.")))
+
+(defmethod generate-rows :before ((buffer completion-buffer-mode))
+  (unless (require-match buffer)
+    (insert-nodes (focus) (make-element "tr" :class "dummy-row"))))
+
+(defmethod revert-buffer-aux :after ((buffer completion-buffer-mode))
+  (setf (pos (focus))
+        (or (npos-right-ensure
+             (pos (focus))
+             (lambda (p) (not (class-p p "dummy-row"))))
+            (error 'top-of-subtree))))
+
+(defmethod occur-p-aux :around ((buffer completion-buffer-mode)
+                                (query t) element)
+  (or (class-p element "dummy-row") (call-next-method)))
+
+(defstyle completion-buffer-mode `(("dummy-row" :display "none")))
 
 (defmethod selectable-p-aux ((buffer completion-buffer-mode) pos)
   (tag-name-p (node-after pos) "tr"))
@@ -108,11 +142,7 @@ This is a thin wrapper around `read-from-minibuffer' that creates a completion b
   (delete-buffer (completion-buffer buffer)))
 
 (define-command complete-minibuffer ()
-  (let ((input (only-elt (get-elements-by-class-name
-                          (document-root (current-buffer)) "input"))))
-    (delete-nodes (pos-down input) nil)
-    (insert-nodes (pos-down input)
-                  (text-content (first-child (node-after (focus (completion-buffer (current-buffer)))))))))
+  (complete-minibuffer-aux (current-buffer)))
 
 (define-command complete-exit-minibuffer ()
   ;; TODO: in case of not require-match, perform completion depending

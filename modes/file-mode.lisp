@@ -2,12 +2,10 @@
 
 (define-class minibuffer-find-file-mode
     (minibuffer-completion-mode)
-  ((require-match :initform nil)))
+  ())
 
 (define-keymap minibuffer-find-file-mode ()
-  "/" 'split-node
-  'complete-minibuffer 'complete-find-file
-  'complete-exit-minibuffer 'complete-exit-find-file)
+  "/" 'split-node)
 
 (defmethod update-completion-buffer ((buffer minibuffer-find-file-mode))
   (let ((path (path-before (focus))))
@@ -48,20 +46,18 @@
 (defmethod minibuffer-input ((buffer minibuffer-find-file-mode))
   (path-before (end-pos (last-child (minibuffer-input-element buffer)))))
 
-(define-command complete-find-file ()
-  (when-let (selection (first-child (node-after (focus (completion-buffer (current-buffer))))))
-    (let ((path-component (node-containing (focus))))
+(defmethod complete-minibuffer-aux ((buffer minibuffer-find-file-mode))
+  (let ((selection (node-after (focus (completion-buffer (current-buffer)))))
+        (path-component (node-containing (focus))))
+    (unless (class-p selection "dummy-row")
       (delete-nodes (pos-right path-component) nil)
       (delete-nodes (pos-down path-component) nil)
       (insert-nodes (pos-down path-component)
-                    (text-content selection))
-      (when (class-p selection "directory")
+                    (text-content (first-child selection)))
+      (when (class-p (first-child selection) "directory")
         (let ((new (make-element "span" :class "path-component")))
           (insert-nodes (pos-right path-component) new)
           (setf (pos (focus)) (end-pos new)))))))
-
-(define-command complete-exit-find-file ()
-  (exit-minibuffer))
 
 (defstyle minibuffer-find-file-mode
     `((".path-component::before"
@@ -85,7 +81,8 @@
                  :completion-buffer
                  (make-completion-buffer
                   '(file-list-mode completion-buffer-mode)
-                  :header-p nil))))
+                  :header-p nil
+                  :require-match nil))))
   ;; If PATH points to a directory, ensure it is a directory
   ;; pathname (with NIL name and type fields).
   (when-let (dir (uiop:directory-exists-p path))
