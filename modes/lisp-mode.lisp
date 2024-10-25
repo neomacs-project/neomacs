@@ -556,6 +556,8 @@ before MARKER-OR-POS."
 
 (defstyle string-node `(((:append "::before") :content "\"")
                         ((:append "::after") :content "\"")
+                        ((:append ":not(:last-child)")
+                         :margin-right "0.4em")
                         ((:append ".focus::before")
                          :inherit selection)
                         ((:append ".focus-tail::after")
