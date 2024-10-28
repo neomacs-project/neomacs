@@ -242,8 +242,8 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
             ((:div :class "header-buffer-name") ,(name buffer))
             ((:div :class "header-buffer-modes")
              ,@(let ((modes
-                       (sera:mapconcat (alex:compose #'string-downcase #'symbol-name)
-                                       (modes buffer) " ")))
+                       (sera:mapconcat #'lighter (modes buffer)
+                                       " ")))
                  (when (> (length modes) 0)
                    (list modes)))))
            ((:div :class "vertical-child-container")

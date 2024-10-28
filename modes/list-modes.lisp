@@ -33,10 +33,12 @@
     (iter (for c in (commands mode))
       (for name = (string-downcase (symbol-name c)))
       (for doc = (short-doc c))
-      (insert-nodes (focus)
-                    (dom `(:tr
-                           (:td ,name)
-                           (:td ,@(when doc (list doc)))))))))
+      (insert-nodes
+       (focus)
+       (dom `(:tr
+              (:td ,name)
+              (:td ,@(when doc (list doc)))
+              (:td ,(string-downcase (symbol-name mode)))))))))
 
 (define-mode buffer-list-mode (list-mode)
   ((show-hidden
