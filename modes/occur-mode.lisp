@@ -1,6 +1,6 @@
 (in-package #:neomacs)
 
-(define-class occur-mode () ((occur-query)))
+(define-mode occur-mode () ((occur-query)))
 
 (defgeneric occur-p-aux (buffer query element))
 

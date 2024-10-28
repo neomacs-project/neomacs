@@ -311,12 +311,11 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
     name))
 
 (defun modes (buffer)
-  (remove-if-not
-   (lambda (name)
-     (sera:string-suffix-p "-MODE" (symbol-name name)))
-   (mapcar
-    #'class-name
-    (sb-mop:class-precedence-list (class-of buffer)))))
+  (iter (for c in (ignore-errors
+                   (slot-value (class-of buffer)
+                               'dynamic-mixins::classes)))
+    (when (typep c 'mode)
+      (collect (class-name c)))))
 
 ;;; Parenscript utils
 

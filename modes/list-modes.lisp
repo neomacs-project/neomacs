@@ -1,6 +1,6 @@
 (in-package #:neomacs)
 
-(define-class list-mode () ())
+(define-mode list-mode () ())
 
 (defgeneric generate-rows (buffer))
 
@@ -21,7 +21,7 @@
     (generate-rows buffer)
     (setf (pos (focus)) (pos-down body-node))))
 
-(define-class command-list-mode (list-mode) ())
+(define-mode command-list-mode (list-mode) ())
 
 (defun short-doc (command)
   (let ((doc (documentation command 'function)))
@@ -36,7 +36,7 @@
                          (:td ,name)
                          (:td ,@(when doc (list doc))))))))
 
-(define-class buffer-list-mode (list-mode)
+(define-mode buffer-list-mode (list-mode)
   ((show-hidden
     :initform nil :initarg :show-hidden
     :documentation "Whether to show hidden buffers, i.e. those with name started with a space.")))
@@ -97,7 +97,7 @@
                        :content "<No Item>"
                        :display "inline")))
 
-(define-class file-list-mode (list-mode)
+(define-mode file-list-mode (list-mode)
   ((file-path
     :initform *default-pathname-defaults*
     :documentation "Path of the directory this buffer is visiting.

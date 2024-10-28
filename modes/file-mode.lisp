@@ -1,6 +1,6 @@
 (in-package #:neomacs)
 
-(define-class minibuffer-find-file-mode
+(define-mode minibuffer-find-file-mode
     (minibuffer-completion-mode)
   ())
 
@@ -100,7 +100,7 @@
      (revert-buffer)
      (current-buffer))))
 
-(define-class file-mode ()
+(define-mode file-mode ()
   ((file-path))
   (:documentation
    "Generic mode for buffer backed by files."))

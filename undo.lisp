@@ -1,10 +1,11 @@
 (in-package :neomacs)
 
-(define-class undo-mode ()
+(define-mode undo-mode ()
   ((undo-entry :initform (make-instance 'undo-root) :type undo-entry)
    (amalgamate-limit :default 20 :type integer)
    (amalgamate-count :default 0 :type integer))
-  (:documentation "Enable undo."))
+  (:documentation "Enable undo.")
+  (:toggler t))
 
 (define-keymap undo-mode ()
   "C-x u" 'undo-history)
@@ -12,7 +13,7 @@
 (defmethod on-pre-command progn ((buffer undo-mode))
   (undo-boundary))
 
-(define-class active-undo-mode ()
+(define-mode active-undo-mode ()
   ((node-table :initform (make-hash-table))
    (undo-buffer :initform
                 (make-buffer "*undo*"
@@ -33,7 +34,7 @@
                   :buffer ,(id (undo-buffer buffer))))))
     node))
 
-(define-class undo-history-mode () ()
+(define-mode undo-history-mode () ()
   (:documentation "Mode for undo history buffers."))
 
 (defmethod window-decoration-aux ((buffer undo-history-mode))
@@ -232,9 +233,6 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
 (defmethod disable-aux ((mode (eql 'active-undo-mode))
                         previous-instance)
   (delete-buffer (undo-buffer previous-instance)))
-
-(define-command undo-mode ()
-  (toggle 'undo-mode))
 
 (defstyle undo-history-mode
     `(("body" :whitespace "pre"

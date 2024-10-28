@@ -88,7 +88,7 @@
       (ps:chain document body (append-child hints-parent))
       label-length)))
 
-(define-class active-web-hint-mode ()
+(define-mode active-web-hint-mode ()
   ((label-length) (label-keys :initform "")))
 
 (define-keymap active-web-hint-mode ()

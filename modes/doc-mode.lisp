@@ -1,6 +1,6 @@
 (in-package #:neomacs)
 
-(define-class html-doc-mode (file-mode) ())
+(define-mode html-doc-mode (file-mode) ())
 
 (defmethod selectable-p-aux ((buffer html-doc-mode) pos)
   (not (and (member (node-after pos) '(#\Space #\Newline #\Tab))

@@ -4,7 +4,7 @@
   (let ((buffer (make-buffer :url (quri:uri "neomacs:scratch.lisp"))))
     (set-current-buffer buffer)))
 
-(define-class lisp-mode (prog-mode) ()
+(define-mode lisp-mode (prog-mode) ()
   (:documentation "Lisp mode."))
 
 (define-keymap lisp-mode ()
@@ -210,7 +210,7 @@
                 (error 'top-of-subtree)))
   (splice-node pos))
 
-(define-class sexp-editing-mode () ()
+(define-mode sexp-editing-mode () ()
   (:documentation "Editing S-exp."))
 
 (define-keymap sexp-editing-mode ()

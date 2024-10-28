@@ -1,6 +1,6 @@
 (in-package #:neomacs)
 
-(define-class text-mode () ())
+(define-mode text-mode () ())
 
 (defmethod read-dom-aux ((buffer text-mode) stream)
   (bind (((:values line missing-new-line-p) (read-line stream)))

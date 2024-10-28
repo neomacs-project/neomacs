@@ -12,7 +12,7 @@
    (make-buffer "Web" :modes 'web-mode :url url
                 :styles nil)))
 
-(define-class web-mode ()
+(define-mode web-mode ()
   ((scroll-multiplier :default 16 :type (integer 1))
    (hints-selector :default "a, button, input, textarea, details, select"
                    :type string)))
