@@ -250,7 +250,7 @@ fixed in future Electron, our logic may be simplified."
   (check-displayed victim)
   (check-displayable buffer)
   (with-current-buffer (frame-root victim)
-    (insert-nodes (window-decoration victim)
+    (insert-nodes (pos-right (window-decoration victim))
                   (make-window-decoration buffer))
     (close-buffer-display victim))
   buffer)
