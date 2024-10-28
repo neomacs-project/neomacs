@@ -235,11 +235,6 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
   (:method-combination progn)
   (:method progn ((buffer buffer) (saved t) (new t))))
 
-(defgeneric keymaps (buffer)
-  (:method-combination append)
-  (:method append ((buffer buffer))
-    (list *global-keymap*)))
-
 (defgeneric window-decoration-aux (buffer)
   (:method ((buffer buffer))
     (dom `((:div :class "buffer" :selectable "")
@@ -316,6 +311,14 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
                                'dynamic-mixins::classes)))
     (when (typep c 'mode)
       (collect (class-name c)))))
+
+(defun keymaps (buffer)
+  (let ((keymaps))
+    (iter (for c in (sb-mop:class-precedence-list (class-of buffer)))
+      (when-let (keymap (keymap c))
+        (push keymap keymaps)))
+    (push *global-keymap* keymaps)
+    (nreverse keymaps)))
 
 ;;; Parenscript utils
 

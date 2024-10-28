@@ -28,14 +28,14 @@
           (replace-node (window-decoration buffer) new)
           (setf (window-decoration buffer) new))))))
 
-(define-class echo-area-mode () ()
+(define-mode echo-area-mode () ()
   (:documentation "Mode for echo area buffer."))
 
 (defmethod window-decoration-aux ((buffer echo-area-mode))
   (dom `((:div :class "minibuffer")
          ((:div :class "content" :buffer ,(id buffer))))))
 
-(define-class frame-root-mode ()
+(define-mode frame-root-mode ()
   ((echo-area :initform (make-buffer " *echo-area*"
                                      :modes 'echo-area-mode
                                      :styles nil)))

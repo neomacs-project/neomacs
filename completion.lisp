@@ -2,13 +2,13 @@
 
 ;;; TAB completion
 
-(define-class active-completion-mode ()
+(define-mode active-completion-mode ()
   ((current-completion :initform 0)
    (completions :initform nil)
    (replace-range))
   (:documentation "Transient mode when completion menu is active."))
 
-(define-keymap active-completion-mode ()
+(define-keys active-completion-mode
   "up" 'previous-completion
   "down" 'next-completion
   "C-p" 'previous-completion

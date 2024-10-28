@@ -4,7 +4,7 @@
     (minibuffer-completion-mode)
   ())
 
-(define-keymap minibuffer-find-file-mode ()
+(define-keys minibuffer-find-file-mode
   "/" 'split-node)
 
 (defmethod update-completion-buffer ((buffer minibuffer-find-file-mode))

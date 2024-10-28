@@ -91,13 +91,13 @@
 (define-mode active-web-hint-mode ()
   ((label-length) (label-keys :initform "")))
 
-(define-keymap active-web-hint-mode ()
+(define-keys active-web-hint-mode
   'keyboard-quit 'remove-hints)
 
 (iter (for i from (char-code #\a) to (char-code #\z))
   (for char = (code-char i))
-  (define-key (find-keymap 'active-web-hint-mode)
-      (string char) 'narrow-hint))
+  (set-key (keymap 'active-web-hint-mode)
+           (string char) 'narrow-hint))
 
 (define-keys web-mode
   "f" 'add-hints)

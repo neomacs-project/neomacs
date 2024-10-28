@@ -7,7 +7,7 @@
   (:documentation "Enable undo.")
   (:toggler t))
 
-(define-keymap undo-mode ()
+(define-keys undo-mode
   "C-x u" 'undo-history)
 
 (defmethod on-pre-command progn ((buffer undo-mode))
@@ -42,7 +42,7 @@
                :style "flex: 0 0 5em;"
                :buffer ,(id buffer)))))
 
-(define-keymap active-undo-mode ()
+(define-keys active-undo-mode
   "p" 'undo-command
   "n" 'redo-command
   "f" 'next-branch

@@ -4,10 +4,10 @@
   (let ((buffer (make-buffer :url (quri:uri "neomacs:scratch.lisp"))))
     (set-current-buffer buffer)))
 
-(define-mode lisp-mode (prog-mode) ()
+(define-mode lisp-mode () ()
   (:documentation "Lisp mode."))
 
-(define-keymap lisp-mode ()
+(define-keys lisp-mode
   'self-insert-command 'lisp-self-insert
   "tab" 'show-completions
   "M-(" 'wrap-paren
@@ -213,7 +213,7 @@
 (define-mode sexp-editing-mode () ()
   (:documentation "Editing S-exp."))
 
-(define-keymap sexp-editing-mode ()
+(define-keys sexp-editing-mode
   "(" 'open-paren
   "\"" 'open-string
   "space" 'open-space

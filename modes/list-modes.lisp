@@ -2,12 +2,12 @@
 
 (define-mode list-mode () ())
 
+(define-keys list-mode
+  "q" 'bury-buffer)
+
 (defgeneric generate-rows (buffer))
 
 (defgeneric focused-item (buffer))
-
-(define-keymap list-mode ()
-  "q" 'bury-buffer)
 
 (defmethod read-only-p ((buffer list-mode)) t)
 
@@ -41,7 +41,7 @@
     :initform nil :initarg :show-hidden
     :documentation "Whether to show hidden buffers, i.e. those with name started with a space.")))
 
-(define-keymap buffer-list-mode ()
+(define-keys buffer-list-mode
   "enter" 'buffer-list-switch-to-buffer
   "k" 'buffer-list-delete-buffer
   "d" 'buffer-list-delete-buffer
@@ -105,7 +105,7 @@
 This should always be a directory pathname (with NIL name and type fields).")
    (header-p :initform t :initarg :header-p)))
 
-(define-keymap file-list-mode ()
+(define-keys file-list-mode
   "enter" 'file-list-find-file)
 
 (defun file-size-readable (file-size &optional flavor space unit)

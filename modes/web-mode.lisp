@@ -22,7 +22,7 @@
 (define-keys global
   "C-x C-l" 'find-url)
 
-(define-keymap web-mode ()
+(define-keys web-mode
   'next-line 'web-next-line
   'previous-line 'web-previous-line
   'backward-node 'web-go-backward

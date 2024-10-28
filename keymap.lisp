@@ -27,24 +27,7 @@
   undef-hook
   parent
   (table (make-hash-table :test 'eq))
-  (function-table (make-hash-table :test 'eq))
-  (name nil :type symbol))
-
-(defmethod print-object ((object keymap) stream)
-  (print-unreadable-object (object stream :identity t :type t)
-    (when (keymap-name object)
-      (princ (keymap-name object) stream))))
-
-(defun make-keymap (&key undef-hook parent name)
-  (unless name (alex:required-argument :name))
-  (lret ((keymap (%make-keymap
-                 :undef-hook undef-hook
-                 :parent parent
-                 :name name)))
-    (setf (gethash name *keymap-table*) keymap)))
-
-(defun find-keymap (name)
-  (gethash name *keymap-table*))
+  (function-table (make-hash-table :test 'eq)))
 
 (defun prefix-command-p (command)
   (hash-table-p command))
@@ -52,13 +35,13 @@
 ;; TODO: handle undefine key sequence (with prefix key),
 ;; i.e. cleanup empty prefix hash-table
 
-(defun define-key (keymap keyspec command)
+(defun set-key (keymap keyspec command)
   "Bind COMMAND to a KEYSPEC in a KEYMAP.
 
 If KEYSPEC argument is a `string', valid prefixes are:
 H (Hyper), S (Super), M (Meta), C (Ctrl), Shift
 
-Example: (define-key *global-keymap* \"C-'\" 'list-modes)"
+Example: (set-key *global-keymap* \"C-'\" 'list-modes)"
   (check-type keyspec (or symbol string))
   (check-type command (or symbol function keymap))
   (typecase keyspec
@@ -70,18 +53,15 @@ Example: (define-key *global-keymap* \"C-'\" 'list-modes)"
        (define-key-internal keymap keys command))))
   (values))
 
-(defmacro define-keys (keymap-name &body bindings)
+(defmacro define-keys (mode-name &body bindings)
   `(progn
      ,@ (iter (for (k v) on bindings by #'cddr)
-          (collect `(define-key (find-keymap ',keymap-name) ,k ,v)))))
+          (collect `(set-key (keymap ',mode-name) ,k ,v)))))
 
-(defmacro define-keymap (mode-name parent &body bindings)
-  `(progn
-     (make-keymap :name ',mode-name :parent ,parent)
-     (define-keys ,mode-name ,@bindings)
-     (defmethod keymaps append ((buffer ,mode-name))
-       (list (find-keymap ',mode-name)))
-     ',mode-name))
+(defun make-keymap (parent &rest bindings)
+  (lret ((keymap (%make-keymap :parent parent)))
+    (iter (for (k v) on bindings by #'cddr)
+      (set-key keymap k v))))
 
 (defun define-key-internal (keymap keys symbol)
   (loop :with table := (keymap-table keymap)
@@ -260,7 +240,10 @@ Example: (define-key *global-keymap* \"C-'\" 'list-modes)"
                          (push kseq bindings))))
     (nreverse bindings)))
 
-(defvar *global-keymap* (make-keymap :name 'global))
+(defvar *global-keymap* (make-keymap nil))
+
+(defmethod keymap ((name (eql 'global)))
+  *global-keymap*)
 
 (define-keys global
   "s-u" 'revert-buffer

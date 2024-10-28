@@ -1,8 +1,8 @@
 (in-package #:neomacs)
 
-(define-class minibuffer-mode () ((prompt :initarg :prompt)))
+(define-mode minibuffer-mode () ((prompt :initarg :prompt)))
 
-(define-keymap minibuffer-mode ()
+(define-keys minibuffer-mode
   "enter" 'exit-minibuffer
   "C-g" 'abort-minibuffer)
 
@@ -65,12 +65,12 @@ This is a thin wrapper around `read-from-minibuffer' that creates a completion b
    (make-completion-buffer
     (list list-mode 'completion-buffer-mode))))
 
-(define-class minibuffer-completion-mode (minibuffer-mode)
+(define-mode minibuffer-completion-mode (minibuffer-mode)
   ((completion-buffer :initarg :completion-buffer))
   (:documentation
    "Mode for minibuffer that supports completion."))
 
-(define-keymap minibuffer-completion-mode ()
+(define-keys minibuffer-completion-mode
   "tab" 'complete-minibuffer
   'exit-minibuffer 'complete-exit-minibuffer
   'next-line 'next-minibuffer-completion
@@ -98,7 +98,7 @@ This is a thin wrapper around `read-from-minibuffer' that creates a completion b
 (defmethod on-post-command progn ((buffer minibuffer-completion-mode))
   (update-completion-buffer buffer))
 
-(define-class completion-buffer-mode (occur-mode)
+(define-mode completion-buffer-mode (occur-mode)
   ((require-match
     :initform t :initarg :require-match
     :documentation
@@ -187,7 +187,7 @@ when this row is selected.")))
       (funcall cmd)
       (message "No such command"))))
 
-(define-key *global-keymap*
+(define-keys global
   "M-x" 'execute-command)
 
 (defstyle minibuffer-prompt `(:inherit bold))

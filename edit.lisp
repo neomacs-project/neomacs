@@ -599,4 +599,4 @@ Called by `self-insert-command' to get the character for insertion."
 (iter (for i from 32 below 127)
   (for char = (code-char i))
   (unless (member char '(#\ ))
-    (define-key *global-keymap* (string char) 'self-insert-command)))
+    (set-key *global-keymap* (string char) 'self-insert-command)))
