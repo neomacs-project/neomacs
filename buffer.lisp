@@ -2,7 +2,8 @@
 
 ;;; Neomacs buffer
 
-(defvar *buffer-table* (make-hash-table) "Map ID to buffer instances.")
+(defvar *buffer-table* (make-hash-table)
+  "Map ID (as integers) to buffer instances.")
 
 (defun generate-buffer-id ()
   (iter (for i from 0)
@@ -43,17 +44,25 @@
    (styles :default (list 'buffer) :initarg :styles)
    (content-scripts :default nil)
    (lock :initform (bt:make-recursive-lock) :reader lock)
-   (window-decoration))
+   (window-decoration :initform nil)
+   (frame-root :initform nil))
   (:default-initargs :url (quri:uri "about:blank")))
 
 (defmethod id ((buffer buffer))
   (format nil "~A" (slot-value buffer 'id)))
 
 (defun enable (mode-name)
-  (dynamic-mixins:ensure-mix (current-buffer) mode-name))
+  (unless (member mode-name (modes (current-buffer)))
+    (dynamic-mixins:ensure-mix (current-buffer) mode-name)))
 
 (defun disable (mode-name)
-  (dynamic-mixins:delete-from-mix (current-buffer) mode-name))
+  (when (member mode-name (modes (current-buffer)))
+    (dynamic-mixins:delete-from-mix (current-buffer) mode-name)))
+
+(defun toggle (mode-name)
+  (if (member mode-name (modes (current-buffer)))
+      (disable mode-name)
+      (enable mode-name)))
 
 (defgeneric enable-aux (mode-name)
   (:method ((mode-name symbol)))
@@ -61,16 +70,17 @@
     (unless (eql mode-name 'buffer)
       (when (get mode-name 'style)
         (pushnew mode-name (styles (current-buffer))))))
-  (:documentation "Run when MODE-NAME is enabled.
+  (:documentation "Run after MODE-NAME is enabled.
 
 This generic function is run with `current-buffer' bound to the buffer
 for which MODE-NAME is being enabled."))
 
-(defgeneric disable-aux (mode-name)
-  (:method ((mode-name symbol))
+(defgeneric disable-aux (mode-name previous-instance)
+  (:method ((mode-name symbol) (previous-instance t)))
+  (:method :after ((mode-name symbol) (previous-instance t))
     (when (get mode-name 'style)
       (alex:deletef (styles (current-buffer)) mode-name)))
-  (:documentation "Run when MODE-NAME is disabled.
+  (:documentation "Run before MODE-NAME is disabled.
 
 This generic function is run with `current-buffer' bound to the buffer
 for which MODE-NAME is being disabled."))
@@ -79,13 +89,19 @@ for which MODE-NAME is being disabled."))
   (remove-if (alex:rcurry #'member list-2) list-1))
 
 (defmethod update-instance-for-different-class
-    :after ((previous buffer) (current buffer) &key)
-  (let ((previous (sb-mop:class-precedence-list (class-of previous)))
-        (current (sb-mop:class-precedence-list (class-of current))))
+    :after ((previous-instance buffer)
+            (current-instance buffer) &key)
+  (let ((previous
+          (sb-mop:class-precedence-list
+           (class-of previous-instance)))
+        (current
+          (sb-mop:class-precedence-list
+           (class-of current-instance))))
     (dolist (old (stable-set-difference previous current))
-      (disable-aux (class-name old)))
+      (disable-aux (class-name old) previous-instance))
     (dolist (new (reverse (stable-set-difference current previous)))
-      (enable-aux (class-name new)))))
+      (enable-aux (class-name new)))
+    (update-window-decoration (current-buffer))))
 
 (defun focus (&optional (buffer (current-buffer)))
   (focus-marker buffer))
@@ -113,6 +129,7 @@ for which MODE-NAME is being disabled."))
                (*current-buffer* buffer))
            (bt:acquire-recursive-lock (lock buffer))
            (setf (adjust-marker-direction buffer) 'forward)
+           (on-pre-command buffer)
            (unwind-protect
                 (with-delayed-evaluation
                   (funcall thunk))
@@ -128,6 +145,7 @@ for which MODE-NAME is being disabled."))
          (bt:acquire-recursive-lock (lock buffer))
          (setf (adjust-marker-direction buffer) 'forward)
          (let ((*current-buffer* buffer))
+           (on-pre-command buffer)
            (funcall thunk)))))
 
 (defun send-dom-update (parenscript buffer)
@@ -156,18 +174,7 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
         (make-instance 'element :tag-name "body" :host buffer)
         (restriction buffer) (document-root buffer)
         (focus-marker buffer) (make-instance 'marker :pos (end-pos (document-root buffer)))
-        (selection-marker buffer) (make-instance 'marker :pos (end-pos (document-root buffer)))
-        (window-decoration buffer)
-        (dom `((:div :class "buffer" :selectable "")
-               ((:div :class "header")
-                ((:div :class "header-buffer-name") ,(name buffer))
-                ((:div :class "header-buffer-modes")
-                      ,@(let ((modes
-                                (sera:mapconcat (alex:compose #'string-downcase #'symbol-name)
-                                                (modes buffer) " ")))
-                          (when (> (length modes) 0)
-                            (list modes)))))
-               ((:div :class "content" :buffer ,(id buffer))))))
+        (selection-marker buffer) (make-instance 'marker :pos (end-pos (document-root buffer))))
   (with-current-buffer buffer
     (dolist (new (reverse (sb-mop:class-precedence-list (class-of buffer))))
       (enable-aux (class-name new)))
@@ -233,14 +240,36 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
   (:method append ((buffer buffer))
     (list *global-keymap*)))
 
+(defgeneric window-decoration-aux (buffer)
+  (:method ((buffer buffer))
+    (dom `((:div :class "buffer" :selectable "")
+           ((:div :class "header")
+            ((:div :class "header-buffer-name") ,(name buffer))
+            ((:div :class "header-buffer-modes")
+             ,@(let ((modes
+                       (sera:mapconcat (alex:compose #'string-downcase #'symbol-name)
+                                       (modes buffer) " ")))
+                 (when (> (length modes) 0)
+                   (list modes)))))
+           ((:div :class "vertical-child-container")
+            ((:div :class "main content" :buffer ,(id buffer)))))))
+  (:documentation "Create window-decoration for BUFFER."))
+
+(defun update-window-decoration-field (buffer name text)
+  (when-let* ((node (window-decoration buffer))
+              (field
+               (only-elt (get-elements-by-class-name node name))))
+    (with-current-buffer (host field)
+      (delete-nodes (pos-down field) nil)
+      (insert-nodes (end-pos field) text))))
+
 #+nil (defgeneric compute-completion (buffer pos))
 
 (define-command delete-buffer
     (&optional (buffer
                 (get-buffer
                  (completing-read "Delete buffer: " 'buffer-list-mode))))
-  (when (frame-root buffer)
-    (bury-buffer buffer))
+  (cleanup-buffer-display buffer)
   (with-current-buffer buffer
     (on-delete-buffer buffer)
     (dolist (style (styles buffer))
@@ -291,21 +320,6 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
                  'dynamic-mixins::classes)))))
 
 ;;; Parenscript utils
-
-(ps:defpsmacro js-node (node)
-  (cond ((text-node-p node)
-          (if-let (next (next-sibling node))
-            `(ps:chain (js-node ,next) previous-sibling)
-            `(ps:chain (js-node ,(parent node)) last-child)))
-         ((element-p node)
-          (if (equal (tag-name node) "body")
-              `(ps:chain document body)
-              (let ((id (attribute node "neomacs-identifier")))
-                `(ps:chain document
-                           (query-selector
-                            ,(format nil "[neomacs-identifier='~a']" id))))))
-         ((null node) nil)
-         (t (error "Unknown node type ~a." node))))
 
 (defun get-bounding-client-rect (node)
   (evaluate-javascript
@@ -467,14 +481,16 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
 (defun update-style (buffer style)
   (let ((id (format nil "neomacs-style-~a" style)))
     (with-current-buffer buffer
-      (send-dom-update
-       `(let ((element (ps:chain document (get-element-by-id ,id))))
-          (unless element
-            (setq element (ps:chain document (create-element "style")))
-            (setf (ps:chain element id) ,id)
-            (ps:chain document head (append-child element)))
-          (setf (ps:chain element inner-h-t-m-l)
-                ,(cell-ref (css-cell style))))
+      (evaluate-javascript
+       (ps:ps
+         (let ((element (ps:chain document (get-element-by-id
+                                            (ps:lisp id)))))
+           (unless element
+             (setq element (ps:chain document (create-element "style")))
+             (setf (ps:chain element id) (ps:lisp id)))
+           (setf (ps:chain element inner-h-t-m-l)
+                 (ps:lisp (cell-ref (css-cell style))))
+           (ps:chain document head (append-child element))))
        buffer))))
 
 (defun remove-style (buffer style)
@@ -515,15 +531,8 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
 
 (defmethod (setf name) :before (new-val (buffer buffer))
   (unless (equal new-val (slot-value buffer 'name))
-    (when-let (name-field
-               (car (get-elements-by-class-name
-                     (window-decoration buffer)
-                     "header-buffer-name")))
-      (if (host name-field)
-          (with-current-buffer (host name-field)
-            (delete-nodes (pos-down name-field) nil)
-            (insert-nodes (end-pos name-field) new-val))
-          (setf (text name-field) new-val)))))
+    (update-window-decoration-field
+     buffer "header-buffer-name" new-val)))
 
 #+nil (progn
         (defstyle default `(:font-family "Verdana" :color "rgb(169,151,160)"))

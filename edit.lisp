@@ -49,13 +49,14 @@ If LENGTH is NIL, move everything after SRC-OFFSET."
   (let ((host (host node))
         (parent (parent node))
         (offset (length (text prev))))
-    (send-dom-update
-     `(let* ((node (js-node ,node))
-             (prev (ps:chain node previous-sibling))
-             (parent (js-node ,parent)))
-        (ps:chain prev (append-data (ps:chain node data)))
-        (ps:chain parent (remove-child node))
-        nil)
+    (evaluate-javascript
+     (ps:ps
+       (let* ((node (js-node-1 node))
+              (prev (ps:chain node previous-sibling))
+              (parent (js-node-1 parent)))
+         (ps:chain prev (append-data (ps:chain node data)))
+         (ps:chain parent (remove-child node))
+         nil))
      (host node))
 
     (setf (text prev)
@@ -67,7 +68,8 @@ If LENGTH is NIL, move everything after SRC-OFFSET."
      (nclo undo-merge-text ()
        (split-text-node prev offset node))
      (nclo redo-merge-text ()
-       (merge-text-nodes prev node)))))
+       (merge-text-nodes prev node))
+     host)))
 
 (defun maybe-merge-text-nodes (node)
   (when node
@@ -78,8 +80,9 @@ If LENGTH is NIL, move everything after SRC-OFFSET."
 (defun split-text-node (node offset next)
   (let ((parent (parent node))
         (host (host node)))
-    (send-dom-update
-     `(ps:chain (js-node ,node) (split-text ,offset))
+    (evaluate-javascript
+     (ps:ps (ps:chain (js-node-1 node)
+                      (split-text (ps:lisp offset))))
      (host node))
     (insert-before parent next (next-sibling node))
     (psetf (text node) (subseq (text node) 0 offset)
@@ -89,7 +92,8 @@ If LENGTH is NIL, move everything after SRC-OFFSET."
      (nclo undo-split-text ()
        (merge-text-nodes node next))
      (nclo redo-split-text ()
-       (split-text-node node offset next)))))
+       (split-text-node node offset next))
+     host)))
 
 (defun maybe-split-text-node (pos)
   "Split `text-node' at POS if possible.
@@ -107,19 +111,20 @@ Returns the node after the position after this operation."
     (_ (node-after pos))))
 
 (defun insert-nodes-2 (parent nodes reference)
-  (send-dom-update
-   `(let* ((parent (js-node ,parent))
-           (reference (js-node ,reference))
-           (template (ps:chain document (create-element "template"))))
-      (setf (ps:chain template inner-h-t-m-l)
-            ,(with-output-to-string (stream)
-               (dolist (c nodes)
-                 (serialize c stream))))
-      (ps:chain -array
-                (from (ps:chain template content child-nodes))
-                (for-each (lambda (c)
-                            (ps:chain parent (insert-before c reference)))))
-      nil)
+  (evaluate-javascript
+   (ps:ps
+     (let* ((parent (js-node-1 parent))
+            (reference (js-node-1 reference))
+            (template (ps:chain document (create-element "template"))))
+       (setf (ps:chain template inner-h-t-m-l)
+             (ps:lisp
+              (with-output-to-string (stream)
+                (dolist (c nodes)
+                  (serialize c stream)))))
+       (ps:chain -array
+                 (from (ps:chain template content child-nodes))
+                 (for-each (lambda (c)
+                             (ps:chain parent (insert-before c reference)))))))
    (host parent))
 
   (dolist (c nodes)
@@ -129,7 +134,8 @@ Returns the node after the position after this operation."
    (nclo undo-insert-nodes ()
      (delete-nodes-2 parent (car nodes) reference))
    (nclo redo-insert-nodes ()
-     (insert-nodes-2 parent nodes reference))))
+     (insert-nodes-2 parent nodes reference))
+   (host parent)))
 
 (defun insert-nodes-1 (pos nodes)
   "Internal function for inserting NODES."
@@ -172,7 +178,8 @@ THINGS can be DOM nodes or strings, which are converted to text nodes."
        (nclo undo-node-setup ()
          (mapc (alex:curry #'do-dom #'node-cleanup) nodes))
        (nclo redo-node-setup ()
-         (mapc (alex:curry #'do-dom (alex:rcurry #'node-setup host)) nodes)))
+         (mapc (alex:curry #'do-dom (alex:rcurry #'node-setup host)) nodes))
+       host)
       (insert-nodes-1 pos (mapc (alex:curry #'do-dom (alex:rcurry #'node-setup host))
                                 nodes)))))
 
@@ -185,19 +192,21 @@ THINGS can be DOM nodes or strings, which are converted to text nodes."
 (defun delete-nodes-2 (parent beg end)
   (let ((reference (previous-sibling beg))
         (length (count-nodes-between beg end)))
-    (send-dom-update
+    (evaluate-javascript
      (if reference
-         `(let ((parent (js-node ,parent))
-                (reference (js-node ,reference)))
-            (dotimes (_ ,length)
-              (ps:chain parent (remove-child
-                                (ps:chain reference next-sibling))))
-            nil)
-         `(let ((parent (js-node ,parent)))
-            (dotimes (_ ,length)
-              (ps:chain parent (remove-child
-                                (ps:chain parent first-child))))
-            nil))
+         (ps:ps
+           (let ((parent (js-node-1 parent))
+                 (reference (js-node-1 reference)))
+             (dotimes (_ (ps:lisp length))
+               (ps:chain parent (remove-child
+                                 (ps:chain reference next-sibling))))
+             nil))
+         (ps:ps
+           (let ((parent (js-node-1 parent)))
+             (dotimes (_ (ps:lisp length))
+               (ps:chain parent (remove-child
+                                 (ps:chain parent first-child))))
+             nil)))
      (host parent))
     (let ((nodes
             (iter (for node = (if reference (next-sibling reference)
@@ -213,7 +222,8 @@ THINGS can be DOM nodes or strings, which are converted to text nodes."
        (nclo undo-delete-nodes ()
          (insert-nodes-2 parent nodes end))
        (nclo redo-delete-nodes ()
-         (delete-nodes-2 parent beg end)))
+         (delete-nodes-2 parent beg end))
+       (host parent))
       nodes)))
 
 (defun relocate-markers (host deleted-nodes end)
@@ -237,7 +247,8 @@ THINGS can be DOM nodes or strings, which are converted to text nodes."
                                  (setf (pos m) pos)))
                              (nclo redo-move-marker ()
                                (when-let (m (trivial-garbage:weak-pointer-value mp))
-                                 (setf (pos m) end)))))
+                                 (setf (pos m) end)))
+                             host))
                     (setf (pos m) end))))
         n))))
 
@@ -295,7 +306,8 @@ tree (which is usually taken care of by `delete-nodes' and
          (nclo undo-node-cleanup ()
            (mapc (alex:curry #'do-dom (alex:rcurry #'node-setup host)) nodes))
          (nclo redo-node-cleanup ()
-           (mapc (alex:curry #'do-dom #'node-cleanup) nodes)))
+           (mapc (alex:curry #'do-dom #'node-cleanup) nodes))
+         host)
         nodes))))
 
 (defun delete-nodes (beg end)
@@ -314,26 +326,28 @@ starting from BEG till the end of its parent."
   (let ((src-reference (previous-sibling beg))
         (length (count-nodes-between beg end)))
 
-    (send-dom-update
+    (evaluate-javascript
      (if src-reference
-         `(let ((src-reference (js-node ,src-reference))
-                (dst-parent (js-node ,dst-parent))
-                (dst-reference (js-node ,reference)))
-            (dotimes (_ ,length)
-              (ps:chain dst-parent
-                        (insert-before
-                         (ps:chain src-reference next-sibling)
-                         dst-reference)))
-            nil)
-         `(let ((src-parent (js-node ,src-parent))
-                (dst-parent (js-node ,dst-parent))
-                (dst-reference (js-node ,reference)))
-            (dotimes (_ ,length)
-              (ps:chain dst-parent
-                        (insert-before
-                         (ps:chain src-parent first-child)
-                         dst-reference)))
-            nil))
+         (ps:ps
+           (let ((src-reference (js-node-1 src-reference))
+                 (dst-parent (js-node-1 dst-parent))
+                 (dst-reference (js-node-1 reference)))
+             (dotimes (_ (ps:lisp length))
+               (ps:chain dst-parent
+                         (insert-before
+                          (ps:chain src-reference next-sibling)
+                          dst-reference)))
+             nil))
+         (ps:ps
+           (let ((src-parent (js-node-1 src-parent))
+                 (dst-parent (js-node-1 dst-parent))
+                 (dst-reference (js-node-1 reference)))
+             (dotimes (_ (ps:lisp length))
+               (ps:chain dst-parent
+                         (insert-before
+                          (ps:chain src-parent first-child)
+                          dst-reference)))
+             nil)))
      (host dst-parent))
 
     (iter (for node = (if src-reference (next-sibling src-reference)
@@ -341,12 +355,13 @@ starting from BEG till the end of its parent."
       (while node)
       (until (eql node end))
       (remove-node node)
-      (insert-before dst-parent node reference)))
-  (record-undo
-   (nclo undo-move-nodes ()
-     (move-nodes-2 dst-parent beg reference src-parent end))
-   (nclo redo-move-nodes ()
-     (move-nodes-2 src-parent beg end dst-parent reference))))
+      (insert-before dst-parent node reference))
+    (record-undo
+     (nclo undo-move-nodes ()
+       (move-nodes-2 dst-parent beg reference src-parent end))
+     (nclo redo-move-nodes ()
+       (move-nodes-2 src-parent beg end dst-parent reference))
+     (host dst-parent))))
 
 (defun move-nodes (beg end to)
   "Move nodes between BEG and END to TO and returns nil.
@@ -422,6 +437,15 @@ NODE become the last child of NEW-NODE."
   (insert-nodes node new-node)
   (move-nodes node (pos-right node) (end-pos new-node)))
 
+(defun delete-node (node)
+  "Delete a single NODE."
+  (delete-nodes node (pos-right node)))
+
+(defun replace-node (node new-node)
+  "Replace NODE with NEW-NODE."
+  (insert-nodes (pos-right node) new-node)
+  (delete-node node))
+
 (defun erase-buffer ()
   "Delete all content of current buffer."
   (delete-nodes (pos-down (document-root (current-buffer))) nil))
@@ -446,15 +470,20 @@ The behavior can be customized via `revert-buffer-aux'."
 ;;; Editing commands
 
 (defun self-insert-char ()
+  "Get the last typed character from `*this-command-keys*'.
+
+Called by `self-insert-command' to get the character for insertion."
   (let ((desc (key-description (lastcar *this-command-keys*))))
     (cond ((= (length desc) 1) (aref desc 0))
           ((equal desc "space") #\Space))))
 
 (define-command self-insert-command ()
+  "Insert the last typed character into current buffer."
   (undo-auto-amalgamate)
   (insert-nodes (focus) (string (self-insert-char))))
 
 (define-command new-line (&optional (marker (focus)))
+  "Insert a new line node (br element) at MARKER."
   (insert-nodes marker (make-new-line-node)))
 
 (defun trivial-p (node)

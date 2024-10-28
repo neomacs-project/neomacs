@@ -4,8 +4,8 @@
   (:import-from #:serapeum #:lret #:lret* #:lastcar #:single #:only-elt #:eval-always)
   (:import-from #:bind #:bind)
   (:import-from #:trivia #:ematch #:match)
-  (:import-from #:alexandria #:if-let #:when-let #:first-elt #:last-elt
-                #:assoc-value)
+  (:import-from #:alexandria #:if-let #:when-let #:when-let*
+                #:first-elt #:last-elt #:assoc-value)
   (:local-nicknames
    (#:sera #:serapeum)
    (#:alex #:alexandria)

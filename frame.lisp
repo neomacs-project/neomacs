@@ -1,19 +1,52 @@
 (in-package #:neomacs)
 
-(defun make-echo-area ()
-  (lret ((buffer (make-instance 'buffer :name " *echo-area*" :styles '(echo-area))))
-    (setf (window-decoration buffer)
-          (dom `((:div :class "minibuffer")
-                 ((:div :class "content" :buffer ,(id buffer))))))))
+(defun make-window-decoration (buffer)
+  (check-displayable buffer)
+  (setf (window-decoration buffer)
+        (window-decoration-aux buffer)))
+
+(defmacro with-delay-frame-update-views (&body body)
+  `(call-with-delay-frame-update-views (lambda () ,@body)))
+
+(defun update-window-decoration (buffer)
+  "Recompute and apply BUFFER's window decoration."
+  (when-let (frame-root (frame-root buffer))
+    (with-current-buffer frame-root
+      ;; `replace-node' first inserts the new node then deletes the
+      ;; old node, which interacts badly with Electron's view handling
+      ;; logic. If we add/remove views inside on-node-setup/cleanup,
+      ;; if a buffer's content node appear in both the new and old
+      ;; node, the buffer's view is first added then removed, which
+      ;; cause it to eventually be removed (which should have been
+      ;; retained, as in the DOM tree).
+
+      ;; Therefore, we surround it with `with-delay-frame-update-views',
+      ;; which record view addition/removal and compute the delta, only
+      ;; adding/removing them once each when the block finishes.
+      (with-delay-frame-update-views
+        (let ((new (window-decoration-aux buffer)))
+          (replace-node (window-decoration buffer) new)
+          (setf (window-decoration buffer) new))))))
+
+(define-class echo-area-mode () ()
+  (:documentation "Mode for echo area buffer."))
+
+(defmethod window-decoration-aux ((buffer echo-area-mode))
+  (dom `((:div :class "minibuffer")
+         ((:div :class "content" :buffer ,(id buffer))))))
 
 (define-class frame-root-mode ()
-  ((echo-area :initform (make-echo-area))))
+  ((echo-area :initform (make-buffer " *echo-area*"
+                                     :modes 'echo-area-mode
+                                     :styles nil)))
+  (:documentation "Mode for frame root buffer."))
 
 (defmethod on-buffer-loaded progn ((buffer frame-root-mode))
   (redisplay-windows))
 
 (defmethod on-post-command progn ((buffer frame-root-mode))
   (redisplay-windows)
+  ;; Update focus
   (when-let (window-node (node-after (focus)))
     (when-let (buffer (window-buffer window-node))
       (evaluate-javascript
@@ -55,11 +88,32 @@
                            (then (lambda (result)
                                    (ps:for-in
                                     (buffer result)
-                                    (ps:chain (ps:getprop (ps:chain -ceramic buffers) buffer)
-                                              (set-bounds (ps:getprop result buffer)))))))))))
+                                    (let ((view (ps:getprop (ps:chain -ceramic buffers) buffer)))
+                                      (when view
+                                        (ps:chain view (set-bounds (ps:getprop result buffer)))))))))))))
        (ps:chain frame (on "resize" resize))
        (ps:chain frame (on "maximize" resize))))
    nil))
+
+(defun cleanup-buffer-display (buffer)
+  "Make sure BUFFER is not displayed in any frame.
+
+This buries the buffer if BUFFER is a main buffer, or remove the view
+if BUFFER is a child buffer. This function is called by
+`delete-buffer' before deleting a buffer.
+
+The logic to remove the view if BUFFER is a child buffer is to
+workaround an Electron bug (as of Electron 33.0.2), which crashes if
+view operations are applied to WebContentsView whose webContents has
+been closed (`delete-buffer' closes the webContents). If this bug is
+fixed in future Electron, our logic may be simplified."
+  (when-let (frame-root (frame-root buffer))
+    (if (window-decoration buffer)
+        (bury-buffer buffer)
+        (evaluate-javascript
+         (ps:ps (ps:chain (js-frame frame-root) content-view
+                          (remove-child-view (js-buffer buffer))))
+         nil))))
 
 (defmethod on-delete-buffer progn ((buffer frame-root-mode))
   (evaluate-javascript
@@ -83,8 +137,11 @@
          (split (make-element "div" :class "horizontal")))
     (insert-nodes (end-pos root) split)
     (insert-nodes (end-pos split)
-                  (window-decoration (echo-area (current-buffer))))
-    (insert-nodes (pos-down split) (window-decoration init-buffer))
+                  (make-window-decoration
+                   (echo-area (current-buffer))))
+    (insert-nodes (pos-down split)
+                  (make-window-decoration
+                   init-buffer))
     (setf (pos (focus)) (pos-down split))))
 
 (defun make-frame-root (init-buffer)
@@ -114,13 +171,47 @@
     (erase-buffer)
     (init-frame-root buffer)))
 
-(defmethod on-node-setup progn ((buffer frame-root-mode) node)
-  (when (class-p node "content")
+(defvar *delay-frame-update-views* nil)
+
+(defvar *frame-add-views* nil)
+
+(defvar *frame-remove-views* nil)
+
+(defun add-view (id)
+  (when-let (buffer (gethash (parse-integer id) *buffer-table*))
     (evaluate-javascript
      (ps:ps (ps:chain (js-frame (current-buffer)) content-view
                       (add-child-view (ps:getprop (ps:chain -ceramic buffers)
-                                                  (ps:lisp (attribute node "buffer"))))))
-     nil))
+                                                  (ps:lisp id)))))
+     nil)
+    (setf (frame-root buffer) (current-buffer))))
+
+(defun remove-view (id)
+  (when-let (buffer (gethash (parse-integer id) *buffer-table*))
+    (evaluate-javascript
+     (ps:ps (ps:chain (js-frame (current-buffer)) content-view
+                      (remove-child-view (ps:getprop (ps:chain -ceramic buffers)
+                                                     (ps:lisp id)))))
+     nil)
+    (setf (window-decoration buffer) nil
+          (frame-root buffer) nil)))
+
+(defun call-with-delay-frame-update-views (thunk)
+  (let ((*delay-frame-update-views* t)
+        *frame-add-views*
+        *frame-remove-views*)
+    (multiple-value-prog1 (funcall thunk)
+      (mapc #'remove-view *frame-remove-views*)
+      (mapc #'add-view *frame-add-views*))))
+
+(defmethod on-node-setup progn ((buffer frame-root-mode) node)
+  (when (class-p node "content")
+    (when-let (id (attribute node "buffer"))
+      (if *delay-frame-update-views*
+          (if (member id *frame-remove-views* :test 'equal)
+              (alex:deletef *frame-remove-views* id)
+              (push id *frame-add-views*))
+          (add-view id))))
   (when (class-p node "vertical" "horizontal")
     (flet ((observer (cell)
              (declare (ignore cell))
@@ -131,14 +222,12 @@
 
 (defmethod on-node-cleanup progn ((buffer frame-root-mode) node)
   (when (class-p node "content")
-    (evaluate-javascript
-     (ps:ps (ps:chain (js-frame (current-buffer)) content-view
-                      (remove-child-view (ps:getprop (ps:chain -ceramic buffers)
-                                                     (ps:lisp (attribute node "buffer"))))))
-     nil)))
-
-(defun frame-root (buffer)
-  (host (window-decoration buffer)))
+    (when-let (id (attribute node "buffer"))
+      (if *delay-frame-update-views*
+          (if (member id *frame-add-views* :test 'equal)
+              (alex:deletef *frame-add-views* id)
+              (push id *frame-remove-views*))
+          (remove-view id)))))
 
 (defun check-displayable (buffer)
   "Signal error if BUFFER is not suitable for display."
@@ -161,9 +250,9 @@
   (check-displayed victim)
   (check-displayable buffer)
   (with-current-buffer (frame-root victim)
-    (let ((pos (window-decoration victim)))
-      (insert-nodes pos (window-decoration buffer))
-      (delete-nodes pos (pos-right pos))))
+    (insert-nodes (window-decoration victim)
+                  (make-window-decoration buffer))
+    (close-buffer-display victim))
   buffer)
 
 (defun replacement-buffer (&optional (buffer (current-buffer)))
@@ -184,13 +273,22 @@ A replacement buffer has to be alive and not already displayed."
 
 (define-command bury-buffer (&optional (buffer (current-buffer)))
   "Stop displaying BUFFER."
+  (check-displayed buffer)
   (switch-to-buffer (replacement-buffer buffer) buffer))
 
 (define-command close-buffer-display (&optional (buffer (current-buffer)))
   "Close the window which displays BUFFER."
+  ;; TODO: account for the case when buffer has the only window in a
+  ;; frame.
+  (check-displayed buffer)
   (with-current-buffer (frame-root buffer)
-    (let ((node (window-decoration buffer)))
-      (delete-nodes node (pos-right node)))))
+    (delete-node (window-decoration buffer))))
+
+(define-command quit-buffer (&optional (buffer (current-buffer)))
+  "Delete BUFFER and close its display, if any."
+  (when (frame-root buffer)
+    (close-buffer-display buffer))
+  (delete-buffer buffer))
 
 (define-command display-buffer-right (&optional (buffer (replacement-buffer)))
   "Split a window to the right and display BUFFER in it."
@@ -198,8 +296,8 @@ A replacement buffer has to be alive and not already displayed."
   (with-current-buffer (current-frame-root)
     (unless (class-p (node-containing (focus)) "vertical")
       (wrap-node (focus) (make-element "div" :class "vertical")))
-    (let ((node (window-decoration buffer)))
-      (insert-nodes (pos-right (focus)) node))))
+    (insert-nodes (pos-right (focus))
+                  (make-window-decoration buffer))))
 
 (define-command display-buffer-below (&optional (buffer (replacement-buffer)))
   "Split a window to the bottom and display BUFFER in it."
@@ -207,8 +305,8 @@ A replacement buffer has to be alive and not already displayed."
   (with-current-buffer (current-frame-root)
     (unless (class-p (node-containing (focus)) "horizontal")
       (wrap-node (focus) (make-element "div" :class "horizontal")))
-    (let ((node (window-decoration buffer)))
-      (insert-nodes (pos-right (focus)) node))))
+    (insert-nodes (pos-right (focus))
+                  (make-window-decoration buffer))))
 
 (defun focus-buffer (buffer)
   "Give BUFFER focus.
@@ -242,7 +340,7 @@ BUFFER must be already displayed."
 
 (defun window-buffer (window-node)
   (content-node-buffer
-   (car (get-elements-by-class-name window-node "content"))))
+   (only-elt (get-elements-by-class-name window-node "main"))))
 
 (defvar *message-log-max* 1000)
 
@@ -287,15 +385,16 @@ BUFFER must be already displayed."
       (".horizontal"
        :flex "1 0 1em" :display "flex" :flex-flow "column"
        :gap "24px" :height "100%" :width "100%")
-      (".content" :width "100%" :height "100%")
+      (".content" :flex "1 0 1em")
+      (".vertical-child-container"
+       :flex "1 0 1em"
+       :display "flex" :flex-flow "row")
       (".buffer" :flex "1 0 1em"
                  :display "flex" :flex-flow "column"
-                 ;; :margin "8px"
                  :backdrop-filter "blur(10px)")
       (".minibuffer"
        :flex "0 0 2em"
        :display "flex" :flex-flow "column"
-       ;; :margin "8px"
        :backdrop-filter "blur(10px)")
       (".header" :inherit header)
       (".focus .header" :inherit header-focus)
@@ -305,13 +404,14 @@ BUFFER must be already displayed."
        :padding "32px"
        :margin 0
        :inherit default
-       :background-size "contain"
+       :background-size "cover"
        :background-image "url(https://sozaino.site/wp-content/uploads/2021/08/sf35.png)")))
 
-(defstyle echo-area `(("body" :inherit default
-                              :margin-top 0
-                              :margin-bottom 0
-                              :white-space "pre-wrap")))
+(defstyle echo-area-mode
+    `(("body" :inherit default
+              :margin-top 0
+              :margin-bottom 0
+              :white-space "pre-wrap")))
 
 (defstyle header `(:padding "8px"
                    :display "flex" :flex-flow "row"
@@ -320,6 +420,10 @@ BUFFER must be already displayed."
 
 (defstyle header-buffer-name `(:flex "1 0 1em"))
 
-(defstyle header-buffer-modes `(:flex "1 0 1em" :text-align "right"))
+(defstyle header-buffer-modes
+    `(:flex "1 0 1em"
+      :text-align "right"
+      :white-space "nowrap"
+      :text-overflow "ellipsis"))
 
 (defstyle header-focus `(:background-color "rgba(169,151,160,0.4)"))

@@ -1,47 +1,66 @@
 (in-package :neomacs)
 
-(define-class undo-mixin ()
+(define-class undo-mode ()
   ((undo-entry :initform (make-instance 'undo-root) :type undo-entry)
    (amalgamate-limit :default 20 :type integer)
-   (amalgamate-count :default 0 :type integer)
-   #+nil (keyscheme-map
-    (keymaps:define-keyscheme-map "undo" ()
-      keyscheme:emacs
-      '("C-x u" undo-history))))
+   (amalgamate-count :default 0 :type integer))
   (:documentation "Enable undo."))
 
-(defmethod on-pre-command progn ((buffer undo-mixin))
+(define-keymap undo-mode ()
+  "C-x u" 'undo-history)
+
+(defmethod on-pre-command progn ((buffer undo-mode))
   (undo-boundary))
 
 (define-class active-undo-mode ()
-  ((id-table :initform (make-hash-table))
-   #+nil (keymap :default
-           (define-keymap "active-undo" ()
-             "arrow-up" 'undo-command
-             "arrow-down" 'redo-command
-             "arrow-left" 'previous-branch
-             "arrow-right" 'next-branch
-             "escape" 'undo-history
-             "enter" 'undo-history
-             "p" 'undo-command
-             "n" 'redo-command
-             "f" 'next-branch
-             "b" 'previous-branch
-             "q" 'undo-history
-             "C-g" 'undo-history)))
+  ((node-table :initform (make-hash-table))
+   (undo-buffer :initform
+                (make-buffer "*undo*"
+                             :modes '(undo-history-mode))))
   (:documentation "Transient mode when undo history panel is active."))
 
 (defmethod read-only-p ((buffer active-undo-mode)) t)
 
+(defmethod window-decoration-aux ((buffer active-undo-mode))
+  (let* ((node (call-next-method))
+         (container (only-elt
+                     (get-elements-by-class-name
+                      node "vertical-child-container"))))
+    (append-child
+     container
+     (dom `((:div :class "content"
+                  :style "flex: 0 0 10em;"
+                  :buffer ,(id (undo-buffer buffer))))))
+    node))
+
+(define-class undo-history-mode () ()
+  (:documentation "Mode for undo history buffers."))
+
+(defmethod window-decoration-aux ((buffer undo-history-mode))
+  (dom `((:div :class "content"
+               :style "flex: 0 0 5em;"
+               :buffer ,(id buffer)))))
+
+(define-keymap active-undo-mode ()
+  "p" 'undo-command
+  "n" 'redo-command
+  "f" 'next-branch
+  "b" 'previous-branch
+  "q" 'quit-undo-history
+  "C-g" 'quit-undo-history
+  "enter" 'quit-undo-history)
+
 (define-class undo-entry ()
-  ((child-entries :type (list-of undo-entry))))
+  ((child-entries :initform nil :type (list-of undo-entry))))
 
 (define-class undo-root (undo-entry) ())
 
 (define-class undo-child (undo-entry)
-  ((parent :initform (error "Must supply :parent.") :type (or undo-root undo-entry))
-   (undo-thunks :type (list-of function))
-   (redo-thunks :type (list-of function))))
+  ((parent :initform (error "Must supply :parent.")
+           :type (or undo-root undo-entry)
+           :initarg :parent)
+   (undo-thunks :initform nil :type (list-of function))
+   (redo-thunks :initform nil :type (list-of function))))
 
 (defmethod parent ((self undo-root)) nil)
 
@@ -61,16 +80,16 @@
 
 This is bound to non-nil during undo process itself.")
 
-(defun record-undo (undo-thunk redo-thunk)
-  "Add UNDO-THUNK and REDO-THUNK to undo history.
+(defun record-undo (undo-thunk redo-thunk buffer)
+  "Add UNDO-THUNK and REDO-THUNK to BUFFER's undo history.
 
 If `*inhibit-record-undo*' is non-nil, do nothing instead."
   (unless *inhibit-record-undo*
-    (when (typep (current-buffer) 'undo-mixin)
-      (let ((entry (undo-entry (current-buffer))))
+    (when (typep buffer 'undo-mode)
+      (let ((entry (undo-entry buffer)))
         (unless (leaf-p entry)
           (setf entry (make-instance 'undo-child :parent entry))
-          (setf (undo-entry (current-buffer)) entry))
+          (setf (undo-entry buffer) entry))
         (push undo-thunk (undo-thunks entry))
         (push redo-thunk (redo-thunks entry))
         nil))))
@@ -94,7 +113,7 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
 
 (defun undo-auto-amalgamate ()
   "Call at the beginning of a command to amalgamate undo entry."
-  (when (typep (current-buffer) 'undo-mixin)
+  (when (typep (current-buffer) 'undo-mode)
     (if (and *last-command*
              (eql *last-command* *this-command*)
              (< (1+ (amalgamate-count (current-buffer)))
@@ -157,92 +176,84 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
     (redo (1- current-index) buffer)
     (update-undo-history)))
 
-#+nil (defun update-undo-history ()
-  (when-let (buffer (find-panel-buffer 'undo-history))
-    (let ((id (gethash (undo-entry (find-submode 'undo-mode))
-                       (id-table (find-submode 'active-undo-mode)))))
-      (ffi-buffer-evaluate-javascript
-       buffer
-       (let (ps:*parenscript-stream*)
-         (ps:ps*
-          `(progn
-             (ps:chain -array
-                       (from
-                        (ps:chain document
-                                  (get-elements-by-class-name "focus")))
-                       (for-each (lambda (x)
-                                   (ps:chain x class-list
-                                             (remove "focus")))))
-             (let ((focus
-                    (ps:chain document
-                              (query-selector ,(format nil "[neomacs-identifier='~a']"
-                                                       id)))))
-              (ps:chain focus class-list (add "focus"))
-               (ps:chain focus (scroll-into-view-if-needed)))
-             nil)))))))
+(defun update-undo-history ()
+  (let ((undo-buffer (undo-buffer (current-buffer))))
+    (if-let ((node (gethash (undo-entry (current-buffer))
+                            (node-table (current-buffer)))))
+      (with-current-buffer undo-buffer
+        (setf (pos (focus)) node))
+      (warn "No corresponding node for ~a in ~a."
+            (undo-entry (current-buffer))
+            undo-buffer))))
 
-#+nil (define-panel-command undo-history () (buffer "*undo*")
-  (let ((parent-buffer (current-buffer)))
-    (enable-modes* 'active-undo-mode parent-buffer)
-    (hooks:add-hook (buffer-delete-hook buffer)
-                    (lambda (buffer)
-                      (declare (ignore buffer))
-                      (disable-modes* 'active-undo-mode parent-buffer))))
-  (setf (style buffer)
-        (lass:compile-and-write
-          '("body" :whitespace "pre"
-                  :line-height 0
-                  :font-family "dejavu sans mono")
-          '(".col" :display "inline-block"
-                  :vertical-align "top")
-          '(".hr" :border-bottom "1px solid"
-                 :margin-right "0.25em"
-                 :margin-left "0.25em")
-          '(".row" :display "inline-block"
-                  :margin-right "auto"
-                  :vertical-align "top")
-          '(".node" :width "0.5em"
-                   :height "0.5em"
-                   :border-radius "50%"
-                   :border "1px solid")
-          '(".focus" :background-color "#000")
-          '(".vert" :border-left "1px solid"
-                   :height "0.5em"
-                   :width "100%"
-                   :margin-left "0.25em")))
-
-  (let ((mode (find-submode 'undo-mode))
-        (id-table (id-table (find-submode 'active-undo-mode)))
-        (id 0))
-    (when (undo-boundary-p (undo-entry mode))
-      (undo mode)) ;; remove undo boundary
-    (let* ((entry (undo-entry mode))
+(define-command undo-history ()
+  (enable 'active-undo-mode)
+  (let ((undo-buffer (undo-buffer (current-buffer)))
+        (node-table (node-table (current-buffer))))
+    (when (undo-boundary-p (undo-entry (current-buffer)))
+      (undo (current-buffer))) ;; remove undo boundary
+    (let* ((entry (undo-entry (current-buffer)))
            (root entry))
-      (iter (until (undo-root-p root))
+      (iter (until (typep root 'undo-root))
         (setq root (parent root)))
-      (spinneret:with-html-string
-        (labels ((draw (node)
-                   (:div :class (if (eql entry node) "node focus" "node")
-                         :neomacs-identifier (format nil "~a" id))
-                   (setf (gethash node id-table) id)
-                   (incf id)
-                   nil)
-                 (process (node root-p)
+      (with-current-buffer undo-buffer
+        (labels ((draw (node pos)
+                   (let ((element
+                           (make-element "div" :class "node")))
+                     (insert-nodes pos element)
+                     (setf (gethash node node-table) element)))
+                 (process (node root-p pos)
                    (let ((children
-                           (remove-if #'undo-boundary-p (children node))))
-                     (:div :class "row"
-                           (unless root-p
-                             (:div :class "vert"))
-                           (draw node))
-                     (cond ((cdr children)
-                            (:div :class "vert")
-                            (:div :class "hr"))
-                           (children
-                            (:div :class "vert")))
-                     #+nil (:br)
+                           (remove-if #'undo-boundary-p (child-entries node)))
+                         (row (make-element "div" :class "row")))
+                     (insert-nodes pos row)
+                     (unless root-p
+                       (insert-nodes (end-pos row) (make-element "div" :class "vert")))
+                     (draw node (end-pos row))
+                     (when children
+                       (insert-nodes pos (make-element "div" :class "vert")))
+                     (when (cdr children)
+                       (insert-nodes pos (make-element "div" :class "hr")))
                      (cond ((cdr children)
                             (dolist (c children)
-                              (:div :class "col" (process c nil))))
+                              (let ((col (make-element "div" :class "col")))
+                                (insert-nodes pos col)
+                                (process c nil (end-pos col)))))
                            (children
-                            (process (only-elt children) nil))))))
-          (:div :class "col" (process root t)))))))
+                            (process (only-elt children) nil pos))))))
+          (let ((col (make-element "div" :class "col")))
+            (insert-nodes (end-pos (document-root (current-buffer))) col)
+            (process root t (end-pos col)))))
+      (update-undo-history))))
+
+(define-command quit-undo-history ()
+  (disable 'active-undo-mode))
+
+(defmethod disable-aux ((mode (eql 'active-undo-mode))
+                        previous-instance)
+  (delete-buffer (undo-buffer previous-instance)))
+
+(define-command undo-mode ()
+  (toggle 'undo-mode))
+
+(defstyle undo-history-mode
+    `(("body" :whitespace "pre"
+              :line-height 0
+              :font-family "dejavu sans mono")
+      (".col" :display "inline-block"
+              :vertical-align "top")
+      (".hr" :border-bottom "1px solid currentColor"
+             :margin-right "0.25em"
+             :margin-left "0.25em")
+      (".row" :display "inline-block"
+              :margin-right "auto"
+              :vertical-align "top")
+      (".node" :width "0.5em"
+               :height "0.5em"
+               :border-radius "50%"
+               :border "1px solid currentColor")
+      (".focus" :background-color "currentColor")
+      (".vert" :border-left "1px solid currentColor"
+               :height "0.5em"
+               :width "100%"
+               :margin-left "0.25em")))

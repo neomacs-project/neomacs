@@ -51,22 +51,23 @@ ELEMENT as a single argument."
 
 (defvar *inhibit-dom-update* nil)
 
+(ps:defpsmacro js-node (node)
+  (cond ((text-node-p node)
+         (if-let (next (next-sibling node))
+           `(ps:chain (js-node ,next) previous-sibling)
+           `(ps:chain (js-node ,(parent node)) last-child)))
+        ((element-p node)
+         (if (equal (tag-name node) "body")
+             `(ps:chain document body)
+             (let ((id (attribute node "neomacs-identifier")))
+               `(ps:chain document
+                          (query-selector
+                           ,(format nil "[neomacs-identifier='~a']" id))))))
+        ((null node) nil)
+        (t (error "Unknown node type ~a." node))))
+
 (ps:defpsmacro js-node-1 (node)
-  `(ps:lisp
-    (let ((node ,node))
-      (cond ((text-node-p node)
-             (if-let (next (next-sibling node))
-               `(ps:chain (js-node ,next) previous-sibling)
-               `(ps:chain (js-node ,(parent node)) last-child)))
-            ((element-p node)
-             (if (equal (tag-name node) "body")
-                 `(ps:chain document body)
-                 (let ((id (attribute node "neomacs-identifier")))
-                   `(ps:chain document
-                              (query-selector
-                               ,(format nil "[neomacs-identifier='~a']" id))))))
-            ((null node) nil)
-            (t (error "Unknown node type ~a." node))))))
+  `(ps:lisp `(js-node ,,node)))
 
 (defun add-attribute-observer (cell node attribute)
   "Add an observer to CELL,

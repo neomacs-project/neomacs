@@ -87,7 +87,7 @@
 (defmethod on-post-command progn ((buffer active-completion-mode))
   (maybe-hide-completions))
 
-(defmethod disable-aux ((mode (eql 'active-completion-mode)))
+(defmethod disable-aux ((mode (eql 'active-completion-mode)) (previous-instance t))
   (send-dom-update
    `(setf (ps:chain document (get-element-by-id "completion-menu")
                     style display)

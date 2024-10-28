@@ -9,10 +9,9 @@
 (defmethod selectable-p-aux ((buffer minibuffer-mode) pos)
   (class-p (node-containing pos) "input"))
 
-(defmethod enable-aux ((mode (eql 'minibuffer-mode)))
-  (setf (window-decoration (current-buffer))
-        (dom `((:div :class "minibuffer" :selectable "")
-               ((:div :class "content" :buffer ,(id (current-buffer))))))))
+(defmethod window-decoration-aux ((buffer minibuffer-mode))
+  (dom `((:div :class "minibuffer" :selectable "")
+         ((:div :class "main content" :buffer ,(id buffer))))))
 
 (define-command exit-minibuffer ()
   (error 'exit-recursive-edit))
@@ -129,14 +128,12 @@ when this row is selected.")))
 (defmethod selectable-p-aux ((buffer completion-buffer-mode) pos)
   (tag-name-p (node-after pos) "tr"))
 
-(defmethod initialize-instance :after
-    ((buffer minibuffer-completion-mode) &key)
-  (setf (window-decoration buffer)
-        (dom `((:div :class "buffer" :selectable "")
-               ((:div :class "content" :style "flex:0 0 2em;"
-                      :buffer ,(id buffer)))
-               ((:div :class "content"
-                      :buffer ,(id (completion-buffer buffer))))))))
+(defmethod window-decoration-aux ((buffer minibuffer-completion-mode))
+  (dom `((:div :class "buffer" :selectable "")
+         ((:div :class "main content" :style "flex:0 0 2em;"
+                :buffer ,(id buffer)))
+         ((:div :class "content"
+                :buffer ,(id (completion-buffer buffer)))))))
 
 (defmethod on-delete-buffer progn ((buffer minibuffer-completion-mode))
   (delete-buffer (completion-buffer buffer)))

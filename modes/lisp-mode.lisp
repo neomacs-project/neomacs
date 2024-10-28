@@ -144,6 +144,7 @@
   (make-atom-node "symbol" (prin1-to-string obj)))
 
 (defun lisp-self-insert ()
+  (undo-auto-amalgamate)
   (let ((string (string (self-insert-char)))
         (marker (focus)))
     (cond ((atom-node-p (node-containing marker))
