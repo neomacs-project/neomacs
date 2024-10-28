@@ -30,6 +30,7 @@
                (:file "modes/occur-mode")
                (:file "modes/file-mode")
                (:file "modes/text-mode")
+               (:file "modes/prog-mode")
                (:file "modes/lisp-mode")
                (:file "modes/doc-mode")
                (:file "modes/web-mode")

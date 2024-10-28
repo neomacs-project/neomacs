@@ -4,7 +4,7 @@
   (let ((buffer (make-buffer :url (quri:uri "neomacs:scratch.lisp"))))
     (set-current-buffer buffer)))
 
-(define-class lisp-mode () ()
+(define-class lisp-mode (prog-mode) ()
   (:documentation "Lisp mode."))
 
 (define-keymap lisp-mode ()

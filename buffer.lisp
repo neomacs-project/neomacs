@@ -61,8 +61,8 @@
 
 (defun toggle (mode-name)
   (if (member mode-name (modes (current-buffer)))
-      (disable mode-name)
-      (enable mode-name)))
+      (progn (disable mode-name) nil)
+      (progn (enable mode-name) t)))
 
 (defgeneric enable-aux (mode-name)
   (:method ((mode-name symbol)))
@@ -311,13 +311,12 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
     name))
 
 (defun modes (buffer)
-  (ignore-errors
-   (remove
-    'buffer
-    (mapcar
-     #'class-name
-     (slot-value (class-of buffer)
-                 'dynamic-mixins::classes)))))
+  (remove-if-not
+   (lambda (name)
+     (sera:string-suffix-p "-MODE" (symbol-name name)))
+   (mapcar
+    #'class-name
+    (sb-mop:class-precedence-list (class-of buffer)))))
 
 ;;; Parenscript utils
 
