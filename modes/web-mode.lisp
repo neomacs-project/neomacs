@@ -32,7 +32,8 @@
   'beginning-of-buffer 'web-scroll-to-top
   'end-of-buffer 'web-scroll-to-bottom)
 
-(define-command web-next-line ()
+(define-command web-next-line
+  :mode web-mode ()
   (evaluate-javascript
    (ps:ps (ps:chain
            window (scroll-by
@@ -40,7 +41,8 @@
                       (scroll-multiplier (current-buffer))))))
    (current-buffer)))
 
-(define-command web-previous-line ()
+(define-command web-previous-line
+  :mode web-mode ()
   (evaluate-javascript
    (ps:ps (ps:chain
            window (scroll-by
@@ -48,7 +50,8 @@
                       (- (scroll-multiplier (current-buffer)))))))
    (current-buffer)))
 
-(define-command web-scroll-up ()
+(define-command web-scroll-up
+  :mode web-mode ()
   (evaluate-javascript
    (ps:ps (ps:chain
            window (scroll-by
@@ -57,7 +60,8 @@
                          (scroll-multiplier (current-buffer)))))))
    (current-buffer)))
 
-(define-command web-scroll-down ()
+(define-command web-scroll-down
+  :mode web-mode ()
   (evaluate-javascript
    (ps:ps (ps:chain
            window (scroll-by
@@ -66,7 +70,8 @@
                          (scroll-multiplier (current-buffer)))))))
    (current-buffer)))
 
-(define-command web-scroll-to-top ()
+(define-command web-scroll-to-top
+  :mode web-mode ()
   (evaluate-javascript
    (ps:ps (ps:chain
            window (scroll-by
@@ -74,7 +79,8 @@
                                   scroll-height)))))
    (current-buffer)))
 
-(define-command web-scroll-to-bottom ()
+(define-command web-scroll-to-bottom
+  :mode web-mode ()
   (evaluate-javascript
    (ps:ps (ps:chain
            window (scroll-by
@@ -85,7 +91,8 @@
 (defmethod on-buffer-title-updated progn ((buffer web-mode) title)
   (rename-buffer title))
 
-(define-command web-go-backward ()
+(define-command web-go-backward
+  :mode web-mode ()
   (unless
       (evaluate-javascript-sync
        (ps:ps
@@ -97,7 +104,8 @@
        nil)
     (error "Can not go backward.")))
 
-(define-command web-go-forward ()
+(define-command web-go-forward
+  :mode web-mode ()
   (unless
       (evaluate-javascript-sync
        (ps:ps

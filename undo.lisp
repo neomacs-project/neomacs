@@ -144,18 +144,21 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
     (mapc #'funcall (reverse (redo-thunks entry)))
     nil))
 
-(define-command undo-command (&optional (buffer (current-buffer)))
+(define-command undo-command
+  :mode undo-mode (&optional (buffer (current-buffer)))
   "Undo."
   (remove-undo-boundary buffer)
   (undo buffer)
   (update-undo-history))
 
-(define-command redo-command (&optional (buffer (current-buffer)))
+(define-command redo-command
+  :mode undo-mode (&optional (buffer (current-buffer)))
   "Redo."
   (redo 0 buffer)
   (update-undo-history))
 
-(define-command next-branch (&optional (buffer (current-buffer)))
+(define-command next-branch
+  :mode undo-mode (&optional (buffer (current-buffer)))
   (let* ((entry (undo-entry buffer))
          (parent (or (parent entry)
                      (error "No next branch.")))
@@ -166,7 +169,8 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
     (redo (1+ current-index) buffer)
     (update-undo-history)))
 
-(define-command previous-branch (&optional (buffer (current-buffer)))
+(define-command previous-branch
+  :mode undo-mode (&optional (buffer (current-buffer)))
   (let* ((entry (undo-entry buffer))
          (parent (or (parent entry)
                      (error "No next branch.")))
@@ -187,7 +191,8 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
             (undo-entry (current-buffer))
             undo-buffer))))
 
-(define-command undo-history ()
+(define-command undo-history
+  :mode undo-mode ()
   (enable 'active-undo-mode)
   (let ((undo-buffer (undo-buffer (current-buffer)))
         (node-table (node-table (current-buffer))))
@@ -227,7 +232,8 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
             (process root t (end-pos col)))))
       (update-undo-history))))
 
-(define-command quit-undo-history ()
+(define-command quit-undo-history
+  :mode active-undo-mode ()
   (disable 'active-undo-mode))
 
 (defmethod disable-aux ((mode (eql 'active-undo-mode))

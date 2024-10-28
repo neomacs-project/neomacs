@@ -13,10 +13,12 @@
   (dom `((:div :class "minibuffer" :selectable "")
          ((:div :class "main content" :buffer ,(id buffer))))))
 
-(define-command exit-minibuffer ()
+(define-command exit-minibuffer
+  :mode minibuffer-mode ()
   (error 'exit-recursive-edit))
 
-(define-command abort-minibuffer ()
+(define-command abort-minibuffer
+  :mode minibuffer-mode ()
   (error 'exit-recursive-edit :condition 'quit))
 
 (defun minibuffer-input-element (buffer)
@@ -54,7 +56,7 @@ ARGS are passed to `make-buffer' to create the minibuffer."
       (close-buffer-display minibuf)
       (delete-buffer minibuf))))
 
-(defun completing-read (prompt list-mode)
+(defun completing-read (prompt list-mode &rest args)
   "Read and return a string from minibuffer with completion.
 
 This is a thin wrapper around `read-from-minibuffer' that creates a completion buffer in LIST-MODE."
@@ -62,8 +64,9 @@ This is a thin wrapper around `read-from-minibuffer' that creates a completion b
    prompt
    :modes 'minibuffer-completion-mode
    :completion-buffer
-   (make-completion-buffer
-    (list list-mode 'completion-buffer-mode))))
+   (apply #'make-completion-buffer
+          (list list-mode 'completion-buffer-mode)
+          args)))
 
 (define-mode minibuffer-completion-mode (minibuffer-mode)
   ((completion-buffer :initarg :completion-buffer))
@@ -138,38 +141,44 @@ when this row is selected.")))
 (defmethod on-delete-buffer progn ((buffer minibuffer-completion-mode))
   (delete-buffer (completion-buffer buffer)))
 
-(define-command complete-minibuffer ()
+(define-command complete-minibuffer
+  :mode minibuffer-completion-mode ()
   (complete-minibuffer-aux (current-buffer)))
 
-(define-command complete-exit-minibuffer ()
-  ;; TODO: in case of not require-match, perform completion depending
-  ;; on whether focus is on minibuf/completion buffer
+(define-command complete-exit-minibuffer
+  :mode minibuffer-completion-mode ()
   (complete-minibuffer)
   (exit-minibuffer))
 
-(define-command next-minibuffer-completion ()
+(define-command next-minibuffer-completion
+  :mode minibuffer-completion-mode ()
   (with-current-buffer (completion-buffer (current-buffer))
     (forward-element)))
 
-(define-command previous-minibuffer-completion ()
+(define-command previous-minibuffer-completion
+  :mode minibuffer-completion-mode ()
   (with-current-buffer (completion-buffer (current-buffer))
     (backward-element)))
 
-(define-command scroll-down-minibuffer-completion ()
+(define-command scroll-down-minibuffer-completion
+  :mode minibuffer-completion-mode ()
   (with-current-buffer (completion-buffer (current-buffer))
     (dotimes (_ (scroll-lines (current-buffer)))
       (forward-element))))
 
-(define-command scroll-up-minibuffer-completion ()
+(define-command scroll-up-minibuffer-completion
+  :mode minibuffer-completion-mode ()
   (with-current-buffer (completion-buffer (current-buffer))
     (dotimes (_ (scroll-lines (current-buffer)))
       (backward-element))))
 
-(define-command beginning-of-minibuffer-completion ()
+(define-command beginning-of-minibuffer-completion
+  :mode minibuffer-completion-mode ()
   (with-current-buffer (completion-buffer (current-buffer))
     (beginning-of-buffer)))
 
-(define-command end-of-minibuffer-completion ()
+(define-command end-of-minibuffer-completion
+  :mode minibuffer-completion-mode ()
   (with-current-buffer (completion-buffer (current-buffer))
     (end-of-buffer)))
 
@@ -179,11 +188,19 @@ when this row is selected.")))
     (with-current-buffer buffer
       (revert-buffer))))
 
+(defun find-command (name modes)
+  (iter (for mode in (append modes '(global)))
+    (when-let
+        (cmd (find name (commands mode)
+                   :key (alex:compose #'string-downcase #'symbol-name)
+                   :test 'equal))
+      (return cmd))))
+
 (define-command execute-command ()
-  (let ((name (completing-read "M-x " 'command-list-mode)))
-    (if-let (cmd (find name *commands*
-                       :key (alex:compose #'string-downcase #'symbol-name)
-                       :test 'equal))
+  (let ((name (completing-read
+               "M-x " 'command-list-mode
+               :include-modes (modes (current-buffer)))))
+    (if-let (cmd (find-command name (modes (current-buffer))))
       (funcall cmd)
       (message "No such command"))))
 

@@ -156,30 +156,35 @@
              (insert-nodes marker node)
              (setf (pos marker) (end-pos node)))))))
 
-(define-command open-paren (&optional (marker (focus)))
+(define-command open-paren :mode lisp-mode
+  (&optional (marker (focus)))
   (let ((node (make-list-node nil)))
     (insert-nodes marker node)
     (setf (pos marker) (end-pos node))))
 
-(define-command wrap-paren (&optional (pos (focus)))
+(define-command wrap-paren :mode lisp-mode
+  (&optional (pos (focus)))
   (let ((node (make-list-node nil)))
     (setq pos (or (pos-up-ensure pos #'sexp-node-p)
                   (error 'top-of-subtree)))
     (wrap-node pos node)))
 
-(define-command open-string (&optional (marker (focus)))
+(define-command open-string :mode lisp-mode
+  (&optional (marker (focus)))
   (let ((node (make-atom-node "string" "")))
     (insert-nodes marker node)
     (setf (pos marker) (end-pos node))))
 
-(define-command open-space (&optional (marker (focus)))
+(define-command open-space :mode lisp-mode
+  (&optional (marker (focus)))
   (if (class-p (node-containing marker) "symbol")
       (setf (pos marker) (pos-down (split-node marker)))
       (let ((node (make-atom-node "symbol" "")))
         (insert-nodes marker node)
         (setf (pos marker) (end-pos node)))))
 
-(define-command open-comment (&optional (marker (focus)))
+(define-command open-comment :mode lisp-mode
+  (&optional (marker (focus)))
   (labels ((cycle-level (n)
              (lret ((n (1+ (mod n 4))))
                (message "Comment Level -> ~a" n))))
@@ -194,18 +199,21 @@
         (insert-nodes marker node)
         (setf (pos marker) (end-pos node))))))
 
-(define-command wrap-comment (&optional (pos (focus)))
+(define-command wrap-comment :mode lisp-mode
+  (&optional (pos (focus)))
   (let ((node (make-atom-node "comment" "")))
     (setq pos (or (pos-up-ensure pos #'sexp-node-p)
                   (error 'top-of-subtree)))
     (wrap-node pos node)))
 
-(define-command lisp-raise (&optional (pos (focus)))
+(define-command lisp-raise :mode lisp-mode
+  (&optional (pos (focus)))
   (setq pos (or (pos-up-ensure pos #'sexp-node-p)
                 (error 'top-of-subtree)))
   (raise-node pos))
 
-(define-command lisp-splice (&optional (pos (focus)))
+(define-command lisp-splice :mode lisp-mode
+  (&optional (pos (focus)))
   (setq pos (or (pos-up-until pos #'list-node-p)
                 (error 'top-of-subtree)))
   (splice-node pos))
@@ -305,7 +313,8 @@ before MARKER-OR-POS."
            (top-of-subtree ())))
         (find-package "NEOMACS"))))
 
-(define-command eval-defun (&optional (marker-or-pos (focus)))
+(define-command eval-defun :mode lisp-mode
+  (&optional (marker-or-pos (focus)))
   (with-marker (marker marker-or-pos)
     (beginning-of-defun marker)
     (let* ((*package* (current-package marker))
@@ -320,12 +329,14 @@ before MARKER-OR-POS."
     (setq pos (npos-prev pos)))
   (node-before pos))
 
-(define-command eval-last-expression (&optional (marker (focus)))
+(define-command eval-last-expression :mode lisp-mode
+  (&optional (marker (focus)))
   (let* ((*package* (current-package marker))
          (result (eval (node-to-sexp (last-expression (pos marker))))))
     (message "=> ~a" result)))
 
-(define-command eval-print-last-expression (&optional (marker (focus)))
+(define-command eval-print-last-expression :mode lisp-mode
+  (&optional (marker (focus)))
   (let* ((*package* (current-package marker))
          (node (last-expression marker))
          (pos (pos-right node))

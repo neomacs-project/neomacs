@@ -21,20 +21,22 @@
     (generate-rows buffer)
     (setf (pos (focus)) (pos-down body-node))))
 
-(define-mode command-list-mode (list-mode) ())
+(define-mode command-list-mode (list-mode)
+  ((include-modes :initform nil :initarg :include-modes)))
 
 (defun short-doc (command)
   (let ((doc (documentation command 'function)))
     (subseq doc 0 (position #\Newline doc))))
 
 (defmethod generate-rows ((buffer command-list-mode))
-  (iter (for c in *commands*)
-    (for name = (string-downcase (symbol-name c)))
-    (for doc = (short-doc c))
-    (insert-nodes (focus)
-                  (dom `(:tr
-                         (:td ,name)
-                         (:td ,@(when doc (list doc))))))))
+  (iter (for mode in (append (include-modes buffer) '(global)))
+    (iter (for c in (commands mode))
+      (for name = (string-downcase (symbol-name c)))
+      (for doc = (short-doc c))
+      (insert-nodes (focus)
+                    (dom `(:tr
+                           (:td ,name)
+                           (:td ,@(when doc (list doc)))))))))
 
 (define-mode buffer-list-mode (list-mode)
   ((show-hidden
@@ -47,13 +49,16 @@
   "d" 'buffer-list-delete-buffer
   "t" 'buffer-list-toggle-hidden)
 
-(define-command buffer-list-switch-to-buffer ()
+(define-command buffer-list-switch-to-buffer
+  :mode buffer-list-mode ()
   (switch-to-buffer (focused-item (current-buffer))))
 
-(define-command buffer-list-delete-buffer ()
+(define-command buffer-list-delete-buffer
+  :mode buffer-list-mode ()
   (delete-buffer (focused-item (current-buffer))))
 
-(define-command buffer-list-toggle-hidden ()
+(define-command buffer-list-toggle-hidden
+  :mode buffer-list-mode ()
   (setf (show-hidden (current-buffer))
         (not (show-hidden (current-buffer))))
   (revert-buffer))
@@ -74,7 +79,10 @@
 (define-command list-commands ()
   (with-current-buffer
       (switch-to-buffer
-       (get-buffer-create "*commands*" :modes '(command-list-mode)))
+       (get-buffer-create
+        "*commands*"
+        :modes '(command-list-mode)
+        :include-modes *modes*))
     (revert-buffer)))
 
 (define-command list-buffers ()
@@ -189,5 +197,6 @@ This should always be a directory pathname (with NIL name and type fields).")
                          (file-path buffer)))
       (error "No focused file")))
 
-(define-command file-list-find-file ()
+(define-command file-list-find-file
+  :mode file-list-mode ()
   (find-file (focused-item (current-buffer))))
