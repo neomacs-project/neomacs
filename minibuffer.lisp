@@ -68,20 +68,25 @@ This is a thin wrapper around `read-from-minibuffer' that creates a completion b
           (list list-mode 'completion-buffer-mode)
           args)))
 
-(define-mode minibuffer-completion-mode (minibuffer-mode)
+(define-mode completion-mode ()
   ((completion-buffer :initarg :completion-buffer))
+  (:documentation
+   "Abstract mode for buffers that has a completion buffer."))
+
+(define-mode minibuffer-completion-mode
+    (completion-mode minibuffer-mode) ()
   (:documentation
    "Mode for minibuffer that supports completion."))
 
 (define-keys minibuffer-completion-mode
   "tab" 'complete-minibuffer
   'exit-minibuffer 'complete-exit-minibuffer
-  'next-line 'next-minibuffer-completion
-  'previous-line 'previous-minibuffer-completion
-  'scroll-down-command 'scroll-down-minibuffer-completion
-  'scroll-up-command 'scroll-up-minibuffer-completion
-  'beginning-of-buffer 'beginning-of-minibuffer-completion
-  'end-of-buffer 'end-of-minibuffer-completion)
+  'next-line 'next-completion
+  'previous-line 'previous-completion
+  'scroll-down-command 'scroll-down-completion
+  'scroll-up-command 'scroll-up-completion
+  'beginning-of-buffer 'first-completion
+  'end-of-buffer 'last-completion)
 
 (defgeneric update-completion-buffer (buffer)
   (:method ((buffer minibuffer-completion-mode))
@@ -150,35 +155,35 @@ when this row is selected.")))
   (complete-minibuffer)
   (exit-minibuffer))
 
-(define-command next-minibuffer-completion
-  :mode minibuffer-completion-mode ()
+(define-command next-completion
+  :mode completion-mode ()
   (with-current-buffer (completion-buffer (current-buffer))
     (forward-element)))
 
-(define-command previous-minibuffer-completion
-  :mode minibuffer-completion-mode ()
+(define-command previous-completion
+  :mode completion-mode ()
   (with-current-buffer (completion-buffer (current-buffer))
     (backward-element)))
 
-(define-command scroll-down-minibuffer-completion
-  :mode minibuffer-completion-mode ()
+(define-command scroll-down-completion
+  :mode completion-mode ()
   (with-current-buffer (completion-buffer (current-buffer))
     (dotimes (_ (scroll-lines (current-buffer)))
       (forward-element))))
 
-(define-command scroll-up-minibuffer-completion
-  :mode minibuffer-completion-mode ()
+(define-command scroll-up-completion
+  :mode completion-mode ()
   (with-current-buffer (completion-buffer (current-buffer))
     (dotimes (_ (scroll-lines (current-buffer)))
       (backward-element))))
 
-(define-command beginning-of-minibuffer-completion
-  :mode minibuffer-completion-mode ()
+(define-command first-completion
+  :mode completion-mode ()
   (with-current-buffer (completion-buffer (current-buffer))
     (beginning-of-buffer)))
 
-(define-command end-of-minibuffer-completion
-  :mode minibuffer-completion-mode ()
+(define-command last-completion
+  :mode completion-mode ()
   (with-current-buffer (completion-buffer (current-buffer))
     (end-of-buffer)))
 

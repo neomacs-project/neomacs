@@ -109,13 +109,6 @@ for which MODE-NAME is being disabled."))
 (defun buffer-alive-p (buffer)
   (eql (gethash (slot-value buffer 'id) *buffer-table*) buffer))
 
-(defun send-dom-update (parenscript buffer)
-  (unless *inhibit-dom-update*
-    (evaluate-javascript
-     (let (ps:*parenscript-stream*)
-       (ps:ps* parenscript))
-     buffer)))
-
 (defmethod print-object ((buffer buffer) stream)
   (print-unreadable-object (buffer stream)
     (format stream "BUFFER ~s {~a}" (name buffer) (id buffer))))
@@ -283,14 +276,34 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
 
 ;;; Parenscript utils
 
-(defun get-bounding-client-rect (node)
-  (evaluate-javascript
-   (let (ps:*parenscript-stream*)
-     (ps:ps*
-      `(let ((r (ps:chain (js-node ,node) (get-bounding-client-rect))))
-         (list (ps:chain r x) (ps:chain r y)
-               (ps:chain r width) (ps:chain r height)))))
-   (host node)))
+(defun get-bounding-client-rect (pos)
+  "Get the bounding client rect of the node after or containing POS.
+
+If POS is a `text-pos', the node is the one character after POS;
+if POS is an `end-pos', the node is instead the one containing POS.
+
+The bounding rect is returned as a list (X Y WIDTH HEIGHT). X, Y,
+WIDTH and HEIGHT are numbers in pixels."
+  (let ((pos (resolve-marker pos)))
+    (ematch pos
+      ((text-pos node offset)
+       (evaluate-javascript-sync
+        (ps:ps
+          (let ((range (ps:new -range))
+                (node (js-node-1 node)))
+            (ps:chain range (set-start node (ps:lisp offset)))
+            (ps:chain range (set-end node (ps:lisp (1+ offset))))
+            (let ((r (ps:chain range (get-bounding-client-rect))))
+              (list (ps:chain r x) (ps:chain r y)
+                    (ps:chain r width) (ps:chain r height)))))
+        (host node)))
+      ((or (end-pos node) node)
+       (evaluate-javascript-sync
+        (ps:ps
+          (let ((r (ps:chain (js-node-1 node) (get-bounding-client-rect))))
+            (list (ps:chain r x) (ps:chain r y)
+                  (ps:chain r width) (ps:chain r height))))
+        (host node))))))
 
 (ps:defpsmacro pos-bounding-rect (marker-or-pos)
   (let ((pos (resolve-marker marker-or-pos)))

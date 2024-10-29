@@ -12,8 +12,11 @@
 
 (defvar *locked-buffers* nil)
 
+(defvar *post-command-buffers* nil)
+
 (defun cleanup-locked-buffers ()
-  (iter (for saved = *locked-buffers*)
+  (iter (for saved = *post-command-buffers*)
+    (setq *post-command-buffers* nil)
     (dolist (buffer saved)
       (when (buffer-alive-p buffer)
         (let ((*current-buffer* buffer))
@@ -22,11 +25,12 @@
             ((backward) (ensure-selectable (focus buffer) t)))
           (on-post-command buffer)
           (render-focus (focus buffer)))))
-    (until (eq saved *locked-buffers*))))
+    (while *post-command-buffers*)))
 
 (defun call-with-current-buffer (buffer thunk)
   (cond ((not *locked-buffers*)
          (let ((*locked-buffers* (list buffer))
+               (*post-command-buffers* (list buffer))
                (*current-buffer* buffer))
            (bt:acquire-recursive-lock (lock buffer))
            (setf (adjust-marker-direction buffer) 'forward)
@@ -39,10 +43,12 @@
                (dolist (buffer *locked-buffers*)
                  (bt:release-recursive-lock (lock buffer)))))))
         ((member buffer *locked-buffers*)
+         (pushnew buffer *post-command-buffers*)
          (let ((*current-buffer* buffer))
            (funcall thunk)))
         (t
          (push buffer *locked-buffers*)
+         (pushnew buffer *post-command-buffers*)
          (bt:acquire-recursive-lock (lock buffer))
          (setf (adjust-marker-direction buffer) 'forward)
          (let ((*current-buffer* buffer))

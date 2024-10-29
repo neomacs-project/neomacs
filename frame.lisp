@@ -385,7 +385,7 @@ BUFFER must be already displayed."
       (".horizontal"
        :flex "1 0 1em" :display "flex" :flex-flow "column"
        :gap "24px" :height "100%" :width "100%")
-      (".content" :flex "1 0 1em")
+      (".content" :flex "1 0 1em" :position "relative")
       (".vertical-child-container"
        :flex "1 0 1em"
        :display "flex" :flex-flow "row")

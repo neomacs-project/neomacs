@@ -158,3 +158,11 @@ DOM before => DOM after
         (end (range-end range)))
     (and (or (equalp beg pos) (before-p beg pos))
          (before-p pos end))))
+
+(defun inside-range-inclusive-p (marker-or-pos range)
+  "Test if MARKER-OR-POS is inside RANGE, including range-end."
+  (let ((pos (resolve-marker marker-or-pos))
+        (beg (range-beg range))
+        (end (range-end range)))
+    (and (or (equalp beg pos) (before-p beg pos))
+         (or (equalp end pos) (before-p pos end)))))

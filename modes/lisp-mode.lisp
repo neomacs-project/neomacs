@@ -370,8 +370,10 @@ before MARKER-OR-POS."
            (completions (car (swank:fuzzy-completions
                               (text-content node)
                               package))))
-      (list (range (pos-down node) (pos-down-last node))
-            completions))))
+      (values
+       (range (pos-down node) (pos-down-last node))
+       (iter (for c in completions)
+         (collect (list (car c) (remove #\- (lastcar c)))))))))
 
 ;;; Parser
 
