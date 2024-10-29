@@ -4,7 +4,7 @@
   ((undo-entry :initform (make-instance 'undo-root) :type undo-entry)
    (amalgamate-limit :default 20 :type integer)
    (amalgamate-count :default 0 :type integer))
-  (:documentation "Enable undo.")
+  (:documentation "Support undo in current buffer.")
   (:toggler t))
 
 (define-keys undo-mode

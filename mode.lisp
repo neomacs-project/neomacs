@@ -4,7 +4,7 @@
 
 (defclass mode (standard-class)
   ((commands :initform nil :accessor commands)
-   (keymap :initform nil :accessor keymap)
+   (keymap :initform (make-keymap nil) :accessor keymap)
    (lighter
     :initform nil :accessor lighter :type string
     :documentation
@@ -35,7 +35,8 @@
     (string-capitalize name)))
 
 (defmethod shared-initialize :after
-    ((class mode) slot-names &key toggler keymap lighter)
+    ((class mode) slot-names
+     &key toggler lighter documentation)
   (declare (ignore slot-names))
   (pushnew (class-name class) *modes*)
   (flet ((safe-car (form)
@@ -48,15 +49,12 @@
       (let ((name (string-downcase (symbol-name
                                     (class-name class)))))
         (eval `(define-command ,(class-name class) ()
-                 ,(format nil "Toggle ~a" name)
+                 ,documentation
                  (message "~a ~:[disabled~;enabled~]"
                           ,name
                           (toggle ',(class-name class)))))))
-    (setf (keymap class)
-          (or (eval (safe-car keymap))
-              (make-keymap nil)))
     (setf (lighter class)
-          (or (eval (safe-car lighter))
+          (or (safe-car lighter)
               (default-lighter class)))))
 
 (defmacro define-mode

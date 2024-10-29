@@ -109,45 +109,6 @@ for which MODE-NAME is being disabled."))
 (defun buffer-alive-p (buffer)
   (eql (gethash (slot-value buffer 'id) *buffer-table*) buffer))
 
-(defvar *locked-buffers* nil)
-
-(defun cleanup-locked-buffers ()
-  (iter (for saved = *locked-buffers*)
-    (dolist (buffer saved)
-      (when (buffer-alive-p buffer)
-        (let ((*current-buffer* buffer))
-          (case (adjust-marker-direction buffer)
-            ((forward) (ensure-selectable (focus buffer)))
-            ((backward) (ensure-selectable (focus buffer) t)))
-          (on-post-command buffer)
-          (render-focus (focus buffer)))))
-    (until (eq saved *locked-buffers*))))
-
-(defun call-with-current-buffer (buffer thunk)
-  (cond ((not *locked-buffers*)
-         (let ((*locked-buffers* (list buffer))
-               (*current-buffer* buffer))
-           (bt:acquire-recursive-lock (lock buffer))
-           (setf (adjust-marker-direction buffer) 'forward)
-           (on-pre-command buffer)
-           (unwind-protect
-                (with-delayed-evaluation
-                  (funcall thunk))
-             (unwind-protect
-                  (cleanup-locked-buffers)
-               (dolist (buffer *locked-buffers*)
-                 (bt:release-recursive-lock (lock buffer)))))))
-        ((member buffer *locked-buffers*)
-         (let ((*current-buffer* buffer))
-           (funcall thunk)))
-        (t
-         (push buffer *locked-buffers*)
-         (bt:acquire-recursive-lock (lock buffer))
-         (setf (adjust-marker-direction buffer) 'forward)
-         (let ((*current-buffer* buffer))
-           (on-pre-command buffer)
-           (funcall thunk)))))
-
 (defun send-dom-update (parenscript buffer)
   (unless *inhibit-dom-update*
     (evaluate-javascript
@@ -496,12 +457,13 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
 
 (defun remove-style (buffer style)
   (let ((id (format nil "neomacs-style-~a" style)))
-    (with-current-buffer buffer
-      (send-dom-update
-       `(let ((element (ps:chain document (get-element-by-id ,id))))
-          (when element
-            (ps:chain element (remove))))
-       buffer))))
+    (evaluate-javascript
+     (ps:ps
+       (let ((element (ps:chain document
+                                (get-element-by-id (ps:lisp id)))))
+         (when element
+           (ps:chain element (remove)))))
+     buffer)))
 
 (defmethod (setf styles) :before (new-val (buffer buffer))
   ;; TODO: maintain order of the style sheets correctly

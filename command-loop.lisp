@@ -10,6 +10,45 @@
 (define-condition quit () ()
   (:report "Quit"))
 
+(defvar *locked-buffers* nil)
+
+(defun cleanup-locked-buffers ()
+  (iter (for saved = *locked-buffers*)
+    (dolist (buffer saved)
+      (when (buffer-alive-p buffer)
+        (let ((*current-buffer* buffer))
+          (case (adjust-marker-direction buffer)
+            ((forward) (ensure-selectable (focus buffer)))
+            ((backward) (ensure-selectable (focus buffer) t)))
+          (on-post-command buffer)
+          (render-focus (focus buffer)))))
+    (until (eq saved *locked-buffers*))))
+
+(defun call-with-current-buffer (buffer thunk)
+  (cond ((not *locked-buffers*)
+         (let ((*locked-buffers* (list buffer))
+               (*current-buffer* buffer))
+           (bt:acquire-recursive-lock (lock buffer))
+           (setf (adjust-marker-direction buffer) 'forward)
+           (on-pre-command buffer)
+           (unwind-protect
+                (with-delayed-evaluation
+                  (funcall thunk))
+             (unwind-protect
+                  (cleanup-locked-buffers)
+               (dolist (buffer *locked-buffers*)
+                 (bt:release-recursive-lock (lock buffer)))))))
+        ((member buffer *locked-buffers*)
+         (let ((*current-buffer* buffer))
+           (funcall thunk)))
+        (t
+         (push buffer *locked-buffers*)
+         (bt:acquire-recursive-lock (lock buffer))
+         (setf (adjust-marker-direction buffer) 'forward)
+         (let ((*current-buffer* buffer))
+           (on-pre-command buffer)
+           (funcall thunk)))))
+
 (defvar *event-queue* (sb-concurrency:make-mailbox))
 (defvar *last-command* nil)
 (defvar *this-command* nil)
