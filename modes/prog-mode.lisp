@@ -1,3 +1,3 @@
 (in-package #:neomacs)
 
-(define-mode prog-mode () ())
+(define-mode prog-mode (doc-mode) ())

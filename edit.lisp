@@ -463,10 +463,6 @@ The behavior can be customized via `revert-buffer-aux'."
 (define-command new-buffer ()
   (switch-to-buffer (get-buffer-create "*new*")))
 
-(defun doc-node (buffer)
-  "Find the doc node of BUFFER."
-  (only-elt (get-elements-by-class-name (document-root buffer) "doc")))
-
 ;;; Editing commands
 
 (defun self-insert-char ()

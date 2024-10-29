@@ -109,21 +109,16 @@
 
 (defmethod revert-buffer-aux ((buffer file-mode))
   (erase-buffer)
-  (let ((doc-node (make-element "div" :class "doc")))
-    (insert-nodes (end-pos (document-root buffer)) doc-node)
-    (apply #'insert-nodes (end-pos doc-node)
-           (read-from-file (file-path buffer)))
-    (setf (restriction buffer) doc-node
-          (pos (focus buffer)) (pos-down doc-node))))
+  (apply #'insert-nodes (end-pos (document-root buffer))
+         (read-from-file (file-path buffer)))
+  (setf (restriction buffer) (document-root buffer)
+        (pos (focus buffer)) (pos-down (document-root buffer))))
 
 (defmethod write-file ((buffer file-mode))
   (with-open-file (s (file-path buffer)
                      :direction :output :if-exists :supersede)
     (with-standard-io-syntax
-      (dolist (c (child-nodes
-                  (only-elt (get-elements-by-class-name
-                             (document-root buffer)
-                             "doc"))))
+      (dolist (c (child-nodes (document-root buffer)))
         (write-dom-aux buffer c s))
       nil)))
 

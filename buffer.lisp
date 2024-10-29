@@ -557,13 +557,15 @@ WIDTH and HEIGHT are numbers in pixels."
                      :white-space "pre-wrap"
                      :padding-left "1em"))
 
-(define-class doc-mode () ())
+(define-class doc-mode () ()
+  (:documentation "Enable doc-node style on HTML body.
+
+This is suitable for whitespace-sensitive editing."))
 
 (defstyle doc-mode `(("body" :inherit doc-node)))
 
 (defstyle buffer
     `(("body" :inherit default)
-      (".doc" :inherit doc-node)
       (".focus" :inherit focus)
       (".focus-tail" :inherit focus-tail)
       (".newline"

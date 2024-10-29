@@ -4,7 +4,7 @@
   (let ((buffer (make-buffer :url (quri:uri "neomacs:scratch.lisp"))))
     (set-current-buffer buffer)))
 
-(define-mode lisp-mode () ()
+(define-mode lisp-mode (prog-mode) ()
   (:documentation "Lisp mode."))
 
 (define-keys lisp-mode
@@ -47,7 +47,8 @@
 (defmethod on-focus-move progn ((buffer lisp-mode) old new)
   (declare (ignore old))
   (let ((node (node-containing new)))
-    (if (class-p node "list" "symbol" "doc")
+    (if (or (class-p node "list" "symbol")
+            (tag-name-p node "body"))
         (enable 'sexp-editing-mode)
         (disable 'sexp-editing-mode))))
 
