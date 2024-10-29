@@ -120,9 +120,6 @@
 (defun non-empty-symbol-node-p (node)
   (and (symbol-node-p node) (first-child node)))
 
-(defun atom-node-text (node)
-  (ignore-errors (text (first-child node))))
-
 (defmethod print-dom ((cons cons) &key)
   (make-list-node (mapcar #'print-dom cons)))
 
@@ -267,7 +264,7 @@ It also takes into account any prefix preceding NODE."
   (labels ((ghost-symbol-p (node)
              (when (symbol-node-p node)
                (bind (((:values wrappers rest)
-                       (parse-prefix (atom-node-text node))))
+                       (parse-prefix (text-content node))))
                  (when (zerop (length rest))
                    wrappers))))
            (apply-wrappers (wrappers node)
@@ -284,10 +281,10 @@ It also takes into account any prefix preceding NODE."
                                                 #'new-line-node-p)
                                                (child-nodes node))))
                            ((equal "string" (attribute node "class"))
-                            (atom-node-text node))
+                            (text-content node))
                            ((symbol-node-p node)
                             (bind (((:values wrappers rest)
-                                    (parse-prefix (atom-node-text node))))
+                                    (parse-prefix (text-content node))))
                               (apply-wrappers wrappers (read-from-string rest))))
                            ((new-line-node-p node) nil)
                            (t (error "Unrecognized DOM node: ~a" node)))))
@@ -371,7 +368,7 @@ before MARKER-OR-POS."
     (let* ((package (current-package pos))
            (swank::*buffer-package* package)
            (completions (car (swank:fuzzy-completions
-                              (atom-node-text node)
+                              (text-content node)
                               package))))
       (list (range (pos-down node) (pos-down-last node))
             completions))))
@@ -513,7 +510,7 @@ before MARKER-OR-POS."
              ((new-line-node-p self)
               (pprint-newline :mandatory stream))
              ((symbol-node-p self)
-              (write-string (atom-node-text self) stream))
+              (write-string (text-content self) stream))
              ((equal (attribute self "class") "string")
               (write
                (with-output-to-string (s)
