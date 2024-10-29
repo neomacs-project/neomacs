@@ -105,7 +105,8 @@
                                :border-collapse "collapse")
                       ("tbody:empty::after"
                        :content "<No Item>"
-                       :display "inline")))
+                       :display "inline")
+                      ("td" :padding-right "1em")))
 
 (define-mode file-list-mode (list-mode)
   ((file-path

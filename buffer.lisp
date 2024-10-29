@@ -179,11 +179,19 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
 
 (defgeneric on-node-setup (buffer node)
   (:method-combination progn)
-  (:method progn ((buffer buffer) (node t))))
+  (:method progn ((buffer buffer) (node t)))
+  (:documentation
+   "Run some action when NODE is inserted into BUFFER.
+
+This runs only when NODE is an element (i.e. not a text node)."))
 
 (defgeneric on-node-cleanup (buffer node)
   (:method-combination progn)
-  (:method progn ((buffer buffer) (node t))))
+  (:method progn ((buffer buffer) (node t)))
+  (:documentation
+   "Run some action when NODE is removed from BUFFER.
+
+This runs only when NODE is an element (i.e. not a text node)."))
 
 (defgeneric on-focus-move (buffer saved new)
   (:method-combination progn)
@@ -547,7 +555,9 @@ WIDTH and HEIGHT are numbers in pixels."
       :inherit selection))
 
 (defstyle common
-    `((:import (url "https://fonts.googleapis.com/css2?family=Yomogi&display=swap"))))
+    `((:import (url "https://fonts.googleapis.com/css2?family=Yomogi&display=swap"))
+      ;; (:import (url "https://cdn.jsdelivr.net/npm/@fontsource/cascadia-code@4.2.1/index.min.css"))
+      ))
 
 (defstyle doc-node `(((:append ".focus-tail::after")
                       :content "  "

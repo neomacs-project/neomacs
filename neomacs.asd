@@ -33,7 +33,7 @@
                (:file "modes/prog-mode")
                (:file "modes/completion")
                (:file "modes/lisp-mode")
-               (:file "modes/doc-mode")
+               (:file "modes/html-doc")
                (:file "modes/web-mode")
                (:file "modes/web-hints")
                (:file "start"))

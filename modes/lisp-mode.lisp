@@ -8,7 +8,6 @@
   (:documentation "Lisp mode."))
 
 (define-keys lisp-mode
-  'self-insert-command 'lisp-self-insert
   "tab" 'show-completions
   "M-(" 'wrap-paren
   "M-;" 'wrap-comment
@@ -141,18 +140,15 @@
 (defmethod print-dom ((obj t) &key)
   (make-atom-node "symbol" (prin1-to-string obj)))
 
-(defun lisp-self-insert ()
-  (undo-auto-amalgamate)
-  (let ((string (string (self-insert-char)))
-        (marker (focus)))
-    (cond ((atom-node-p (node-containing marker))
-           (insert-nodes marker string))
-          ((class-p (node-before marker) "comment")
-           (insert-nodes (end-pos (node-before marker)) string))
-          (t
-           (let ((node (make-atom-node "symbol" string)))
-             (insert-nodes marker node)
-             (setf (pos marker) (end-pos node)))))))
+(defmethod self-insert-aux ((buffer lisp-mode) marker string)
+  (cond ((atom-node-p (node-containing marker))
+         (insert-nodes marker string))
+        ((class-p (node-before marker) "comment")
+         (insert-nodes (end-pos (node-before marker)) string))
+        (t
+         (let ((node (make-atom-node "symbol" string)))
+           (insert-nodes marker node)
+           (setf (pos marker) (end-pos node))))))
 
 (define-command open-paren :mode lisp-mode
   (&optional (marker (focus)))

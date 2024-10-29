@@ -161,7 +161,7 @@ X and Y are numbers in pixels."
 (define-mode auto-completion-mode ()
   ((minimum-prefix :default 3)
    (allowed-commands
-    :default '(self-insert-command lisp-self-insert)
+    :default '(self-insert-command)
     :type (list-of symbol)))
   (:documentation
    "Automatically show completion menu after input.")

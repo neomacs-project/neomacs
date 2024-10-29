@@ -142,6 +142,12 @@ which ensures renderer side ATTRIBUTE of NODE matches value of CELL."
                   "newline")
            (equal (tag-name node) "br"))))
 
+(defmethod print-object ((node element) stream)
+  (print-unreadable-object (node stream :identity t :type t)
+    (format stream "~a" (tag-name node))))
+
+(defvar *serialize-exclude-attributes* nil)
+
 (defun serialize (node stream)
   "Serialize NODE to HTML and write to STREAM.
 STREAM can also be
@@ -156,8 +162,9 @@ STREAM can also be
                             :tag-name (tag-name node))))
                    (iter (for (k v) in-hashtable (attributes node))
                      (when (stringp k)
-                       (when-let (value (cell-ref v))
-                         (setf (gethash k (plump:attributes n)) value))))
+                       (unless (member k *serialize-exclude-attributes* :test 'equal)
+                         (when-let (value (cell-ref v))
+                           (setf (gethash k (plump:attributes n)) value)))))
                    (setf (plump:children n)
                          (iter (for c first (first-child node)
                                     then (next-sibling c))
@@ -172,7 +179,9 @@ STREAM can also be
 (defgeneric clone-node (node &optional deep)
   (:documentation
    "Clone NODE.
-If DEEP is non-nil, recursively clone all descendant.")
+
+If DEEP is non-nil, recursively clone all descendant.
+DEEP defaults to T.")
   (:method ((node text-node) &optional (deep t))
            (declare (ignore deep))
            (make-instance 'text-node :text (text node)))
