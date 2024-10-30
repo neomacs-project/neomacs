@@ -534,7 +534,8 @@ WIDTH and HEIGHT are numbers in pixels."
 (defstyle special-operator `(:color "#d29fa8"))
 (defstyle string `(:color "#d29fa8"))
 (defstyle comment `(:color "#a997a0"))
-(defstyle bold `())
+(defstyle highlight `(:color "#701"))
+(defstyle bold `(:font-weight 900))
 
 (defstyle focus-tail
     `(((:append "::after")
@@ -554,7 +555,9 @@ WIDTH and HEIGHT are numbers in pixels."
 (defstyle common
     `((:import (url "https://fonts.googleapis.com/css2?family=Yomogi&display=swap"))
       ;; (:import (url "https://cdn.jsdelivr.net/npm/@fontsource/cascadia-code@4.2.1/index.min.css"))
-      (:import (url "https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"))))
+      ;; (:import (url "https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"))
+      ;; (:import (url "https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"))
+      ))
 
 (defstyle doc-node `(((:append ".focus-tail::after")
                       :content "  "
