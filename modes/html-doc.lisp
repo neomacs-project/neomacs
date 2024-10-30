@@ -25,12 +25,16 @@
    (ps:ps (ps:chain (js-buffer buffer) web-contents
                     (load-u-r-l
                      (ps:lisp (str:concat "file://" (uiop:native-namestring (file-path buffer)))))))
-   nil))
+   nil)
+  ;; Enter recursive edit to wait for `on-buffer-loaded', so that
+  ;; buffer state is updated when `revert-buffer' returns.
+  (recursive-edit))
 
 (defmethod on-buffer-loaded progn ((buffer html-doc-mode))
   (update-document-model buffer)
   (setf (pos (focus buffer))
-        (pos-down (document-root buffer))))
+        (pos-down (document-root buffer)))
+  (signal 'exit-recursive-edit))
 
 (defmethod self-insert-aux
     ((buffer html-doc-mode) marker string)
@@ -313,6 +317,11 @@ JSON should have the format like what `+get-body-json-code+' produces:
           (expand-comma-expr (document-root (current-buffer))))
          s))
       (message "Rendered to ~a" output-path))))
+
+(defun build-manual ()
+  (iter (for file in (uiop:directory-files (asdf:system-relative-pathname "neomacs" "doc")))
+    (with-current-buffer (find-file-no-select file)
+      (render-html-doc))))
 
 (defstyle html-doc-mode
     `(("p:empty::after" :content "_")
