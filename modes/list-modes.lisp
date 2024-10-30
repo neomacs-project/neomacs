@@ -111,6 +111,7 @@
 (define-mode file-list-mode (list-mode)
   ((file-path
     :initform *default-pathname-defaults*
+    :initarg :file-path
     :documentation "Path of the directory this buffer is visiting.
 
 This should always be a directory pathname (with NIL name and type fields).")

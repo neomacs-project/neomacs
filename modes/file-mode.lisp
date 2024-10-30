@@ -2,7 +2,7 @@
 
 (define-mode minibuffer-find-file-mode
     (minibuffer-completion-mode)
-  ())
+  ((file-path :initform nil :initarg :file-path)))
 
 (define-keys minibuffer-find-file-mode
   "/" 'split-node)
@@ -21,7 +21,9 @@
   (call-next-method)
   (let ((last (make-element "span" :class "path-component"))
         (input (minibuffer-input-element buffer)))
-    (iter (for n in (cdr (pathname-directory *default-pathname-defaults*)))
+    (iter (for n in (cdr (pathname-directory
+                          (or (file-path (current-buffer))
+                              *default-pathname-defaults*))))
       (insert-nodes
        (end-pos input)
        (make-element "span" :class "path-component" :children (list n))))
@@ -73,6 +75,31 @@
            (enable 'html-doc-mode))
           (t (enable 'text-mode)))))
 
+(defun find-file-buffer (path)
+  "Find a buffer already opening PATH, if any."
+  (bt:with-recursive-lock-held (*buffer-table-lock*)
+    (iter (for (_ b) in-hashtable *buffer-table*)
+      (when (equal path (file-path b))
+        (return b)))))
+
+(defun find-file-no-select (path)
+  ;; If PATH points to a directory, ensure it is a directory
+  ;; pathname (with NIL name and type fields).
+  (when-let (dir (uiop:directory-exists-p path))
+    (setq path dir))
+  (ensure-directories-exist path)
+  (with-current-buffer
+      (or (find-file-buffer path)
+          (make-buffer
+           (if (uiop:directory-pathname-p path)
+               (lastcar (pathname-directory path))
+               (file-namestring path))
+           :modes 'file-mode))
+    (setf (file-path (current-buffer)) path)
+    (set-auto-mode)
+    (revert-buffer)
+    (current-buffer)))
+
 (define-command find-file
     (&optional (path
                 (read-from-minibuffer
@@ -82,28 +109,16 @@
                  (make-completion-buffer
                   '(file-list-mode completion-buffer-mode)
                   :header-p nil
-                  :require-match nil))))
-  ;; If PATH points to a directory, ensure it is a directory
-  ;; pathname (with NIL name and type fields).
-  (when-let (dir (uiop:directory-exists-p path))
-    (setq path dir))
-  (ensure-directories-exist path)
-  (switch-to-buffer
-   (with-current-buffer
-       (make-buffer
-        (if (uiop:directory-pathname-p path)
-            (lastcar (pathname-directory path))
-            (file-namestring path))
-        :modes 'file-mode)
-     (setf (file-path (current-buffer)) path)
-     (set-auto-mode)
-     (revert-buffer)
-     (current-buffer))))
+                  :require-match nil)
+                 :file-path (file-path (current-buffer)))))
+  (switch-to-buffer (find-file-no-select path)))
 
 (define-mode file-mode ()
   ((file-path))
   (:documentation
    "Generic mode for buffer backed by files."))
+
+(defmethod file-path ((buffer buffer)) nil)
 
 (defgeneric write-file (file-mode))
 

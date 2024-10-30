@@ -1,18 +1,23 @@
 (in-package #:neomacs)
 
-(define-mode html-doc-mode (file-mode) ())
+(define-mode html-doc-mode (lisp-mode file-mode) ())
 
 (define-keys html-doc-mode
   "enter" 'open-paragraph
   "M-*" 'open-heading
   "M-`" 'open-code
   "M-/" 'open-italic
-  "M--" 'open-list
-  "M-@" 'open-at)
+  "M--" 'insert-description-list
+  "M-," 'open-comma
+  "C-c C-l"'insert-link)
+
+(defmethod enable-aux ((mode (eql 'html-doc-mode)))
+  (pushnew 'lisp-mode (styles (current-buffer))))
 
 (defmethod selectable-p-aux ((buffer html-doc-mode) pos)
-  (not (and (member (node-after pos) '(#\Space #\Newline #\Tab))
-            (member (node-before pos) '(nil #\Space #\Newline #\Tab)))))
+  (and (not (and (member (node-after pos) '(#\Space #\Newline #\Tab))
+                 (member (node-before pos) '(nil #\Space #\Newline #\Tab))))
+       (call-next-method)))
 
 (defmethod revert-buffer-aux ((buffer html-doc-mode))
   (erase-buffer)
@@ -30,12 +35,17 @@
 (defmethod self-insert-aux
     ((buffer html-doc-mode) marker string)
   (let ((node (node-containing marker)))
-    (if (member (tag-name node) '("p" "code" "i" "li" "span")
-                :test 'equal)
-        (insert-nodes marker string)
-        (let ((node (make-element "p" :children (list string))))
-          (insert-nodes marker node)
-          (setf (pos marker) (end-pos node))))))
+    (cond ((member (tag-name node) '("body") :test 'equal)
+           (let ((node (make-element "p" :children (list string))))
+             (insert-nodes marker node)
+             (setf (pos marker) (end-pos node))))
+          (t (call-next-method)))))
+
+(defmethod on-focus-move :around ((buffer html-doc-mode) old new)
+  (declare (ignore old))
+  (if (tag-name-p (node-containing new) "body")
+      (disable 'sexp-editing-mode)
+      (call-next-method)))
 
 (define-command open-paragraph
   :mode html-doc-mode (&optional (marker (focus)))
@@ -79,21 +89,44 @@
     (insert-nodes marker node)
     (setf (pos marker) (end-pos node))))
 
-(define-command open-list
-  :mode html-doc-mode (&optional (marker (focus)))
-  (unless (tag-name-p (node-containing marker) "ul")
-    (let ((node (make-element "ul")))
+(defun insert-list (marker list-tag item-tag)
+  (unless (tag-name-p (node-containing marker) list-tag)
+    (let ((node (make-element list-tag)))
       (insert-nodes marker node)
       (setf (pos marker) (end-pos node))))
-  (let ((node (make-element "li")))
+  (let ((node (make-element item-tag)))
     (insert-nodes marker node)
     (setf (pos marker) (end-pos node))))
 
-(define-command open-at
+(define-command insert-unordered-list
   :mode html-doc-mode (&optional (marker (focus)))
-  (let ((node (make-element "span" :class "at-expr")))
-    (insert-nodes marker node)
-    (setf (pos marker) (end-pos node))))
+  (insert-list marker "ul" "li"))
+
+(define-command insert-description-list
+  :mode html-doc-mode (&optional (marker (focus)))
+  (insert-list marker "dl" "dt"))
+
+(define-command open-comma
+  :mode html-doc-mode (&optional (marker (focus)))
+  "Insert a Sexp list and change the surrounding node to a comma expr."
+  (let* ((list (make-list-node nil)))
+    (add-class (node-containing marker) "comma-expr")
+    (insert-nodes marker list)
+    (setf (pos marker) (end-pos list))))
+
+(define-command insert-link
+  :mode html-doc-mode (&optional (marker (focus)))
+  (let* ((href (read-from-minibuffer "Href: "))
+         (a (make-element "a" :href href)))
+    (insert-nodes marker a)
+    (setf (pos marker) (end-pos a))))
+
+(defmethod on-focus-move progn ((buffer html-doc-mode) old new)
+  (declare (ignore old))
+  (let ((node (node-containing new)))
+    (if (class-p node "list" "symbol")
+        (enable 'sexp-editing-mode)
+        (disable 'sexp-editing-mode))))
 
 ;;; Get DOM from renderer
 ;; Initially adapted from Nyxt
@@ -174,59 +207,115 @@ JSON should have the format like what `+get-body-json-code+' produces:
   (let ((*package* package))
     (format nil "(~{~a~^ ~})" arglist)))
 
-(in-nomine:define-namespace at-expander)
+(defun render-doc-string (string)
+  (when string
+    (let ((paragraphs (str:split "
 
-(setf (symbol-at-expander 'fundoc)
-      (lambda (arg)
-        (let* ((function (read-from-string arg))
-               (doc (documentation function 'function)))
-          (list* (make-instance 'text-node :text "Function: ")
-                (make-element "code" :children (list arg))
-                (make-instance 'text-node :text " ")
-                (make-element "code" :children
-                              (list (print-arglist (swank-backend:arglist function)
-                                                   (symbol-package function))))
-                (when doc (list (make-element "p" :children
-                                              (list doc))))))))
+"
+                                 string)))
+      (iter (for p in paragraphs)
+        (append-child
+         *dom-output*
+         (make-element
+          "dd" :children
+          (let ((last-end 0))
+            (append
+             (iter
+               (for (start end) on
+                    (ppcre:all-matches "`[^']*'" p)
+                    by #'cddr)
+               (when (> start last-end)
+                 (collect (subseq p last-end start)))
+               (when (> (1- end) (1+ start))
+                 (collect (make-element "code" :children
+                                        (list (subseq p (1+ start) (1- end))))))
+               (setq last-end end))
+             (when (> (length p) last-end)
+               (list (subseq p last-end)))))))))))
 
-(setf (symbol-at-expander 'classdoc)
-      (lambda (arg)
-        (let ((class (read-from-string arg)))
-          (list (make-instance 'text-node :text "Class: ")
-                (make-element "code" :children (list arg))))))
+(defun fundoc (function)
+  (let ((*print-case* :downcase))
+    (let ((*dom-output*
+            (append-child *dom-output* (make-element "dt"))))
+      (append-text
+       *dom-output*
+       (format nil "~a~:[~;, setf-able~]: "
+               (if (typep (symbol-function function)
+                          'generic-function)
+                   (let ((*print-case* :capitalize))
+                     (format nil "~a generic function"
+                             (slot-value (sb-mop:generic-function-method-combination (symbol-function function))
+                                         'sb-pcl::type-name)))
+                   "Function")
+               (fboundp (list 'setf function))))
+      (append-child *dom-output*
+                    (make-element "code" :children (list (prin1-to-string function))))
+      (append-text *dom-output* " ")
+      (append-child *dom-output*
+                    (make-element "code" :children
+                                  (list (print-arglist (swank-backend:arglist function)
+                                                       (symbol-package function))))))
+    (render-doc-string (documentation function 'function))))
 
-(defun expand-at-expr (node)
-  (only-elt
-   (map-dom
-    (lambda (node results)
-      (if (class-p node "at-expr")
-          (bind (((name arg) (str:split " "(text-content node))))
-            (funcall (symbol-at-expander
-                      (find-symbol (string-upcase name)))
-                     arg))
-          (list
-           (lret ((new (clone-node node nil)))
-             (iter (for ns in results)
-               (append-children new ns))))))
-    node)))
+(defun classdoc (class)
+  (let ((*print-case* :downcase))
+    (let ((*dom-output* (append-child *dom-output* (make-element "dt"))))
+      (append-text *dom-output* "Class: ")
+      (append-child *dom-output*
+                    (make-element "code" :children (list (prin1-to-string class)))))))
+
+(defun expand-comma-expr (node)
+  (labels ((process (node)
+             (if (element-p node)
+                 (if (class-p node "comma-expr")
+                     (progn
+                       (eval (node-to-sexp (first-child node)))
+                       nil)
+                     (lret ((*dom-output* (clone-node node nil)))
+                       (iter (for c first (first-child node)
+                                  then (next-sibling c))
+                         (while c)
+                         (when-let (d (process c))
+                           (append-child *dom-output* d)))))
+                 (clone-node node nil))))
+    (process node)))
+
+(defun add-heading-ids (node)
+  (do-elements
+      (lambda (node)
+        (when (ppcre:all-matches
+               "^h[123456]$"
+               (tag-name node))
+          (setf (attribute node "id")
+                (str:replace-all
+                 " " "-"
+                 (string-downcase (text-content node))))))
+    node))
 
 (define-command render-html-doc
   :mode html-doc-mode ()
   "Render current buffer by expanding at expressions."
-  (let ((path (file-path (current-buffer))))
-    (with-open-file (s (make-pathname
-                        :name (str:concat (pathname-name path)
-                                          "-rendered")
-                        :defaults path)
+  (let* ((path (file-path (current-buffer)))
+         (output-path (make-pathname
+                       :directory
+                       (append (pathname-directory path)
+                               (list "build"))
+                       :defaults path)))
+    (ensure-directories-exist output-path)
+    (with-open-file (s output-path
                        :direction :output
                        :if-exists :supersede)
+      (message "Rendering ~a" output-path)
       (let ((*serialize-exclude-attributes* '("neomacs-identifier"))
             (*package* (find-package "NEOMACS")))
         (serialize
-         (expand-at-expr (document-root (current-buffer)))
-         s)))))
+         (add-heading-ids
+          (expand-comma-expr (document-root (current-buffer))))
+         s))
+      (message "Rendered to ~a" output-path))))
 
 (defstyle html-doc-mode
-    `((":empty::after" :content "_")
-      (".at-expr::before" :content "@")
-      (".at-expr" :border "solid 1px currentColor")))
+    `(("p:empty::after" :content "_")
+      ("li p" :margin 0)
+      (".comma-expr::before" :content ",")
+      (".comma-expr" :border "solid 1px currentColor")))

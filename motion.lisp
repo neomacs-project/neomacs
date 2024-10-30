@@ -8,20 +8,28 @@
                 (invisible-p (node-after pos))
                 (invisible-p (node-containing pos)))
       (unless (new-line-node-p (node-containing pos))
-        (call-next-method)))))
+        (call-next-method))))
+  (:documentation
+   "Extension point for `selectable-p'.
+
+Test if POS is selectable in BUFFER."))
 
 (defun selectable-p (pos)
+  "Test if POS is selectable."
   (selectable-p-aux (host pos) pos))
 
-(defun word-character-p (neomacs node)
+(defun word-character-p (buffer node)
+  "Test if NODE is a word constituent character in BUFFER."
   (and (characterp node)
-       (not (member node (word-boundary-list neomacs)))))
+       (not (member node (word-boundary-list buffer)))))
 
 (defun word-start-p (pos)
+  "Test if POS is at start of a word."
   (and (word-character-p (host pos) (node-after pos))
        (not (word-character-p (host pos) (node-before pos)))))
 
 (defun word-end-p (pos)
+  "Test if POS is at end of a word."
   (and (word-character-p (host pos) (node-before pos))
        (not (word-character-p (host pos) (node-after pos)))))
 
@@ -112,6 +120,10 @@
   (setf (pos marker) (end-pos (restriction (host marker)))))
 
 (defun ensure-selectable (marker &optional backward)
+  "Move MARKER to nearest selectable position.
+
+Prefer going forward if BACKWARD is nil. Prefer going backward
+otherwise."
   (let ((pos (pos marker)))
     (unless (selectable-p pos)
       (setq pos
@@ -149,17 +161,24 @@
   (:method ((buffer buffer) (element element))
     (member (tag-name element)
             '("tr" "address" "article" "aside" "blockquote" "canvas" "dd" "div" "dl" "dt" "fieldset" "figcaption" "figure" "footer" "form" "h1" "h2" "h3" "h4" "h5" "h6" "header" "hr" "li" "main" "nav" "noscript" "ol" "p" "pre" "section" "table" "tfoot" "ul" "video")
-            :test 'equal)))
+            :test 'equal))
+  (:documentation
+   "Extension point for `block-element-p'.
+
+Test if ELEMENT is a block element in BUFFER."))
 
 (defun block-element-p (element)
+  "Test if ELEMENT is a block element."
   (when (element-p element)
     (block-element-p-aux (host element) element)))
 
 (defun line-start-p (pos)
+  "Test if POS is at start of a line."
   (or (new-line-node-p (node-before pos))
       (block-element-p (node-after pos))))
 
 (defun line-end-p (pos)
+  "Test if POS is at end of a line."
   (or (new-line-node-p (node-after pos))
       (and (end-pos-p pos)
            (block-element-p (end-pos-node pos)))))

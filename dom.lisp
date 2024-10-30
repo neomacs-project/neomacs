@@ -266,19 +266,21 @@ Returns CHILDREN."
 
 (defun do-dom (function node)
   "Call FUNCTION on every descendant of NODE in post-order.
-This includes `element's and `text-node's."
+This includes `element's and `text-node's. Returns NODE."
   (map-dom (lambda (node results)
              (declare (ignore results))
              (funcall function node))
-           node))
+           node)
+  node)
 
 (defun do-elements (function node)
-  "Like `do-dom', but only call FUNCTION on `element's."
+  "Like `do-dom', but only call FUNCTION on `element's. Returns NODE."
   (map-dom (lambda (node results)
              (declare (ignore results))
              (when (element-p node)
                (funcall function node)))
-           node))
+           node)
+  node)
 
 (defun text-content (node)
   (map-dom

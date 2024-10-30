@@ -140,16 +140,6 @@
 (defmethod print-dom ((obj t) &key)
   (make-atom-node "symbol" (prin1-to-string obj)))
 
-(defmethod self-insert-aux ((buffer lisp-mode) marker string)
-  (cond ((atom-node-p (node-containing marker))
-         (insert-nodes marker string))
-        ((class-p (node-before marker) "comment")
-         (insert-nodes (end-pos (node-before marker)) string))
-        (t
-         (let ((node (make-atom-node "symbol" string)))
-           (insert-nodes marker node)
-           (setf (pos marker) (end-pos node))))))
-
 (define-command open-paren :mode lisp-mode
   (&optional (marker (focus)))
   (let ((node (make-list-node nil)))
@@ -212,7 +202,7 @@
                 (error 'top-of-subtree)))
   (splice-node pos))
 
-(define-mode sexp-editing-mode () ()
+(define-mode sexp-editing-mode (lisp-mode) ()
   (:documentation "Editing S-exp."))
 
 (define-keys sexp-editing-mode
@@ -220,6 +210,16 @@
   "\"" 'open-string
   "space" 'open-space
   ";" 'open-comment)
+
+(defmethod self-insert-aux ((buffer sexp-editing-mode) marker string)
+  (cond ((atom-node-p (node-containing marker))
+         (insert-nodes marker string))
+        ((class-p (node-before marker) "comment")
+         (insert-nodes (end-pos (node-before marker)) string))
+        (t
+         (let ((node (make-atom-node "symbol" string)))
+           (insert-nodes marker node)
+           (setf (pos marker) (end-pos node))))))
 
 (defun parse-prefix (string)
   "Parse prefix from STRING.

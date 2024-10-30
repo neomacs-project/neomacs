@@ -77,9 +77,6 @@ for which MODE-NAME is being enabled."))
 
 (defgeneric disable-aux (mode-name previous-instance)
   (:method ((mode-name symbol) (previous-instance t)))
-  (:method :after ((mode-name symbol) (previous-instance t))
-    (when (get mode-name 'style)
-      (alex:deletef (styles (current-buffer)) mode-name)))
   (:documentation "Run before MODE-NAME is disabled.
 
 This generic function is run with `current-buffer' bound to the buffer
@@ -557,7 +554,7 @@ WIDTH and HEIGHT are numbers in pixels."
 (defstyle common
     `((:import (url "https://fonts.googleapis.com/css2?family=Yomogi&display=swap"))
       ;; (:import (url "https://cdn.jsdelivr.net/npm/@fontsource/cascadia-code@4.2.1/index.min.css"))
-      ))
+      (:import (url "https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"))))
 
 (defstyle doc-node `(((:append ".focus-tail::after")
                       :content "  "
