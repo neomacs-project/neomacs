@@ -21,20 +21,21 @@
 
 (defmethod revert-buffer-aux ((buffer html-doc-mode))
   (erase-buffer)
-  (evaluate-javascript
-   (ps:ps (ps:chain (js-buffer buffer) web-contents
-                    (load-u-r-l
-                     (ps:lisp (str:concat "file://" (uiop:native-namestring (file-path buffer)))))))
-   nil)
-  ;; Enter recursive edit to wait for `on-buffer-loaded', so that
+  (load-url buffer (str:concat "file://" (uiop:native-namestring (file-path buffer))))
+  ;; Enter recursive edit to wurlait for `on-buffer-loaded', so that
   ;; buffer state is updated when `revert-buffer' returns.
   (recursive-edit))
 
-(defmethod on-buffer-loaded progn ((buffer html-doc-mode))
+(defmethod on-buffer-loaded progn ((buffer html-doc-mode) url)
   (update-document-model buffer)
   (setf (pos (focus buffer))
         (pos-down (document-root buffer)))
-  (signal 'exit-recursive-edit))
+  (when (equal url (str:concat "file://" (uiop:native-namestring (file-path buffer))))
+    (signal 'exit-recursive-edit)))
+
+(defmethod on-buffer-load-failed progn ((buffer html-doc-mode) url err)
+  (when (equal url (str:concat "file://" (uiop:native-namestring (file-path buffer))))
+    (signal 'exit-recursive-edit)))
 
 (defmethod self-insert-aux
     ((buffer html-doc-mode) marker string)
@@ -322,6 +323,9 @@ JSON should have the format like what `+get-body-json-code+' produces:
                  (clone-node node nil))))
     (process node)))
 
+(defun heading-text-to-id (text)
+  (str:replace-all " " "-" (string-downcase text)))
+
 (defun add-heading-ids (node)
   (do-elements
       (lambda (node)
@@ -329,9 +333,7 @@ JSON should have the format like what `+get-body-json-code+' produces:
                "^h[123456]$"
                (tag-name node))
           (setf (attribute node "id")
-                (str:replace-all
-                 " " "-"
-                 (string-downcase (text-content node))))))
+                (heading-text-to-id (text-content node)))))
     node))
 
 (define-command render-html-doc
@@ -356,11 +358,61 @@ JSON should have the format like what `+get-body-json-code+' produces:
          s))
       (message "Rendered to ~a" output-path))))
 
+(defun build-manual-section (file)
+  (with-current-buffer (find-file-no-select file)
+    (render-html-doc)
+    (let (title subtitles)
+      (do-elements
+          (lambda (node)
+            (when (tag-name-p node "h1")
+              (setq title (text-content node)))
+            (when (tag-name-p node "h2")
+              (push (text-content node) subtitles)))
+        (document-root (current-buffer)))
+      (values title (nreverse subtitles)))))
+
 (defun build-manual ()
-  (iter (for file in (uiop:directory-files (asdf:system-relative-pathname "neomacs" "doc")))
-    (when (equal (pathname-type file) "html")
-      (with-current-buffer (find-file-no-select file)
-        (render-html-doc)))))
+  (let ((sections '("dom" "positions" "markers" "motion"
+                    "edit" "ranges" "mode" "command-loop"
+                    "window-management")))
+    (with-current-buffer
+        (find-file-no-select
+         (asdf:system-relative-pathname
+          "neomacs" "doc/build/toc.html"))
+      (erase-buffer)
+      (let ((*dom-output*
+              (make-element "ol")))
+        (iter (for section in sections)
+          (for file = (asdf:system-relative-pathname
+                       "neomacs"
+                       (str:concat "doc/" section ".html")))
+          (for href = (str:concat section ".html"))
+          (let ((*dom-output* (append-child
+                               *dom-output*
+                               (make-element "li"))))
+            (multiple-value-bind
+                  (title subtitles)
+                (build-manual-section file)
+              (append-child
+               *dom-output*
+               (make-element "a" :href href :children (list title)))
+              (let ((*dom-output* (append-child *dom-output*
+                                                (make-element "ul"))))
+                (iter
+                  (for subtitle in subtitles)
+                  (append-child
+                   *dom-output*
+                   (make-element
+                    "li" :children
+                    (list (make-element
+                           "a" :href
+                           (str:concat href "#"
+                                       (heading-text-to-id subtitle))
+                           :children (list subtitle))))))))))
+        (insert-nodes
+         (end-pos (document-root (current-buffer)))
+         *dom-output*)
+        (save-buffer)))))
 
 (defstyle html-doc-mode
     `(("p:empty::after" :content "_")

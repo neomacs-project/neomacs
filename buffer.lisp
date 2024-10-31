@@ -195,9 +195,13 @@ changed."
        (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
        nil))))
 
-(defgeneric on-buffer-loaded (buffer)
+(defgeneric on-buffer-loaded (buffer url)
   (:method-combination progn)
-  (:method progn ((buffer buffer))))
+  (:method progn ((buffer buffer) (url t))))
+
+(defgeneric on-buffer-load-failed (buffer url err)
+  (:method-combination progn)
+  (:method progn ((buffer buffer) (url t) (err t))))
 
 (defgeneric on-buffer-title-updated (buffer title)
   (:method-combination progn)
@@ -280,6 +284,24 @@ This runs only when NODE is an element (i.e. not a text node)."))
            (apply #'dynamic-mixins:mix
                   (append modes (list 'buffer)))
            :name name args)))
+
+(defun load-url (buffer url)
+  "Load URL in BUFFER.
+
+This set up a promise handler so that `on-buffer-loaded' is triggered
+when URL finishes loading. We use this instead of Electron's
+`did-finish-load' event because the latter doesn't carry url
+information, and getting url with `webContents.getURL()' isn't
+reliable because it may get the URL of a later issued unfinished load
+operation."
+  (evaluate-javascript
+   (format nil "Ceramic.buffers[~S].webContents.loadURL(~S).then(()=>
+        {RemoteJS.send(JSON.stringify({inputEvent: {type: 'load', url: ~S}, buffer: ~S}));},
+        (err)=>{RemoteJS.send(JSON.stringify({inputEvent: {type: 'fail-load', url: ~S, err: err}, buffer: ~S}));});"
+           (id buffer) url
+           url (id buffer)
+           url (id buffer))
+   nil))
 
 (defun get-buffer-create (name &rest args)
   (bt:with-recursive-lock-held (*buffer-table-lock*)
@@ -558,7 +580,8 @@ WIDTH and HEIGHT are numbers in pixels."
  (defstyle string `(:color "#a29bfe"))
  (defstyle comment `(:color "#777")))
 
-(defstyle default `(:font-family "Yomogi" :color "#54454d"))
+(defstyle default `(:font-family "CMU Concrete"
+                    :color "#54454d"))
 (defstyle focus `(:background-color "rgba(169,151,160,0.1)"))
 (defstyle selection `(:background-color "rgba(169,151,160,0.5)"
                       :color "#54454d"))
@@ -587,6 +610,8 @@ WIDTH and HEIGHT are numbers in pixels."
 
 (defstyle common
     `((:import (url "https://fonts.googleapis.com/css2?family=Yomogi&display=swap"))
+      ;; (:import (url "https://lalten.github.io/lmweb/style/latinmodern-sans.css"))
+      (:import (url "https://fonts.cdnfonts.com/css/cmu-concrete"))
       ;; (:import (url "https://cdn.jsdelivr.net/npm/@fontsource/cascadia-code@4.2.1/index.min.css"))
       ;; (:import (url "https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"))
       ;; (:import (url "https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"))
