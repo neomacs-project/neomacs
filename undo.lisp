@@ -193,6 +193,8 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
 
 (define-command undo-history
   :mode undo-mode ()
+  (when (typep (current-buffer) 'active-undo-mode)
+    (error "Already showing undo history"))
   (enable 'active-undo-mode)
   (let ((undo-buffer (undo-buffer (current-buffer)))
         (node-table (node-table (current-buffer))))
