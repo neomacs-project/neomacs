@@ -381,4 +381,5 @@ Return that instance or nil otherwise."
 (defvar *current-buffer* nil)
 
 (defmacro with-current-buffer (buffer &body body)
+  "Run BODY with BUFFER as the current buffer."
   `(call-with-current-buffer ,buffer (lambda () ,@body)))

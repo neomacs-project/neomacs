@@ -244,13 +244,15 @@ JSON should have the format like what `+get-body-json-code+' produces:
       (append-text
        *dom-output*
        (format nil "~a~:[~;, setf-able~]: "
-               (if (typep (symbol-function function)
-                          'generic-function)
-                   (let ((*print-case* :capitalize))
-                     (format nil "~a generic function"
-                             (slot-value (sb-mop:generic-function-method-combination (symbol-function function))
-                                         'sb-pcl::type-name)))
-                   "Function")
+               (cond ((macro-function function)
+                      "Macro")
+                     ((typep (symbol-function function)
+                             'generic-function)
+                      (let ((*print-case* :capitalize))
+                        (format nil "~a generic function"
+                                (slot-value (sb-mop:generic-function-method-combination (symbol-function function))
+                                            'sb-pcl::type-name))))
+                     (t "Function"))
                (fboundp (list 'setf function))))
       (append-child *dom-output*
                     (make-element "code" :children (list (prin1-to-string function))))
@@ -260,6 +262,14 @@ JSON should have the format like what `+get-body-json-code+' produces:
                                   (list (print-arglist (swank-backend:arglist function)
                                                        (symbol-package function))))))
     (render-doc-string (documentation function 'function))))
+
+(defun vardoc (var)
+  (let ((*print-case* :downcase))
+    (let ((*dom-output* (append-child *dom-output* (make-element "dt"))))
+      (append-text *dom-output* "Variable: ")
+      (append-child *dom-output*
+                    (make-element "code" :children (list (prin1-to-string var))))
+      (render-doc-string (documentation var 'variable)))))
 
 (defun classdoc (class)
   (let ((*print-case* :downcase))

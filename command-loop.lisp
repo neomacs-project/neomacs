@@ -53,9 +53,22 @@
            (funcall thunk)))))
 
 (defvar *event-queue* (sb-concurrency:make-mailbox))
-(defvar *last-command* nil)
-(defvar *this-command* nil)
-(defvar *this-command-keys* nil)
+
+(defvar *last-command* nil
+  "Last command run by command loop.")
+
+(defvar *this-command* nil
+  "Current command run by command loop.
+
+The value is also available after a command has finished and before
+command loop run the next command.")
+
+(defvar *this-command-keys* nil
+  "List of keys that cause current command to run.
+
+The value is also available after a command has finished and before
+command loop run the next command.")
+
 (defvar *debug-on-error* nil)
 
 (define-command toggle-debug-on-error ()
@@ -157,6 +170,11 @@
 (defvar *command-loop-thread* nil)
 
 (defun start-command-loop ()
+  "Start Neomacs command loop.
+
+If a command loop is already running, ask and wait for it to quit
+before starting a new one. This is useful when you want changes to the
+function `command-loop' to take effect."
   (when (and *command-loop-thread*
              (bt:thread-alive-p *command-loop-thread*))
     (format t "Waiting for command loop to quit...")

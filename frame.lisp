@@ -42,10 +42,10 @@
   (:documentation "Mode for frame root buffer."))
 
 (defmethod on-buffer-loaded progn ((buffer frame-root-mode))
-  (redisplay-windows))
+  (redisplay-windows buffer))
 
 (defmethod on-post-command progn ((buffer frame-root-mode))
-  (redisplay-windows)
+  (redisplay-windows buffer)
   ;; Update focus
   (when-let (window-node (node-after (focus)))
     (when-let (buffer (window-buffer window-node))
@@ -322,7 +322,9 @@ BUFFER must be already displayed."
   "C-x b" 'switch-to-buffer
   "C-x k" 'delete-buffer)
 
-(defun redisplay-windows (&optional (frame-root (current-buffer)))
+(defun redisplay-windows
+    (&optional (frame-root (current-frame-root)))
+  "Ask FRAME-ROOT to update its windows."
   (evaluate-javascript
    (ps:ps (ps:chain (js-frame frame-root) (emit "resize")))
    nil))
