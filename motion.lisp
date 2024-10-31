@@ -101,14 +101,14 @@ Test if POS is selectable in BUFFER."))
   "Move to first end of element (excluding line break) to the right."
   (let ((pos (pos marker)))
     (iter
+      (when (graphic-element-p pos)
+        (setf (pos marker) (end-pos pos))
+        (return))
       (setq pos (or (npos-right pos)
                     (pos-right (pos-up pos))))
       (when (and (end-pos-p pos)
                  (graphic-element-p (end-pos-node pos)))
         (setf (pos marker) pos)
-        (return))
-      (when (graphic-element-p pos)
-        (setf (pos marker) (end-pos pos))
         (return)))))
 
 (define-command backward-element (&optional (marker (focus)))
