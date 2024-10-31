@@ -4,10 +4,11 @@
 
 (eval-always
   (defstruct (end-pos (:constructor end-pos (node)))
-    (node))
+    (node (alex:required-argument 'node) :type element))
 
   (defstruct (text-pos (:constructor text-pos (node offset)))
-    (node) (offset)))
+    (node (alex:required-argument 'node) :type text-node)
+    (offset (alex:required-argument 'offset) :type (integer 0))))
 
 (deftype pos ()
   '(or element text-pos end-pos null))
@@ -255,13 +256,13 @@ If DESTRUCTIVE is non-nil, POS might be mutated."
 
 (eval-always
   (defstruct (%start-pos (:constructor %start-pos (node)))
-    (node))
+    (node (alex:required-argument 'node) :type element))
 
   (defstruct (%after-pos (:constructor %after-pos (before)))
-    (before))
+    (before (alex:required-argument 'before) :type pos))
 
   (defclass marker ()
-    ((pos :initarg :pos))))
+    ((pos :initarg :pos :type pos))))
 
 (defmethod host ((pos %start-pos))
   (host (%start-pos-node pos)))
