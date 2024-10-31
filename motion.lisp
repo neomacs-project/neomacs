@@ -97,6 +97,20 @@ Test if POS is selectable in BUFFER."))
                pos #'graphic-element-p)
               (error 'top-of-subtree)))))
 
+(define-command forward-element-end (&optional (marker (focus)))
+  "Move to first end of element (excluding line break) to the right."
+  (let ((pos (pos marker)))
+    (iter
+      (setq pos (or (npos-right pos)
+                    (pos-right (pos-up pos))))
+      (when (and (end-pos-p pos)
+                 (graphic-element-p (end-pos-node pos)))
+        (setf (pos marker) pos)
+        (return))
+      (when (graphic-element-p pos)
+        (setf (pos marker) (end-pos pos))
+        (return)))))
+
 (define-command backward-element (&optional (marker (focus)))
   "Move to first element (excluding line break) to the left."
   (let ((pos (pos marker)))
@@ -283,7 +297,7 @@ Try to keep horizontal location approximately the same."
   "C-b" 'backward-node
   "M-f" 'forward-word
   "M-b" 'backward-word
-  "C-M-f" 'forward-element
+  "C-M-f" 'forward-element-end
   "C-M-b" 'backward-element
   "M-<" 'beginning-of-buffer
   "M->" 'end-of-buffer
