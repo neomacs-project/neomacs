@@ -35,11 +35,8 @@
            (bt:acquire-recursive-lock (lock buffer))
            (setf (adjust-marker-direction buffer) 'forward)
            (on-pre-command buffer)
-           (unwind-protect
-                (with-delayed-evaluation
-                  (funcall thunk))
-             (unwind-protect
-                  (cleanup-locked-buffers)
+           (unwind-protect (funcall thunk)
+             (unwind-protect (cleanup-locked-buffers)
                (dolist (buffer *locked-buffers*)
                  (bt:release-recursive-lock (lock buffer)))))))
         ((member buffer *locked-buffers*)

@@ -34,7 +34,7 @@
    (markers :type list)
    (document-root)
    (restriction)
-   (next-neomacs-id :initform 0 :accessor next-neomacs-id :type integer)
+   (next-neomacs-id :initform 0 :type integer)
    (read-only-p :type boolean)
    (scroll-margin
     :default 0.2
@@ -44,6 +44,9 @@
    (styles :default (list 'buffer) :initarg :styles)
    (content-scripts :default nil)
    (lock :initform (bt:make-recursive-lock) :reader lock)
+   (post-command-thunks
+    :initform nil
+    :documentation "Thunks to run at the end of current command.")
    (window-decoration :initform nil)
    (frame-root :initform nil))
   (:default-initargs :url (quri:uri "about:blank")))
@@ -139,11 +142,41 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
 
 (defgeneric on-post-command (buffer)
   (:method-combination progn)
-  (:method progn ((buffer buffer))))
+  (:method progn ((buffer buffer))
+    (iter (for saved = (post-command-thunks buffer))
+      (while saved)
+      (setf (post-command-thunks buffer) nil)
+      (mapc #'funcall (nreverse saved))))
+  (:documentation "Run after command invocation.
+
+More specifically, this runs after a command invocation iff it has
+ever entered any `with-current-buffer' form for BUFFER during its
+execution."))
 
 (defgeneric on-pre-command (buffer)
   (:method-combination progn)
-  (:method progn ((buffer buffer))))
+  (:method progn ((buffer buffer)))
+  (:documentation "Run before command invocation.
+
+More specifically, this runs before entering the first
+`with-current-buffer' form for BUFFER during a command invocation."))
+
+(defun call-with-post-command (node slots thunk)
+  (let ((buffer (host node)))
+    (labels ((action ()
+               (when (eql (host node) buffer)
+                 (funcall thunk)))
+             (observer (cell)
+               (declare (ignore cell))
+               (push #'action (post-command-thunks buffer))))
+      (dolist (slot slots)
+        (add-observer (slot-value node slot) #'observer)))))
+
+(defmacro with-post-command ((node &rest slots) &body body)
+  "Run BODY at the end of current command, if any SLOTS of NODE is
+changed."
+  `(call-with-post-command
+    node (list ,@slots) (lambda () ,@body)))
 
 (ps:defpsmacro js-buffer (buffer)
   `(ps:getprop (ps:chain -ceramic buffers) (ps:lisp (id ,buffer))))

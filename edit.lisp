@@ -162,26 +162,27 @@ tree (which is usually taken care of by `insert-nodes')."
   "Insert THINGS at MARKER-OR-POS.
 
 THINGS can be DOM nodes or strings, which are converted to text nodes."
-  (let* ((pos (resolve-marker marker-or-pos))
-         (host (host pos)))
-    (unless host
-      (error "~a does not point inside an active document." pos))
-    (check-read-only host)
-    (let ((nodes
-            ;; TODO: do more cleanup, like merging adjacent text nodes
-            (iter (for n in things)
-              (if (stringp n)
-                  (when (> (length n) 0)
-                    (collect (make-instance 'text-node :text n)))
-                  (collect n)))))
-      (record-undo
-       (nclo undo-node-setup ()
-         (mapc (alex:curry #'do-dom #'node-cleanup) nodes))
-       (nclo redo-node-setup ()
-         (mapc (alex:curry #'do-dom (alex:rcurry #'node-setup host)) nodes))
-       host)
-      (insert-nodes-1 pos (mapc (alex:curry #'do-dom (alex:rcurry #'node-setup host))
-                                nodes)))))
+  (with-delayed-evaluation
+    (let* ((pos (resolve-marker marker-or-pos))
+           (host (host pos)))
+      (unless host
+        (error "~a does not point inside an active document." pos))
+      (check-read-only host)
+      (let ((nodes
+              ;; TODO: do more cleanup, like merging adjacent text nodes
+              (iter (for n in things)
+                (if (stringp n)
+                    (when (> (length n) 0)
+                      (collect (make-instance 'text-node :text n)))
+                    (collect n)))))
+        (record-undo
+         (nclo undo-node-setup ()
+           (mapc (alex:curry #'do-dom #'node-cleanup) nodes))
+         (nclo redo-node-setup ()
+           (mapc (alex:curry #'do-dom (alex:rcurry #'node-setup host)) nodes))
+         host)
+        (insert-nodes-1 pos (mapc (alex:curry #'do-dom (alex:rcurry #'node-setup host))
+                                  nodes))))))
 
 (defun count-nodes-between (beg end)
   (iter (for node first beg then (next-sibling node))
@@ -291,24 +292,25 @@ tree (which is usually taken care of by `delete-nodes' and
   (setf (host node) nil))
 
 (defun delete-nodes-0 (beg end)
-  (let* ((beg (resolve-marker beg))
-         (host (host beg))
-         (end (resolve-marker end)))
-    (unless host
-      (error "~a does not point inside an active document." beg))
-    (check-read-only host)
-    ;; Account for this edge case
-    (unless (or (end-pos-p beg) (equalp beg end))
-      (let ((nodes (delete-nodes-1 beg end)))
-        (mapc (alex:curry #'do-dom #'node-cleanup)
-              nodes)
-        (record-undo
-         (nclo undo-node-cleanup ()
-           (mapc (alex:curry #'do-dom (alex:rcurry #'node-setup host)) nodes))
-         (nclo redo-node-cleanup ()
-           (mapc (alex:curry #'do-dom #'node-cleanup) nodes))
-         host)
-        nodes))))
+  (with-delayed-evaluation
+    (let* ((beg (resolve-marker beg))
+           (host (host beg))
+           (end (resolve-marker end)))
+      (unless host
+        (error "~a does not point inside an active document." beg))
+      (check-read-only host)
+      ;; Account for this edge case
+      (unless (or (end-pos-p beg) (equalp beg end))
+        (let ((nodes (delete-nodes-1 beg end)))
+          (mapc (alex:curry #'do-dom #'node-cleanup)
+                nodes)
+          (record-undo
+           (nclo undo-node-cleanup ()
+             (mapc (alex:curry #'do-dom (alex:rcurry #'node-setup host)) nodes))
+           (nclo redo-node-cleanup ()
+             (mapc (alex:curry #'do-dom #'node-cleanup) nodes))
+           host)
+          nodes)))))
 
 (defun delete-nodes (beg end)
   "Delete nodes between BEG and END and returns nil.
@@ -368,36 +370,37 @@ starting from BEG till the end of its parent."
 
 BEG and END must be sibling positions.  If END is nil, move children
 starting from BEG till the end of its parent."
-  (let* ((beg (resolve-marker beg))
-         (end (resolve-marker end))
-         (to (resolve-marker to))
-         (src-parent (node-containing beg))
-         (dst-parent (node-containing to))
-         (host (host to)))
+  (with-delayed-evaluation
+    (let* ((beg (resolve-marker beg))
+           (end (resolve-marker end))
+           (to (resolve-marker to))
+           (src-parent (node-containing beg))
+           (dst-parent (node-containing to))
+           (host (host to)))
 
-    (unless (host beg)
-      (error "~a does not point inside an active document." beg))
-    (unless (eq (host beg) host)
-      (error "~a and ~a not point inside the same document." beg to))
-    (check-read-only host)
-    ;; If END is nil, also move marker at (end-pos src-parent)
-    (unless end
-      (dolist (m (markers host))
-        (let ((pos (slot-value m 'pos)))
-          (when (and (end-pos-p pos)
-                     (eq (end-pos-node pos) src-parent))
-            (setf (pos m) to)))))
-    ;; Account for this edge case
-    (when (or (end-pos-p beg) (equalp beg end))
-      (return-from move-nodes nil))
-    (setq end (maybe-split-text-node end)
-          beg (maybe-split-text-node beg)
-          to (maybe-split-text-node to))
-    (move-nodes-2 src-parent beg end dst-parent to)
-    (maybe-merge-text-nodes end)
-    (maybe-merge-text-nodes to)
-    (maybe-merge-text-nodes beg)
-    nil))
+      (unless (host beg)
+        (error "~a does not point inside an active document." beg))
+      (unless (eq (host beg) host)
+        (error "~a and ~a not point inside the same document." beg to))
+      (check-read-only host)
+      ;; If END is nil, also move marker at (end-pos src-parent)
+      (unless end
+        (dolist (m (markers host))
+          (let ((pos (slot-value m 'pos)))
+            (when (and (end-pos-p pos)
+                       (eq (end-pos-node pos) src-parent))
+              (setf (pos m) to)))))
+      ;; Account for this edge case
+      (when (or (end-pos-p beg) (equalp beg end))
+        (return-from move-nodes nil))
+      (setq end (maybe-split-text-node end)
+            beg (maybe-split-text-node beg)
+            to (maybe-split-text-node to))
+      (move-nodes-2 src-parent beg end dst-parent to)
+      (maybe-merge-text-nodes end)
+      (maybe-merge-text-nodes to)
+      (maybe-merge-text-nodes beg)
+      nil)))
 
 ;;; Additional operations
 
