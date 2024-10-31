@@ -268,15 +268,43 @@ JSON should have the format like what `+get-body-json-code+' produces:
     (let ((*dom-output* (append-child *dom-output* (make-element "dt"))))
       (append-text *dom-output* "Variable: ")
       (append-child *dom-output*
-                    (make-element "code" :children (list (prin1-to-string var))))
-      (render-doc-string (documentation var 'variable)))))
+                    (make-element "code" :children (list (prin1-to-string var)))))
+    (render-doc-string (documentation var 'variable))))
 
 (defun classdoc (class)
-  (let ((*print-case* :downcase))
+  (let ((*print-case* :downcase)
+        (object (find-class class)))
     (let ((*dom-output* (append-child *dom-output* (make-element "dt"))))
       (append-text *dom-output* "Class: ")
       (append-child *dom-output*
-                    (make-element "code" :children (list (prin1-to-string class)))))))
+                    (make-element "code" :children (list (prin1-to-string class))))
+      (append-text *dom-output* " inherits ")
+      (append-child
+       *dom-output*
+       (make-element
+        "code"
+        :children
+        (list (print-arglist
+               (mapcar #'class-name
+                       (sb-mop:class-direct-superclasses object))
+               (symbol-package class))))))
+    (render-doc-string (documentation class 'type))
+    (when-let (slots (sb-mop:class-direct-slots object))
+      (let ((*dom-output*
+              (append-child
+               (append-child *dom-output*
+                             (make-element "dd"))
+               (make-element "dl"))))
+        (iter (for slot in slots)
+          (let ((*dom-output* (append-child *dom-output* (make-element "dt"))))
+            (append-text *dom-output* "Slot: ")
+            (append-child
+             *dom-output*
+             (make-element
+              "code" :children
+              (list (prin1-to-string
+                     (sb-mop:slot-definition-name slot)))))
+            (render-doc-string (documentation slot t))))))))
 
 (defun expand-comma-expr (node)
   (labels ((process (node)
@@ -330,8 +358,9 @@ JSON should have the format like what `+get-body-json-code+' produces:
 
 (defun build-manual ()
   (iter (for file in (uiop:directory-files (asdf:system-relative-pathname "neomacs" "doc")))
-    (with-current-buffer (find-file-no-select file)
-      (render-html-doc))))
+    (when (equal (pathname-type file) "html")
+      (with-current-buffer (find-file-no-select file)
+        (render-html-doc)))))
 
 (defstyle html-doc-mode
     `(("p:empty::after" :content "_")
