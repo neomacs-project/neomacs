@@ -4,7 +4,7 @@
 
 (defclass mode (standard-class)
   ((commands :initform nil :accessor commands)
-   (keymap :initform (make-keymap nil) :accessor keymap)
+   (keymap :initform (make-keymap) :accessor keymap)
    (lighter
     :initform nil :accessor lighter :type string
     :documentation

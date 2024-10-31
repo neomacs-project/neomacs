@@ -1,6 +1,6 @@
-;; Adapted from lem
-
 (in-package #:neomacs)
+
+;; Initially adapted from lem
 
 (defstruct (key (:constructor %make-key))
   (ctrl nil :type boolean)
@@ -25,7 +25,6 @@
 
 (defstruct (keymap (:constructor %make-keymap))
   undef-hook
-  parent
   (table (make-hash-table :test 'eq))
   (function-table (make-hash-table :test 'eq)))
 
@@ -58,8 +57,8 @@ Example: (set-key *global-keymap* \"C-'\" 'list-modes)"
      ,@ (iter (for (k v) on bindings by #'cddr)
           (collect `(set-key (keymap ',mode-name) ,k ,v)))))
 
-(defun make-keymap (parent &rest bindings)
-  (lret ((keymap (%make-keymap :parent parent)))
+(defun make-keymap (&rest bindings)
+  (lret ((keymap (%make-keymap)))
     (iter (for (k v) on bindings by #'cddr)
       (set-key keymap k v))))
 
@@ -205,9 +204,6 @@ Example: (set-key *global-keymap* \"C-'\" 'list-modes)"
                          ((keymap-p cmd)
                           (setf table (keymap-table cmd)))
                          (t cmd)))))
-        (let ((parent (keymap-parent keymap)))
-          (when parent
-            (setf cmd (keymap-find-keybind parent key cmd))))
         (or (etypecase key
               (key
                (f key))
@@ -240,7 +236,7 @@ Example: (set-key *global-keymap* \"C-'\" 'list-modes)"
                          (push kseq bindings))))
     (nreverse bindings)))
 
-(defvar *global-keymap* (make-keymap nil))
+(defvar *global-keymap* (make-keymap))
 
 (defmethod keymap ((name (eql 'global)))
   *global-keymap*)
