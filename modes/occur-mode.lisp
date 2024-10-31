@@ -63,4 +63,4 @@ end-2...), where [start-n,end-n) are matched ranges."
         (enable 'occur-mode)
         (setf (occur-query (current-buffer)) query))))
 
-(defstyle occur-mode `(("::highlight(occur)" :inherit highlight)))
+(defstyle occur-mode `(("::highlight(occur)" :inherit match)))

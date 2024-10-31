@@ -567,8 +567,8 @@ WIDTH and HEIGHT are numbers in pixels."
 (defstyle special-operator `(:color "#d29fa8"))
 (defstyle string `(:color "#d29fa8"))
 (defstyle comment `(:color "#a997a0"))
-(defstyle highlight `(:color "#701"))
 (defstyle bold `(:font-weight 900))
+(defstyle match `(:inherit selection))
 
 (defstyle focus-tail
     `(((:append "::after")
