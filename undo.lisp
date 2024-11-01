@@ -2,8 +2,12 @@
 
 (define-mode undo-mode ()
   ((undo-entry :initform (make-instance 'undo-root) :type undo-entry)
-   (amalgamate-limit :default 20 :type integer)
-   (amalgamate-count :default 0 :type integer))
+   (amalgamate-limit
+    :default 20 :type integer
+    :documentation "Maximum number of consecutive commands to amalgamate undo.")
+   (amalgamate-count
+    :initform 0 :type integer
+    :documentation "Number of already amalgamated commands."))
   (:documentation "Support undo in current buffer.")
   (:toggler t))
 
@@ -113,7 +117,11 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
       nil)))
 
 (defun undo-auto-amalgamate ()
-  "Call at the beginning of a command to amalgamate undo entry."
+  "Call at the beginning of a command to amalgamate undo entry.
+
+This amalgamate the undo entry if `*this-command*' is the same as
+`*last-command*', and if `amalgamate-count' will not exceed
+`amalgamate-limit'."
   (when (typep (current-buffer) 'undo-mode)
     (if (and *last-command*
              (eql *last-command* *this-command*)
@@ -159,6 +167,7 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
 
 (define-command next-branch
   :mode undo-mode (&optional (buffer (current-buffer)))
+  "Goto next sibling branch in undo history."
   (let* ((entry (undo-entry buffer))
          (parent (or (parent entry)
                      (error "No next branch.")))
@@ -171,6 +180,7 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
 
 (define-command previous-branch
   :mode undo-mode (&optional (buffer (current-buffer)))
+  "Goto previous sibling branch in undo history."
   (let* ((entry (undo-entry buffer))
          (parent (or (parent entry)
                      (error "No next branch.")))
@@ -193,6 +203,7 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
 
 (define-command undo-history
   :mode undo-mode ()
+  "Show undo history and enable `active-undo-mode'."
   (when (typep (current-buffer) 'active-undo-mode)
     (error "Already showing undo history"))
   (enable 'active-undo-mode)
