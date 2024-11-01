@@ -255,16 +255,21 @@ reproduce the effect of parsed prefix."
         (t (return))))
     (values wrappers (subseq string i))))
 
+(defun ghost-symbol-p (node)
+  "Test NODE is a symbol node with only prefix.
+
+These symbol nodes do not correspond to Sexp symbols, instead act on
+the following node."
+  (when (symbol-node-p node)
+    (bind (((:values wrappers rest)
+            (parse-prefix (text-content node))))
+      (when (zerop (length rest))
+        wrappers))))
+
 (defun node-to-sexp (node)
   "Parse DOM NODE as a Lisp object.
 It also takes into account any prefix preceding NODE."
-  (labels ((ghost-symbol-p (node)
-             (when (symbol-node-p node)
-               (bind (((:values wrappers rest)
-                       (parse-prefix (text-content node))))
-                 (when (zerop (length rest))
-                   wrappers))))
-           (apply-wrappers (wrappers node)
+  (labels ((apply-wrappers (wrappers node)
              (iter (for w in wrappers)
                (setq node (funcall w node)))
              node)
@@ -487,7 +492,8 @@ before MARKER-OR-POS."
           (with i = 0)
           (for c in (child-nodes list-node))
           (unless (or (first-iteration-p)
-                      (new-line-node-p prev))
+                      (new-line-node-p prev)
+                      (ghost-symbol-p prev))
             (write-char #\space stream))
           (when (and (sexp-node-p c) (<= i 1))
             (pprint-indent :current 0 stream))
