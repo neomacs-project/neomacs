@@ -77,7 +77,8 @@
   (:method :after ((mode-name symbol))
     (unless (eql mode-name 'buffer)
       (when (get mode-name 'style)
-        (pushnew mode-name (styles (current-buffer))))))
+        (pushnew mode-name (styles (current-buffer)))))
+    (mapc #'enable (hooks mode-name)))
   (:documentation "Run after MODE-NAME is enabled.
 
 This generic function is run with `current-buffer' bound to the buffer
@@ -85,6 +86,8 @@ for which MODE-NAME is being enabled."))
 
 (defgeneric disable-aux (mode-name previous-instance)
   (:method ((mode-name symbol) (previous-instance t)))
+  (:method :before ((mode-name symbol) (previous-instance t))
+    (mapc #'disable (hooks mode-name)))
   (:documentation "Run before MODE-NAME is disabled.
 
 This generic function is run with `current-buffer' bound to the buffer

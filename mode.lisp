@@ -8,12 +8,17 @@
    (lighter
     :initform nil :accessor lighter :type string
     :documentation
-    "String displayed in header to indicate this mode is enabled."))
+    "String displayed in header to indicate this mode is enabled.")
+   (hooks
+    :initform nil :accessor hooks :initarg :hooks
+    :documentation
+    "Other modes to enable or disable when enable or disabling this mode."))
   (:documentation "Metaclass for modes."))
 
 (macrolet ((define-symbol-accessors (accessor)
              `(progn
                 (defmethod ,accessor ((object t)))
+                (defmethod ,accessor ((name null)))
                 (defmethod ,accessor ((name symbol))
                   (,accessor (find-class name)))
                 (defmethod (setf ,accessor)
@@ -21,7 +26,8 @@
                   (setf (,accessor (find-class name)) new-val)))))
   (define-symbol-accessors commands)
   (define-symbol-accessors keymap)
-  (define-symbol-accessors lighter))
+  (define-symbol-accessors lighter)
+  (define-symbol-accessors hooks))
 
 (defmethod sb-mop:validate-superclass
     ((class mode) (super standard-class))

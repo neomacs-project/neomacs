@@ -5,7 +5,8 @@
     (set-current-buffer buffer)))
 
 (define-mode lisp-mode (prog-mode) ()
-  (:documentation "Lisp mode."))
+  (:documentation "Lisp mode.")
+  (:hooks auto-completion-mode))
 
 (define-keys lisp-mode
   "tab" 'show-completions
