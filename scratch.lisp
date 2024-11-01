@@ -11,3 +11,12 @@
     ((1) 'y)
     (t (list (random-tree (1- depth))
              (random-tree (1- depth))))))
+(default foo bar)
+(build-manual)
+(defun foo ()
+  "test"
+  (progn
+    (y)
+    (print 1)
+    x))
+(read-yes-or-no "test")

@@ -56,6 +56,15 @@ ARGS are passed to `make-buffer' to create the minibuffer."
       (close-buffer-display minibuf)
       (delete-buffer minibuf))))
 
+(defun read-yes-or-no (prompt)
+  (let ((answer (read-from-minibuffer
+                 (str:concat prompt "(yes or no) "))))
+    (cond ((member answer '("y" "yes") :test 'equal)
+           t)
+          ((member answer '("n" "no") :test 'equal)
+           nil)
+          (t (read-yes-or-no prompt)))))
+
 (defun completing-read (prompt list-mode &rest args)
   "Read and return a string from minibuffer with completion.
 

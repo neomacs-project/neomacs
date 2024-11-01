@@ -13,6 +13,7 @@
 
   "C-M-x" 'eval-defun
   ;; "C-c C-c" 'compile-defun
+  "C-c C-k" 'lisp-compile-file
   "M-p" 'previous-compiler-note
   "M-n" 'next-compiler-note
   "tab" 'show-completions
@@ -323,6 +324,32 @@ before MARKER-OR-POS."
 (defvar *compilation-buffer* nil
   "The buffer for outputting compilation notes.")
 
+(defvar *compilation-document-root* nil
+  "Document root of the buffer being compiled.
+
+Used for resolving source-path to DOM node.")
+
+(defvar *compilation-single-form* nil
+  "If t, the first element in source-path should always be 0 and is ignored.")
+
+(defun find-node-for-compiler-note (context)
+  (or
+   (when-let (form (sb-c::compiler-error-context-original-form
+                    context))
+     (gethash form *form-node-table*))
+   (when-let (path (reverse (sb-c::compiler-error-context-original-source-path context)))
+     (when *compilation-single-form*
+       (unless (eql (car path) 0)
+         (warn "Compiling single form but source path ~a does not start with 0." path))
+       (pop path))
+     (iter (with node = *compilation-document-root*)
+       (for i in path)
+       (when-let
+           (child (nth i (remove-if-not #'sexp-node-p
+                                        (child-nodes node))))
+         (setq node child))
+       (finally (return node))))))
+
 (defun handle-notification-condition (condition)
   (let (id)
     (with-current-buffer *compilation-buffer*
@@ -332,19 +359,18 @@ before MARKER-OR-POS."
                    (list (princ-to-string condition)))))
         (insert-nodes (focus) node)
         (setq id (attribute node "neomacs-identifier"))))
-   (when-let* ((context (sb-c::find-error-context nil))
-               (form (sb-c::compiler-error-context-original-form
-                      context))
-               (node (gethash form *form-node-table*)))
-     (setf (attribute node "compiler-note-severity")
-           (typecase condition
-             (sb-ext:compiler-note "note")
-             (sb-c:compiler-error  "error")
-             (error                "error")
-             (style-warning        "style-warning")
-             (warning              "warning")
-             (t "error")))
-     (setf (attribute node "compiler-note-id") id))))
+
+    (when-let* ((context (sb-c::find-error-context nil))
+                (node (find-node-for-compiler-note context)))
+      (setf (attribute node "compiler-note-severity")
+            (typecase condition
+              (sb-ext:compiler-note "note")
+              (sb-c:compiler-error  "error")
+              (error                "error")
+              (style-warning        "style-warning")
+              (warning              "warning")
+              (t "error")))
+      (setf (attribute node "compiler-note-id") id))))
 
 (defmacro with-collecting-notes (() &body body)
   `(let ((*form-node-table* (make-hash-table))
@@ -412,10 +438,15 @@ before MARKER-OR-POS."
 
 (define-command eval-defun :mode lisp-mode
   (&optional (marker-or-pos (focus)))
+  "Evaluate the surrounding top-level form.
+
+Highlights compiler notes and echo the result."
   (with-marker (marker marker-or-pos)
     (beginning-of-defun marker)
     (with-collecting-notes ()
       (let* ((*package* (current-package marker))
+             (*compilation-single-form* t)
+             (*compilation-document-root* (pos marker))
              (result (eval (node-to-sexp (pos marker)))))
         (unless (frame-root *compilation-buffer*)
           (when (first-child (document-root *compilation-buffer*))
@@ -432,12 +463,14 @@ before MARKER-OR-POS."
 
 (define-command eval-last-expression :mode lisp-mode
   (&optional (marker (focus)))
+  "Evaluate the last expression and echo the result."
   (let* ((*package* (current-package marker))
          (result (eval (node-to-sexp (last-expression (pos marker))))))
     (message "=> ~a" result)))
 
 (define-command eval-print-last-expression :mode lisp-mode
   (&optional (marker (focus)))
+  "Evaluate the last expression and insert result into current buffer."
   (let* ((*package* (current-package marker))
          (node (last-expression marker))
          (pos (pos-right node))
@@ -448,6 +481,19 @@ before MARKER-OR-POS."
     (insert-nodes pos (print-dom (eval (node-to-sexp node)))
                   last-line)
     (setf (pos marker) (pos-right last-line))))
+
+(define-command lisp-compile-file :mode lisp-mode ()
+  "Compile current file.
+
+Highlight compiler notes."
+  (when (read-yes-or-no "Save file? ")
+    (save-buffer))
+  (let ((*compilation-document-root*
+          (document-root (current-buffer))))
+    (with-collecting-notes ()
+      (compile-file (file-path (current-buffer))))))
+
+;;; Auto-completion
 
 (defun atom-around (pos)
   (let ((parent (node-containing pos))
