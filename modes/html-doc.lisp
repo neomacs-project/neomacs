@@ -22,19 +22,16 @@
 (defmethod revert-buffer-aux ((buffer html-doc-mode))
   (erase-buffer)
   (load-url buffer (str:concat "file://" (uiop:native-namestring (file-path buffer))))
-  ;; Enter recursive edit to wurlait for `on-buffer-loaded', so that
+  ;; Enter recursive edit to wait for `on-buffer-loaded', so that
   ;; buffer state is updated when `revert-buffer' returns.
   (recursive-edit))
 
-(defmethod on-buffer-loaded progn ((buffer html-doc-mode) url)
-  (update-document-model buffer)
-  (setf (pos (focus buffer))
-        (pos-down (document-root buffer)))
+(defmethod on-buffer-loaded progn ((buffer html-doc-mode) url err)
   (when (equal url (str:concat "file://" (uiop:native-namestring (file-path buffer))))
-    (signal 'exit-recursive-edit)))
-
-(defmethod on-buffer-load-failed progn ((buffer html-doc-mode) url err)
-  (when (equal url (str:concat "file://" (uiop:native-namestring (file-path buffer))))
+    (unless err
+      (update-document-model buffer)
+      (setf (pos (focus buffer))
+            (pos-down (document-root buffer))))
     (signal 'exit-recursive-edit)))
 
 (defmethod self-insert-aux

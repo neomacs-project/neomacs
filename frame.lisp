@@ -41,7 +41,8 @@
                                      :styles nil)))
   (:documentation "Mode for frame root buffer."))
 
-(defmethod on-buffer-loaded progn ((buffer frame-root-mode) (url t))
+(defmethod on-buffer-loaded progn
+    ((buffer frame-root-mode) (url t) (err t))
   (redisplay-windows buffer))
 
 (defmethod on-post-command progn ((buffer frame-root-mode))

@@ -116,12 +116,14 @@ command loop run the next command.")
                    (setq *this-command-keys* nil))))))
           ((equal type "load")
            (with-current-buffer buffer
-             (on-buffer-loaded buffer (assoc-value event :url))))
+             (on-buffer-loaded
+              buffer (assoc-value event :url) nil)))
           ((equal type "fail-load")
            (with-current-buffer buffer
-             (on-buffer-load-failed
+             (on-buffer-loaded
               buffer (assoc-value event :url)
-              (assoc-value event :err))))
+              (or (assoc-value event :err)
+                  (list (cons :code "UNKNOWN"))))))
           ((equal type "dom-ready")
            (with-current-buffer buffer
              (on-buffer-dom-ready buffer)))

@@ -94,7 +94,11 @@
            (if (uiop:directory-pathname-p path)
                (lastcar (pathname-directory path))
                (file-namestring path))
-           :modes 'file-mode))
+           :modes 'file-mode
+           :disambiguate
+           (if (uiop:directory-pathname-p path)
+               (car (last (pathname-directory path) 2))
+               (lastcar (pathname-directory path)))))
     (setf (file-path (current-buffer)) path)
     (set-auto-mode)
     (revert-buffer)

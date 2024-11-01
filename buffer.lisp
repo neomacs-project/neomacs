@@ -13,12 +13,17 @@
 (defvar *buffer-name-table* (make-hash-table :test 'equal)
   "Map buffer name to buffer instances.")
 
-(defun generate-buffer-name (name)
+(defun generate-buffer-name (name &optional disambiguate)
   (if (gethash name *buffer-name-table*)
-      (iter (for i from 2)
-        (for new-name = (format nil "~A<~A>" name i))
-        (while (gethash new-name *buffer-name-table*))
-        (finally (return new-name)))
+      (progn
+        (when disambiguate
+          (setq name (format nil "~A<~A>" name disambiguate))
+          (unless (gethash name *buffer-name-table*)
+            (return-from generate-buffer-name name)))
+        (iter (for i from 2)
+          (for new-name = (format nil "~A<~A>" name i))
+          (while (gethash new-name *buffer-name-table*))
+          (finally (return new-name))))
       name))
 
 (defvar *buffer-table-lock* (bt:make-recursive-lock))
@@ -113,10 +118,10 @@ for which MODE-NAME is being disabled."))
   (print-unreadable-object (buffer stream)
     (format stream "BUFFER ~s {~a}" (name buffer) (id buffer))))
 
-(defmethod initialize-instance :after ((buffer buffer) &key name)
+(defmethod initialize-instance :after ((buffer buffer) &key name disambiguate)
   (unless name (alex:required-argument :name))
   (bt:with-recursive-lock-held (*buffer-table-lock*)
-    (setf (name buffer) (generate-buffer-name name)
+    (setf (name buffer) (generate-buffer-name name disambiguate)
           (gethash (name buffer) *buffer-name-table*) buffer)
     (setf (gethash (slot-value buffer 'id) *buffer-table*) buffer))
   (cera.d:js cera.d:*driver*
@@ -195,13 +200,14 @@ changed."
        (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
        nil))))
 
-(defgeneric on-buffer-loaded (buffer url)
+(defgeneric on-buffer-loaded (buffer url err)
   (:method-combination progn)
-  (:method progn ((buffer buffer) (url t))))
+  (:method progn ((buffer buffer) (url t) (err t)))
+  (:documentation
+   "Invoked when BUFFER finishes loading.
 
-(defgeneric on-buffer-load-failed (buffer url err)
-  (:method-combination progn)
-  (:method progn ((buffer buffer) (url t) (err t))))
+This is invoked both when load succeeded or failed. When load
+succeeded, err is nil."))
 
 (defgeneric on-buffer-title-updated (buffer title)
   (:method-combination progn)
