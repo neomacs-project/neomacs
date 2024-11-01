@@ -206,6 +206,13 @@ changed."
 (defgeneric on-buffer-loaded (buffer url err)
   (:method-combination progn)
   (:method progn ((buffer buffer) (url t) (err t)))
+  (:method :around ((buffer buffer) (url t) err)
+    (when err
+      (message "~a failed to load URL ~a: ~a"
+               buffer
+               (assoc-value err :url)
+               (assoc-value err :code)))
+    (call-next-method))
   (:documentation
    "Invoked when BUFFER finishes loading.
 
