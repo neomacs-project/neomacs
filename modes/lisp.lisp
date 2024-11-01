@@ -220,6 +220,10 @@
            (insert-nodes marker node)
            (setf (pos marker) (end-pos node))))))
 
+(defmethod insert-text-aux
+    ((buffer sexp-editing-mode) text-node (parent t))
+  (make-atom-node "symbol" (text text-node)))
+
 ;;; DOM to Sexp parser
 
 (defvar *form-node-table* nil

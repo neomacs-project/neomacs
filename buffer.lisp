@@ -235,6 +235,10 @@ succeeded, err is nil."))
 
 This runs only when NODE is an element (i.e. not a text node)."))
 
+(defgeneric insert-text-aux (buffer text-node parent)
+  (:method ((buffer buffer) text-node (parent t))
+    text-node))
+
 (defgeneric on-node-cleanup (buffer node)
   (:method-combination progn)
   (:method progn ((buffer buffer) (node t)))
