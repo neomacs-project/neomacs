@@ -345,8 +345,11 @@ Used for resolving source-path to DOM node.")
      (iter (with node = *compilation-document-root*)
        (for i in path)
        (when-let
-           (child (nth i (remove-if-not #'sexp-node-p
-                                        (child-nodes node))))
+           (child (nth i (remove-if
+                          (lambda (node)
+                            (or (not (sexp-node-p node))
+                                (ghost-symbol-p node)))
+                          (child-nodes node))))
          (setq node child))
        (finally (return node))))))
 
