@@ -250,9 +250,22 @@ This runs only when NODE is an element (i.e. not a text node)."))
                    (list modes)))))
            ((:div :class "vertical-child-container")
             ((:div :class "main content" :buffer ,(id buffer)))))))
-  (:documentation "Create window-decoration for BUFFER."))
+  (:documentation "Create window-decoration for BUFFER.
+
+Should return a `div' with `buffer' or `minibuffer' CSS class, which
+contains a single descendant with both `main' and `content' CSS
+class. This descendant must have a `buffer' CSS attribute with the
+`id' of BUFFER as its value.
+
+Child buffers can be included via other elements with `content' CSS
+class."))
 
 (defun update-window-decoration-field (buffer name text)
+  "Update the element with CSS class NAME in BUFFER's window decoration.
+
+There must be exactly one element with NAME as CSS class, whose
+content is replaced with TEXT. If BUFFER is not displayed, this
+function does nothing."
   (when-let* ((node (window-decoration buffer))
               (field
                (only-elt (get-elements-by-class-name node name))))

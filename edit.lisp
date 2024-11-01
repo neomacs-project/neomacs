@@ -425,7 +425,8 @@ This moves all children of SRC into DST and deletes SRC."
   "Split node containing POS at POS.
 
 Let parent be the node containing POS. This involves inserting a clone
-of parent after parent, and moving children after POS into the clone."
+of parent after parent, and moving children after POS into the
+clone. Returns the cloned node (i.e. the node after the split point)."
   (let* ((node (node-containing pos))
          (new-node (clone-node node nil))
          (dst (pos-right (pos-up pos))))

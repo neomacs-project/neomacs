@@ -8,6 +8,7 @@
   "M-`" 'open-code
   "M-/" 'open-italic
   "M--" 'insert-description-list
+  "C-u M--" 'insert-description
   "M-," 'open-comma
   "C-c C-l"'insert-link)
 
@@ -93,6 +94,8 @@
 
 (defun insert-list (marker list-tag item-tag)
   (unless (tag-name-p (node-containing marker) list-tag)
+    (when (tag-name-p (node-containing marker) "p")
+      (setf (pos marker) (split-node (pos marker))))
     (let ((node (make-element list-tag)))
       (insert-nodes marker node)
       (setf (pos marker) (end-pos node))))
@@ -107,6 +110,10 @@
 (define-command insert-description-list
   :mode html-doc-mode (&optional (marker (focus)))
   (insert-list marker "dl" "dt"))
+
+(define-command insert-description
+  :mode html-doc-mode (&optional (marker (focus)))
+  (insert-list marker "dl" "dd"))
 
 (define-command open-comma
   :mode html-doc-mode (&optional (marker (focus)))
@@ -414,5 +421,6 @@ JSON should have the format like what `+get-body-json-code+' produces:
 (defstyle html-doc-mode
     `(("p:empty::after" :content "_")
       ("li p" :margin 0)
+      ("body" :white-space "normal")
       (".comma-expr::before" :content ",")
       (".comma-expr" :border "solid 1px currentColor")))

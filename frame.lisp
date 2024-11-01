@@ -342,7 +342,11 @@ BUFFER must be already displayed."
   (content-node-buffer
    (only-elt (get-elements-by-class-name window-node "main"))))
 
-(defvar *message-log-max* 1000)
+(defvar *message-log-max* 1000
+  "Maximum number of lines to keep in the `*Messages*' buffer.
+
+If nil, disable message logging. If t, log messages but don't truncate
+`*Messages*' buffer.")
 
 (defun get-message-buffer ()
   (get-buffer-create "*Messages*" :modes '(doc-mode)))
@@ -360,6 +364,7 @@ BUFFER must be already displayed."
       (return))))
 
 (defun message (control-string &rest format-arguments)
+  "Log a message in `*Messages*' buffer."
   (with-current-buffer (echo-area *current-frame-root*)
     (erase-buffer)
     (when control-string
