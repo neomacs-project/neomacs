@@ -221,8 +221,10 @@
            (setf (pos marker) (end-pos node))))))
 
 (defmethod insert-text-aux
-    ((buffer sexp-editing-mode) text-node (parent t))
-  (make-atom-node "symbol" (text text-node)))
+    ((buffer sexp-editing-mode) text-node parent)
+  (if (symbol-node-p parent)
+      text-node
+      (make-atom-node "symbol" (text text-node))))
 
 ;;; DOM to Sexp parser
 

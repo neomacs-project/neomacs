@@ -237,7 +237,13 @@ This runs only when NODE is an element (i.e. not a text node)."))
 
 (defgeneric insert-text-aux (buffer text-node parent)
   (:method ((buffer buffer) text-node (parent t))
-    text-node))
+    text-node)
+  (:documentation
+   "Transform TEXT-NODE when inserting into BUFFER under PARENT.
+
+Must return one node (`text-node' or `element'), which is then
+actually inserted. This runs before `on-node-setup', so that if an
+`element' is returned it will be processed by `on-node-setup'."))
 
 (defgeneric on-node-cleanup (buffer node)
   (:method-combination progn)
