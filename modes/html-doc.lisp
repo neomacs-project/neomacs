@@ -377,7 +377,7 @@ JSON should have the format like what `+get-body-json-code+' produces:
 
 (defun build-manual ()
   (let ((sections '("dom" "positions" "markers" "motion"
-                    "edit" "ranges" "mode" "command-loop"
+                    "edit" "undo" "ranges" "mode" "command-loop"
                     "window-management")))
     (with-current-buffer
         (find-file-no-select
