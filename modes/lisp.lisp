@@ -332,6 +332,13 @@ Used for resolving source-path to DOM node.")
 (defvar *compilation-single-form* nil
   "If t, the first element in source-path should always be 0 and is ignored.")
 
+(defun sexp-nth-child (node n)
+  (nth n (remove-if
+          (lambda (node)
+            (or (not (sexp-node-p node))
+                (ghost-symbol-p node)))
+          (child-nodes node))))
+
 (defun find-node-for-compiler-note (context)
   (or
    (when-let (form (sb-c::compiler-error-context-original-form
@@ -344,12 +351,7 @@ Used for resolving source-path to DOM node.")
        (pop path))
      (iter (with node = *compilation-document-root*)
        (for i in path)
-       (when-let
-           (child (nth i (remove-if
-                          (lambda (node)
-                            (or (not (sexp-node-p node))
-                                (ghost-symbol-p node)))
-                          (child-nodes node))))
+       (when-let (child (sexp-nth-child node i))
          (setq node child))
        (finally (return node))))))
 
@@ -495,6 +497,45 @@ Highlight compiler notes."
           (document-root (current-buffer))))
     (with-collecting-notes ()
       (compile-file (file-path (current-buffer))))))
+
+;;; Xref
+
+(defparameter *definition-types*
+  '(:variable :constant :type :symbol-macro :macro
+    :compiler-macro :function :generic-function :method
+    :setf-expander :structure :condition :class
+    :method-combination :package :transform :optimizer
+    :vop :source-transform :ir1-convert :declaration
+    :alien-type)
+  "SB-INTROSPECT definition types.")
+
+(defun visit-definition (definition)
+  (with-current-buffer
+      (find-file (sb-introspect:definition-source-pathname
+                  definition))
+    (setf (pos (focus))
+          (sexp-nth-child
+           (document-root (current-buffer))
+           (car (sb-introspect:definition-source-form-path
+                 definition))))))
+
+(define-command goto-definition
+  :mode lisp-mode ()
+  "Goto definition of symbol under focus."
+  (when-let (node (symbol-around (focus)))
+    (let ((name (nth-value 1 (parse-prefix (text-content node)))))
+      (when (> (length name) 0)
+        (when-let (symbol (find-symbol (string-upcase name)
+                                       (current-package)))
+          (let ((definitions
+                  (mapcan
+                   (alex:curry
+                    #'sb-introspect:find-definition-sources-by-name
+                    symbol)
+                   *definition-types*)))
+            (if (= (length definitions) 1)
+                (visit-definition (car definitions))
+                (error "TODO"))))))))
 
 ;;; Auto-completion
 

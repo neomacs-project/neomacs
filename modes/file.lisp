@@ -83,6 +83,7 @@
         (return b)))))
 
 (defun find-file-no-select (path)
+  (setq path (translate-logical-pathname path))
   ;; If PATH points to a directory, ensure it is a directory
   ;; pathname (with NIL name and type fields).
   (when-let (dir (uiop:directory-exists-p path))
