@@ -551,37 +551,47 @@ Called by `self-insert-command' to get the character for insertion."
 
 (defvar *clipboard-ring-index* 0)
 
+(defun clipboard-insert (items)
+  (if items
+      (containers:insert-item *clipboard-ring* items)
+      (error "Nothing to copy")))
+
 (define-command cut-element (&optional (pos (focus)))
   (setq pos (or (pos-up-ensure pos #'element-p)
                 (error 'top-of-subtree)))
-  (containers:insert-item *clipboard-ring* (extract-nodes pos 1)))
+  (clipboard-insert (extract-nodes pos (pos-right pos))))
 
 (define-command copy-element (&optional (pos (focus)))
   (setq pos (or (pos-up-ensure pos #'element-p)
                 (error 'top-of-subtree)))
-  (containers:insert-item *clipboard-ring* (list (clone-node pos))))
+  (clipboard-insert (list (clone-node pos))))
 
 (define-command paste ()
+  (setq *clipboard-ring-index* 0)
   (let ((item (containers:item-at *clipboard-ring* *clipboard-ring-index*)))
     (setf (advance-p (selection-marker (current-buffer))) nil)
     (setf (pos (selection-marker (current-buffer))) (pos (focus)))
     (apply #'insert-nodes (focus) (mapcar #'clone-node item))))
 
 (define-command paste-pop ()
-  (incf *clipboard-ring-index*)
-  (let ((item (containers:item-at *clipboard-ring* *clipboard-ring-index*)))
-    (delete-nodes (selection-marker (current-buffer))
-                  (pos-right (selection-marker (current-buffer))))
-    (apply #'insert-nodes (focus) (mapcar #'clone-node item))))
+  (if (member *last-command* '(paste paste-pop))
+      (progn
+        (incf *clipboard-ring-index*)
+        (let ((item (containers:item-at *clipboard-ring* *clipboard-ring-index*)))
+          (delete-range
+           (range (pos (selection-marker (current-buffer)))
+                  (pos (focus))))
+          (apply #'insert-nodes (focus) (mapcar #'clone-node item))))
+      (error "TODO")))
 
 (define-command forward-cut (&optional (pos (focus)))
   (iter (with end = (copy-pos pos))
     (setq end (npos-right end))
     (unless end
-      (containers:insert-item *clipboard-ring* (extract-nodes pos nil))
+      (clipboard-insert (extract-nodes pos nil))
       (return))
     (when (new-line-node-p end)
-      (containers:insert-item *clipboard-ring* (extract-nodes pos end))
+      (clipboard-insert (extract-nodes pos end))
       (return))))
 
 ;;; Default key bindings
