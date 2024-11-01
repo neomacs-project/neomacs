@@ -26,19 +26,23 @@
 
 (defun short-doc (command)
   (let ((doc (documentation command 'function)))
-    (subseq doc 0 (position #\Newline doc))))
+    (render-doc-string-paragraph
+     (subseq doc 0 (position #\Newline doc)))))
 
 (defmethod generate-rows ((buffer command-list-mode))
   (iter (for mode in (append (include-modes buffer) '(global)))
     (iter (for c in (commands mode))
       (for name = (string-downcase (symbol-name c)))
-      (for doc = (short-doc c))
       (insert-nodes
        (focus)
-       (dom `(:tr
-              (:td ,name)
-              (:td ,@(when doc (list doc)))
-              (:td ,(string-downcase (symbol-name mode)))))))))
+       (make-element
+        "tr" :children
+        (list (make-element "td" :children (list name))
+              (make-element "td" :children
+                            (short-doc c))
+              (make-element
+               "td" :children
+               (list (string-downcase (symbol-name mode))))))))))
 
 (define-mode buffer-list-mode (list-mode)
   ((show-hidden

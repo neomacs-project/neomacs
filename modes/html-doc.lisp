@@ -216,6 +216,22 @@ JSON should have the format like what `+get-body-json-code+' produces:
   (let ((*package* package))
     (format nil "(~{~a~^ ~})" arglist)))
 
+(defun render-doc-string-paragraph (p)
+  (let ((last-end 0))
+    (append
+     (iter
+       (for (start end) on
+            (ppcre:all-matches "`[^']*'" p)
+            by #'cddr)
+       (when (> start last-end)
+         (collect (subseq p last-end start)))
+       (when (> (1- end) (1+ start))
+         (collect (make-element "code" :children
+                                (list (subseq p (1+ start) (1- end))))))
+       (setq last-end end))
+     (when (> (length p) last-end)
+       (list (subseq p last-end))))))
+
 (defun render-doc-string (string)
   (when string
     (let ((paragraphs (str:split "
@@ -227,20 +243,7 @@ JSON should have the format like what `+get-body-json-code+' produces:
          *dom-output*
          (make-element
           "dd" :children
-          (let ((last-end 0))
-            (append
-             (iter
-               (for (start end) on
-                    (ppcre:all-matches "`[^']*'" p)
-                    by #'cddr)
-               (when (> start last-end)
-                 (collect (subseq p last-end start)))
-               (when (> (1- end) (1+ start))
-                 (collect (make-element "code" :children
-                                        (list (subseq p (1+ start) (1- end))))))
-               (setq last-end end))
-             (when (> (length p) last-end)
-               (list (subseq p last-end)))))))))))
+          (render-doc-string-paragraph p)))))))
 
 (defun fundoc (function)
   (let ((*print-case* :downcase))
