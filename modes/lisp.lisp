@@ -363,12 +363,14 @@ before MARKER-OR-POS."
 (defmethod compute-completion ((buffer lisp-mode) pos)
   (when-let (node (symbol-around pos))
     (let* ((package (current-package pos))
+           (text (text-content node))
+           (name (nth-value 1 (parse-prefix text)))
            (swank::*buffer-package* package)
            (completions (car (swank:fuzzy-completions
-                              (text-content node)
-                              package))))
+                              name package))))
       (values
-       (range (pos-down node) (pos-down-last node))
+       (range (text-pos (first-child node) (- (length text) (length name)))
+              (pos-down-last node))
        (iter (for c in completions)
          (collect (list (car c) (remove #\- (lastcar c)))))))))
 
