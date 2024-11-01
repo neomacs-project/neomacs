@@ -208,3 +208,32 @@ This should always be a directory pathname (with NIL name and type fields).")
 (define-command file-list-find-file
   :mode file-list-mode ()
   (find-file (focused-item (current-buffer))))
+
+(define-mode clipboard-list-mode (list-mode) ())
+
+(defmethod generate-rows ((buffer clipboard-list-mode))
+  (containers:iterate-nodes
+   *clipboard-ring*
+   (lambda (nodes)
+     (insert-nodes
+      (focus)
+      (make-element
+       "tr" :children
+       (list (make-element "td" :children nodes)))))))
+
+(define-mode clipboard-minibuffer-mode
+    (minibuffer-completion-mode) ())
+
+(define-keys clipboard-minibuffer-mode
+  "tab" nil)
+
+(defmethod complete-minibuffer-aux ((buffer minibuffer-completion-mode))
+  (let ((input (only-elt (get-elements-by-class-name
+                          (document-root buffer) "input")))
+        (selection (node-after (focus (completion-buffer buffer)))))
+    (delete-nodes (pos-down input) nil)
+    (insert-nodes (pos-down input)
+                  (prin1-to-string
+                   (position
+                    selection
+                    (child-nodes (parent selection)))))))

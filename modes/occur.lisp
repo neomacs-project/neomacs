@@ -10,7 +10,7 @@ Test if ELEMENT matches QUERY in BUFFER. Returns a list similar to
 where [start-n,end-n) are matched ranges."))
 
 (defmethod occur-p-aux ((buffer list-mode) query element)
-  (when-let (start (search query (text (first-child (first-child element)))))
+  (when-let (start (search query (text-content (first-child element))))
     (list start (+ start (length query)))))
 
 (defun occur-p (query element)

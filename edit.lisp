@@ -560,16 +560,19 @@ Called by `self-insert-command' to get the character for insertion."
       (error "Nothing to copy")))
 
 (define-command cut-element (&optional (pos (focus)))
+  "Cut element under focus and save into clipboard."
   (setq pos (or (pos-up-ensure pos #'element-p)
                 (error 'top-of-subtree)))
   (clipboard-insert (extract-nodes pos (pos-right pos))))
 
 (define-command copy-element (&optional (pos (focus)))
+  "Copy element under focus into clipboard."
   (setq pos (or (pos-up-ensure pos #'element-p)
                 (error 'top-of-subtree)))
   (clipboard-insert (list (clone-node pos))))
 
 (define-command paste ()
+  "Paste the first item in clipboard."
   (setq *clipboard-ring-index* 0)
   (let ((item (containers:item-at *clipboard-ring* *clipboard-ring-index*)))
     (setf (advance-p (selection-marker (current-buffer))) nil)
@@ -577,6 +580,8 @@ Called by `self-insert-command' to get the character for insertion."
     (apply #'insert-nodes (focus) (mapcar #'clone-node item))))
 
 (define-command paste-pop ()
+  "Cycle pasted contents, or prompt for a clipboard item to paste."
+  (undo-auto-amalgamate)
   (if (member *last-command* '(paste paste-pop))
       (progn
         (incf *clipboard-ring-index*)
@@ -585,14 +590,23 @@ Called by `self-insert-command' to get the character for insertion."
            (range (pos (selection-marker (current-buffer)))
                   (pos (focus))))
           (apply #'insert-nodes (focus) (mapcar #'clone-node item))))
-      (error "TODO")))
+      (message
+       "~a"
+       (read-from-minibuffer
+        "Paste from clipboard: "
+        :modes 'clipboard-minibuffer-mode
+        :completion-buffer
+        (make-completion-buffer
+         '(clipboard-list-mode completion-buffer-mode))))))
 
 (define-command forward-cut (&optional (pos (focus)))
+  "Cut until end of line and save into clipboard."
   (iter (with end = (copy-pos pos))
     (setq end (npos-right end))
     (unless end
       (clipboard-insert (extract-nodes pos nil))
       (return))
+    ;; TODO: handle block elements correctly
     (when (new-line-node-p end)
       (clipboard-insert (extract-nodes pos end))
       (return))))
