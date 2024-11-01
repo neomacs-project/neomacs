@@ -16,6 +16,7 @@
   "C-c C-k" 'lisp-compile-file
   "M-p" 'previous-compiler-note
   "M-n" 'next-compiler-note
+  "M-." 'goto-definition
   "tab" 'show-completions
   "C-x C-e" 'eval-last-expression
   "C-c C-p" 'eval-print-last-expression)
@@ -605,6 +606,7 @@ Highlight compiler notes."
     (setf (get-syntax-table #\) table) nil)
     (setf (get-syntax-table #\  table) 'read-ignore)
     (setf (get-syntax-table #\Newline table) 'read-newline)
+    (setf (get-syntax-table #\Page table) 'read-newline)
     (setf (get-syntax-table #\Tab table) 'read-ignore)
     (setf (get-syntax-table #\" table) 'read-string)
     (setf (get-syntax-table #\\ table) 'single-escape)
