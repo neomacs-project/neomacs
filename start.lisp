@@ -8,5 +8,6 @@
     (with-current-buffer buffer
       (setf (file-path buffer)
             (asdf:system-relative-pathname :neomacs #p"scratch.lisp"))
-      (revert-buffer))
+      (revert-buffer)
+      (disable 'file-mode))
     (start-command-loop)))
