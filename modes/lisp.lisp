@@ -547,7 +547,7 @@ Highlight compiler notes."
 (defun read-line-comment (stream c)
   (declare (ignore c))
   (let ((n 1))
-    (iter (for c = (peek-char t stream nil nil t))
+    (iter (for c = (peek-char nil stream nil nil t))
       (while (eql c #\;))
       (incf n)
       (read-char stream))
