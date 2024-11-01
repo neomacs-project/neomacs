@@ -540,6 +540,13 @@ WIDTH and HEIGHT are numbers in pixels."
         :report "Make buffer writable and go on."
         (setf (read-only-p buffer) nil)))))
 
+(define-mode read-only-mode () ()
+  (:documentation "Make this buffer read-only.")
+  (:toggler t))
+
+(defmethod read-only-p ((buffer read-only-mode))
+  t)
+
 ;;; Styles
 
 (defun update-style (buffer style)

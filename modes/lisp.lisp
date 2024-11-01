@@ -1,9 +1,5 @@
 (in-package #:neomacs)
 
-#+nil (define-command-global neomacs-scratch ()
-  (let ((buffer (make-buffer :url (quri:uri "neomacs:scratch.lisp"))))
-    (set-current-buffer buffer)))
-
 (define-mode lisp-mode (prog-mode) ()
   (:documentation "Lisp mode.")
   (:hooks auto-completion-mode))
@@ -17,6 +13,8 @@
 
   "C-M-x" 'eval-defun
   ;; "C-c C-c" 'compile-defun
+  "M-p" 'previous-compiler-note
+  "M-n" 'next-compiler-note
   "tab" 'show-completions
   "C-x C-e" 'eval-last-expression
   "C-c C-p" 'eval-print-last-expression)
@@ -221,6 +219,11 @@
            (insert-nodes marker node)
            (setf (pos marker) (end-pos node))))))
 
+;;; DOM to Sexp parser
+
+(defvar *form-node-table* nil
+  "Hash table that map forms to node that generates them.")
+
 (defun parse-prefix (string)
   "Parse prefix from STRING.
 Return a list of wrapper functions and the rest of STRING.  The list
@@ -290,6 +293,9 @@ It also takes into account any prefix preceding NODE."
                               (apply-wrappers wrappers (read-from-string rest))))
                            ((new-line-node-p node) nil)
                            (t (error "Unrecognized DOM node: ~a" node)))))
+               (when *form-node-table*
+                 (setf (gethash sexp *form-node-table*)
+                       node))
                (if-let (wrappers (ghost-symbol-p (previous-sibling node)))
                  (apply-wrappers wrappers sexp)
                  sexp))))
@@ -312,13 +318,109 @@ before MARKER-OR-POS."
            (top-of-subtree ())))
         (find-package "NEOMACS"))))
 
+;;; Compiler notes
+
+(defvar *compilation-buffer* nil
+  "The buffer for outputting compilation notes.")
+
+(defun handle-notification-condition (condition)
+  (let (id)
+    (with-current-buffer *compilation-buffer*
+      (let ((*inhibit-read-only* t)
+            (node (make-element
+                   "p" :children
+                   (list (princ-to-string condition)))))
+        (insert-nodes (focus) node)
+        (setq id (attribute node "neomacs-identifier"))))
+   (when-let* ((context (sb-c::find-error-context nil))
+               (form (sb-c::compiler-error-context-original-form
+                      context))
+               (node (gethash form *form-node-table*)))
+     (setf (attribute node "compiler-note-severity")
+           (typecase condition
+             (sb-ext:compiler-note "note")
+             (sb-c:compiler-error  "error")
+             (error                "error")
+             (style-warning        "style-warning")
+             (warning              "warning")
+             (t "error")))
+     (setf (attribute node "compiler-note-id") id))))
+
+(defmacro with-collecting-notes (() &body body)
+  `(let ((*form-node-table* (make-hash-table))
+         (*compilation-buffer*
+           (get-buffer-create "*compilation*"
+                              :modes '(read-only-mode))))
+     (clear-compiler-notes)
+     (with-current-buffer *compilation-buffer*
+       (let ((*inhibit-read-only* t))
+         (erase-buffer)))
+     (handler-bind
+         ((sb-c:fatal-compiler-error #'handle-notification-condition)
+          (sb-c:compiler-error #'handle-notification-condition)
+          (sb-ext:compiler-note #'handle-notification-condition)
+          (error #'handle-notification-condition)
+          (warning #'handle-notification-condition))
+       ,@body)))
+
+(defun clear-compiler-notes ()
+  (do-elements
+      (lambda (node)
+        (when (attribute node "compiler-note-severity")
+          (setf (attribute node "compiler-note-severity")
+                nil)))
+    (document-root (current-buffer))))
+
+(defun goto-compiler-note (id)
+  (when-let (buffer (get-buffer "*compilation*"))
+    (with-current-buffer buffer
+      (do-elements
+          (lambda (node)
+            (when (equal (attribute node "neomacs-identifier")
+                         id)
+              (setf (pos (focus)) node)
+              (return-from goto-compiler-note)))
+        (document-root buffer)))))
+
+(define-command previous-compiler-note (&optional (marker (focus)))
+  "Move to next compiler note."
+  (if-let (pos
+           (npos-prev-until
+            (pos marker)
+            (lambda (node)
+              (and (element-p node)
+                   (attribute node "compiler-note-id")))))
+    (progn
+      (setf (pos marker) pos)
+      (goto-compiler-note (attribute pos "compiler-note-id")))
+    (error "No previous compiler note")))
+
+(define-command next-compiler-note (&optional (marker (focus)))
+  "Move to previous compiler note."
+  (if-let (pos
+           (npos-next-until
+            (pos marker)
+            (lambda (node)
+              (and (element-p node)
+                   (attribute node "compiler-note-id")))))
+    (progn
+      (setf (pos marker) pos)
+      (goto-compiler-note (attribute pos "compiler-note-id")))
+    (error "No next compiler note")))
+
+;;; Eval/compile commands
+
 (define-command eval-defun :mode lisp-mode
   (&optional (marker-or-pos (focus)))
   (with-marker (marker marker-or-pos)
     (beginning-of-defun marker)
-    (let* ((*package* (current-package marker))
-           (result (eval (node-to-sexp (pos marker)))))
-      (message "=> ~a" result))))
+    (with-collecting-notes ()
+      (let* ((*package* (current-package marker))
+             (result (eval (node-to-sexp (pos marker)))))
+        (unless (frame-root *compilation-buffer*)
+          (when (first-child (document-root *compilation-buffer*))
+            (display-buffer-right *compilation-buffer*)))
+        (message "=> ~a" result)))))
 
 (defun last-expression (pos)
   (iter
@@ -614,6 +716,15 @@ before MARKER-OR-POS."
                            :font-size "1.1em"
                            :inherit comment))
 
+(defstyle compiler-note
+    `(:outline "solid rgba(200,200,200,1.0)"))
+(defstyle compiler-style-warning
+    `(:outline "solid rgba(150,150,255,1.0)"))
+(defstyle compiler-warning
+    `(:outline "solid rgba(255,150,0,1.0)"))
+(defstyle compiler-error
+    `(:outline "solid rgba(255,75,0,1.0)"))
+
 (defstyle lisp-mode
     `((".symbol" :inherit symbol-node)
       (".symbol:empty" :inherit empty-symbol-node)
@@ -627,7 +738,15 @@ before MARKER-OR-POS."
       (".comment[comment-level=\"1\"]" :inherit comment-node-1)
       (".comment[comment-level=\"2\"]" :inherit comment-node-2)
       (".comment[comment-level=\"3\"]" :inherit comment-node-3)
-      (".comment[comment-level=\"4\"]" :inherit comment-node-4)))
+      (".comment[comment-level=\"4\"]" :inherit comment-node-4)
+      ("[compiler-note-severity=\"note\"]"
+       :inherit compiler-note)
+      ("[compiler-note-severity=\"style-warning\"]"
+       :inherit compiler-style-warning)
+      ("[compiler-note-severity=\"warning\"]"
+       :inherit compiler-warning)
+      ("[compiler-note-severity=\"error\"]"
+       :inherit compiler-error)))
 
 ;;; Default hooks
 #+nil (add-mode-hook 'lisp-mode 'undo-mode)
