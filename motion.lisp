@@ -98,19 +98,22 @@ Test if POS is selectable in BUFFER."))
               (error 'top-of-subtree)))))
 
 (define-command forward-element-end (&optional (marker (focus)))
-  "Move to first end of element (excluding line break) to the right."
+  "Move after the end of surrounding element to the right."
   (let ((pos (pos marker)))
     (iter
       (when (graphic-element-p pos)
-        (setf (pos marker) (end-pos pos))
+        (setq pos (end-pos pos))
         (return))
       (setq pos (or (npos-right pos)
                     (pos-right (pos-up pos))
                     (error 'top-of-subtree)))
       (when (and (end-pos-p pos)
                  (graphic-element-p (end-pos-node pos)))
-        (setf (pos marker) pos)
-        (return)))))
+        (return)))
+    (setf (pos marker)
+          (or (npos-next pos)
+              (error 'top-of-subtree))
+          (adjust-marker-direction (host marker)) 'backward)))
 
 (define-command backward-element (&optional (marker (focus)))
   "Move to first element (excluding line break) to the left."
