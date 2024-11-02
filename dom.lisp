@@ -39,8 +39,30 @@
   (setf (gethash name (attributes element))
         (add-attribute-observer new-val element name)))
 
-(defmacro attribute (element name)
-  `(cell-ref (attribute-cell ,element ,name)))
+(defvar *record-attribute-undo* nil
+  "Record undo information when setting attributes.
+
+Note that this only affects `(setf attribute)', not computed
+attributes (`set-attribute-function').")
+
+(defun attribute (element name)
+  (cell-ref (attribute-cell element name)))
+
+(defun (setf attribute) (new-val element name)
+  (if *record-attribute-undo*
+      (let ((old-val (cell-ref (attribute-cell element name))))
+        (setf (cell-ref (attribute-cell element name)) new-val)
+        (record-undo
+         (nclo undo-set-attribute ()
+           (setf (cell-ref (attribute-cell element name))
+                 old-val))
+         (nclo redo-set-attribute ()
+           (setf (cell-ref (attribute-cell element name))
+                 new-val))
+         (host element))
+        new-val)
+      (setf (cell-ref (attribute-cell element name))
+            new-val)))
 
 (defun set-attribute-function (element attribute function)
   "Set a computed attribute.
