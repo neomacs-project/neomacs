@@ -24,15 +24,15 @@ end-2...), where [start-n,end-n) are matched ranges."
     (prog1 (call-next-method)
      (unless (equal old-val new-val)
        (with-current-buffer buffer
-         (update-occur))))))
+         (update-occur buffer))))))
 
-(defun update-occur ()
+(defun update-occur (buffer)
   (evaluate-javascript
    (ps:ps
      (ps:chain -c-s-s highlights (set "occur" (ps:new (-highlight)))))
-   (current-buffer))
-  (iter (for c in (children (restriction (current-buffer))))
-    (if-let (matches (occur-p (occur-query (current-buffer)) c))
+   buffer)
+  (iter (for c in (children (restriction buffer)))
+    (if-let (matches (occur-p (occur-query buffer) c))
         (progn
           (remove-class c "invisible")
           (evaluate-javascript
@@ -50,7 +50,7 @@ end-2...), where [start-n,end-n) are matched ranges."
                 `(progn
                    ,@(iter (for (start end) on matches by #'cddr)
                        (collect `(highlight-range ,start ,end)))))))
-           (current-buffer)))
+           buffer))
         (add-class c "invisible"))))
 
 (define-command occur ()

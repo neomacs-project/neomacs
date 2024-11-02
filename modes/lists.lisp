@@ -212,14 +212,24 @@ This should always be a directory pathname (with NIL name and type fields).")
 (define-mode clipboard-list-mode (list-mode) ())
 
 (defmethod generate-rows ((buffer clipboard-list-mode))
+  ;; TODO: instead to computing `styles' union like below,
+  ;; use shadow DOM to provide better encapsulation
+  (let (styles)
+    (containers:iterate-nodes
+     *clipboard-ring*
+     (lambda (item)
+       (alex:unionf styles (clipboard-item-styles item))))
+    (setf (styles buffer) styles))
   (containers:iterate-nodes
    *clipboard-ring*
-   (lambda (nodes)
+   (lambda (item)
      (insert-nodes
       (focus)
       (make-element
        "tr" :children
-       (list (make-element "td" :children nodes)))))))
+       (list (make-element
+              "td" :children
+              (clipboard-item-nodes item))))))))
 
 (define-mode clipboard-minibuffer-mode
     (minibuffer-completion-mode) ())
@@ -227,13 +237,9 @@ This should always be a directory pathname (with NIL name and type fields).")
 (define-keys clipboard-minibuffer-mode
   "tab" nil)
 
-(defmethod complete-minibuffer-aux ((buffer minibuffer-completion-mode))
-  (let ((input (only-elt (get-elements-by-class-name
-                          (document-root buffer) "input")))
-        (selection (node-after (focus (completion-buffer buffer)))))
-    (delete-nodes (pos-down input) nil)
-    (insert-nodes (pos-down input)
-                  (prin1-to-string
-                   (position
-                    selection
-                    (child-nodes (parent selection)))))))
+(defmethod complete-minibuffer-aux ((buffer clipboard-minibuffer-mode))
+  ;; We don't actually complete the minibuffer, instead communicate
+  ;; selection information via `*clipboard-ring-index*'
+  (let ((selection (node-after (focus (completion-buffer buffer)))))
+    (setq *clipboard-ring-index*
+          (position selection (child-nodes (parent selection))))))
