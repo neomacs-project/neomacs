@@ -198,8 +198,7 @@ Test if ELEMENT is a block element in BUFFER."))
 (defun line-end-p (pos)
   "Test if POS is at end of a line."
   (or (new-line-node-p (node-after pos))
-      (and (end-pos-p pos)
-           (block-element-p (end-pos-node pos)))))
+      (block-element-p (node-before pos))))
 
 (define-command beginning-of-line (&optional (marker (focus)))
   "Move to beginning of line.
@@ -274,8 +273,9 @@ Try to keep horizontal location approximately the same."
   (let ((i (with-marker (tmp marker)
              (beginning-of-line tmp))))
     (dotimes (_ n)
-      (end-of-line marker)
-      (forward-node marker))
+      (setf (pos marker)
+            (or (npos-next-until (pos marker) #'line-start-p)
+                (error 'end-of-subtree))))
     (forward-node-same-line marker i)))
 
 (define-command scroll-up-command ()

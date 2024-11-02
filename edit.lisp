@@ -613,8 +613,7 @@ Called by `self-insert-command' to get the character for insertion."
     (unless end
       (clipboard-insert (extract-nodes pos nil))
       (return))
-    ;; TODO: handle block elements correctly
-    (when (new-line-node-p end)
+    (when (line-end-p end)
       (clipboard-insert (extract-nodes pos end))
       (return))))
 
