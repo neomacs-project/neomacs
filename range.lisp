@@ -52,10 +52,11 @@ POS itself appears at the beginning, Root appears at the end."
 (defun range (beg end)
   "Create a range between BEG and END.
 
-BEG must be a position before or equal to END."
-  (unless (or (equalp beg end) (before-p beg end))
-    (error "~a is not before ~a." beg end))
-  (%range beg end))
+This normalizes `range-beg' and `range-end', i.e. if END is before
+BEG, they are swapped."
+  (if (before-p end beg)
+      (%range end beg)
+      (%range beg end)))
 
 (defun range-collapsed-p (range)
   "Test if RANGE is collapsed (`range-beg' and `range-end' are the same)."
@@ -168,10 +169,15 @@ DOM before => DOM after
          (or (equalp end pos) (before-p pos end)))))
 
 (defun render-sibling-selection (start end)
+  "Render selection between sibling positions START and END.
+
+END may also be nil, which means render selection till end of
+containing node."
   (setq start (resolve-marker start)
         end (resolve-marker end))
-  (unless (eq (node-containing start)
-              (node-containing end))
+  (unless (or (not end)
+              (eq (node-containing start)
+                  (node-containing end)))
     (warn "~a and ~a are not siblings" start end))
   (match start
     ((text-pos node offset)
@@ -186,7 +192,9 @@ DOM before => DOM after
                         "neomacs-range")
      (if-let (next (next-sibling node))
        (setq start next)
-       (return-from render-sibling-selection))))
+       (return-from render-sibling-selection)))
+    ((end-pos)
+     (return-from render-sibling-selection)))
   (match end
     ((text-pos node offset)
      (render-text-focus node 0 offset
@@ -203,7 +211,37 @@ DOM before => DOM after
        (render-text-focus node 0 (length (text node))
                           "neomacs-range")))))
 
+(defun render-range-selection (range)
+  "Render RANGE selection."
+  (unless (range-collapsed-p range)
+    (bind ((a-1 (nreverse (ancestors (range-beg range))))
+           (a-2 (nreverse (ancestors (range-end range))))
+           ((:values tail-1 tail-2)
+            (remove-common-prefix a-1 a-2)))
+      (cond ((not tail-1)
+             (iter (for pos in tail-2)
+               (render-sibling-selection (pos-down (node-containing pos)) pos)))
+            ((not tail-2)
+             (error "Should not reach here!"))
+            (t
+             (render-sibling-selection
+              (if (cdr tail-1)
+                  (pos-right (car tail-1))
+                  (car tail-1))
+              (car tail-2))
+             (iter (for tail on (cdr tail-1))
+               (render-sibling-selection
+                (if (cdr tail)
+                    (pos-right (car tail))
+                    (car tail))
+                nil))
+             (iter (for pos in (cdr tail-2))
+               (render-sibling-selection
+                (pos-down (node-containing pos)) pos))))
+      nil)))
+
 (defun clear-range-selection (buffer)
+  "Clear any rendered selection in BUFFER from renderer."
   (evaluate-javascript
    (ps:ps
      (clear-class "range-selection")
@@ -212,5 +250,9 @@ DOM before => DOM after
    buffer))
 
 (define-command set-selection ()
-  (setf (pos (selection-marker (current-buffer)))
+  (setf (selection-active (current-buffer)) t
+        (pos (selection-marker (current-buffer)))
         (pos (focus))))
+
+(define-keys global
+  "C-space" 'set-selection)

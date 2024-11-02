@@ -35,6 +35,7 @@
    (word-boundary-list :default (list #\  #\-))
    (focus-marker)
    (selection-marker)
+   (selection-active :initform nil :type boolean)
    (adjust-marker-direction :initform 'forward)
    (markers :type list)
    (document-root)
@@ -56,8 +57,8 @@
    (frame-root :initform nil))
   (:default-initargs :url (quri:uri "about:blank")))
 
-(defmethod id ((buffer buffer))
-  (format nil "~A" (slot-value buffer 'id)))
+(defmethod id :around ((buffer buffer))
+  (format nil "~A" (call-next-method)))
 
 (defun enable (mode-name)
   (unless (member mode-name (modes (current-buffer)))
@@ -633,8 +634,7 @@ WIDTH and HEIGHT are numbers in pixels."
 (defstyle focus `(:background-color "rgba(169,151,160,0.1)"))
 (defstyle selection `(:background-color "rgba(169,151,160,0.5)"
                       :color "#54454d"))
-(defstyle range-selection
-    `(:background-color "rgba(169,151,160,0.1)"))
+(defstyle range-selection `(:inherit selection))
 (defstyle keyword `(:color "#d29fa8"))
 (defstyle macro `(:color "#d29fa8"))
 (defstyle special-operator `(:color "#d29fa8"))

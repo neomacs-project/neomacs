@@ -24,7 +24,13 @@
             ((forward) (ensure-selectable (focus buffer)))
             ((backward) (ensure-selectable (focus buffer) t)))
           (on-post-command buffer)
-          (render-focus (focus buffer)))))
+          (let ((focus (pos (focus buffer)))
+                (selection (pos (selection-marker buffer))))
+            (render-focus focus)
+            (clear-range-selection buffer)
+            (when (selection-active buffer)
+              (render-range-selection
+               (range selection focus)))))))
     (while *post-command-buffers*)))
 
 (defun call-with-current-buffer (buffer thunk)
@@ -193,6 +199,7 @@ function `command-loop' to take effect."
 
 (define-command keyboard-quit ()
   "Signal a `quit' condition."
+  (setf (selection-active (current-buffer)) nil)
   (error 'quit))
 
 (define-keys global
