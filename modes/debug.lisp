@@ -104,4 +104,6 @@
     `(("table" :width "100%"
                :border-collapse "collapse")
       ("td" :padding-right "1em")
-      (".restart-name" :white-space "nowrap")))
+      (".restart-name"
+       :white-space "nowrap"
+       :vertical-align "top")))
