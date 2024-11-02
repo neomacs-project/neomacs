@@ -87,11 +87,11 @@
 
 (define-command debugger-invoke-restart
   :mode debugger-mode ()
-  (if-let (restart
-           (when-let (row (pos-up-ensure (focus) (alex:rcurry #'tag-name-p "tr")))
-             (attribute row 'restart)))
-    (dissect:invoke restart)
-    (message "No restart under focus")))
+  (or (when-let (restart (when-let (row (focused-row))
+                           (attribute row 'restart)))
+        (dissect:invoke restart)
+        t)
+      (message "No restart under focus")))
 
 (defun debug-for-condition (c)
   (let ((debugger
