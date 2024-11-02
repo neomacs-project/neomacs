@@ -121,13 +121,12 @@ DOM before => DOM after, returned nodes
                      (setq parent (append-child parent (clone-node pos nil))))))
                nodes))))))
 
-(defun delete-range (range)
-  "Delete contents inside RANGE.
-This may delete part of a node, examples (^ marks `range-beg' and
-_ marks `range-end'):
-DOM before => DOM after
-((a^ b) c (d _e)) => ((a)(e))
-^(a (b _c) d) => ((c) d)"
+(defun map-range (range fn)
+  "Decompose RANGE into a set of sibling ranges and call FN on them.
+
+FN is called with two arguments BEG and END, which are sibling
+positions. END might be nil, which signifies the end of node
+containing BEG."
   (unless (range-collapsed-p range)
     (bind ((a-1 (nreverse (ancestors (range-beg range))))
            (a-2 (nreverse (ancestors (range-end range))))
@@ -135,22 +134,31 @@ DOM before => DOM after
             (remove-common-prefix a-1 a-2)))
       (cond ((not tail-1)
              (iter (for pos in tail-2)
-               (delete-nodes (pos-down (node-containing pos)) pos)))
+               (funcall fn (pos-down (node-containing pos)) pos)))
             ((not tail-2)
              (error "Should not reach here!"))
             (t
-             (delete-nodes (if (cdr tail-1)
-                               (pos-right (car tail-1))
-                               (car tail-1))
-                           (car tail-2))
+             (funcall fn (if (cdr tail-1)
+                             (pos-right (car tail-1))
+                             (car tail-1))
+                      (car tail-2))
              (iter (for tail on (cdr tail-1))
-               (delete-nodes (if (cdr tail)
-                                 (pos-right (car tail))
-                                 (car tail))
-                             nil))
+               (funcall fn (if (cdr tail)
+                               (pos-right (car tail))
+                               (car tail))
+                        nil))
              (iter (for pos in (cdr tail-2))
-               (delete-nodes (pos-down (node-containing pos)) pos))))
+               (funcall fn (pos-down (node-containing pos)) pos))))
       nil)))
+
+(defun delete-range (range)
+  "Delete contents inside RANGE.
+This may delete part of a node, examples (^ marks `range-beg' and
+_ marks `range-end'):
+DOM before => DOM after
+((a^ b) c (d _e)) => ((a)(e))
+^(a (b _c) d) => ((c) d)"
+  (map-range range #'delete-nodes))
 
 (defun inside-range-p (marker-or-pos range)
   "Test if MARKER-OR-POS is inside RANGE."
@@ -213,32 +221,7 @@ containing node."
 
 (defun render-range-selection (range)
   "Render RANGE selection."
-  (unless (range-collapsed-p range)
-    (bind ((a-1 (nreverse (ancestors (range-beg range))))
-           (a-2 (nreverse (ancestors (range-end range))))
-           ((:values tail-1 tail-2)
-            (remove-common-prefix a-1 a-2)))
-      (cond ((not tail-1)
-             (iter (for pos in tail-2)
-               (render-sibling-selection (pos-down (node-containing pos)) pos)))
-            ((not tail-2)
-             (error "Should not reach here!"))
-            (t
-             (render-sibling-selection
-              (if (cdr tail-1)
-                  (pos-right (car tail-1))
-                  (car tail-1))
-              (car tail-2))
-             (iter (for tail on (cdr tail-1))
-               (render-sibling-selection
-                (if (cdr tail)
-                    (pos-right (car tail))
-                    (car tail))
-                nil))
-             (iter (for pos in (cdr tail-2))
-               (render-sibling-selection
-                (pos-down (node-containing pos)) pos))))
-      nil)))
+  (map-range range #'render-sibling-selection))
 
 (defun clear-range-selection (buffer)
   "Clear any rendered selection in BUFFER from renderer."
