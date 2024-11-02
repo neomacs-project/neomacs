@@ -275,11 +275,17 @@ A replacement buffer has to be alive and not already displayed."
   (switch-to-buffer (replacement-buffer buffer) buffer))
 
 (define-command close-buffer-display (&optional (buffer (current-buffer)))
-  "Close the window which displays BUFFER."
-  ;; TODO: account for the case when buffer has the only window in a
-  ;; frame.
+  "Close the window which displays BUFFER.
+
+If BUFFER is the only displayed buffer in a frame, this functions do
+nothing instead, because deleting it would break window management."
   (check-displayed buffer)
   (with-current-buffer (frame-root buffer)
+    (with-marker (m (window-decoration buffer))
+      (forward-node-cycle m)
+      (when (eq (node-after m) (window-decoration buffer))
+        (message "Attempting to delete sole window in a frame")
+        (return-from close-buffer-display)))
     (delete-node (window-decoration buffer))))
 
 (define-command quit-buffer (&optional (buffer (current-buffer)))
