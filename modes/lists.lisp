@@ -1,6 +1,6 @@
 (in-package #:neomacs)
 
-(define-mode list-mode () ())
+(define-mode list-mode (read-only-mode) ())
 
 (define-keys list-mode
   "q" 'bury-buffer)
@@ -8,8 +8,6 @@
 (defgeneric generate-rows (buffer))
 
 (defgeneric focused-item (buffer))
-
-(defmethod read-only-p ((buffer list-mode)) t)
 
 (defmethod revert-buffer-aux ((buffer list-mode))
   (erase-buffer)

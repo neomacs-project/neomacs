@@ -17,14 +17,12 @@
 (defmethod on-pre-command progn ((buffer undo-mode))
   (undo-boundary))
 
-(define-mode active-undo-mode ()
+(define-mode active-undo-mode (read-only-mode)
   ((node-table :initform (make-hash-table))
    (undo-buffer :initform
                 (make-buffer "*undo*"
                              :modes '(undo-history-mode))))
   (:documentation "Transient mode when undo history panel is active."))
-
-(defmethod read-only-p ((buffer active-undo-mode)) t)
 
 (defmethod window-decoration-aux ((buffer active-undo-mode))
   (let* ((node (call-next-method))

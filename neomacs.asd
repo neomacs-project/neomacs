@@ -33,6 +33,7 @@
                (:file "modes/prog")
                (:file "modes/completion")
                (:file "modes/lisp")
+               (:file "modes/debug")
                (:file "modes/html-doc")
                (:file "modes/web")
                (:file "modes/web-hints")
@@ -51,4 +52,5 @@
                :quri
                :trivial-types
                :local-time
-               :sb-concurrency))
+               :sb-concurrency
+               :dissect))

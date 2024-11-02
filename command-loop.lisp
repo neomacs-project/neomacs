@@ -156,12 +156,15 @@ command loop run the next command.")
                        (message "Quit")
                        (next-iteration)))
                (error (lambda (c)
-                        (unless *debug-on-error*
-                          (evaluate-javascript
-                           "new Audio('https://www.myinstants.com/media/sounds/amogus.mp3').play()"
-                           (current-frame-root))
-                          (message "~a" c)
-                          (next-iteration)))))
+                        (if *debug-on-error*
+                            (unless (eql *debug-on-error* 'external)
+                              (debug-for-condition c))
+                            (progn
+                              (evaluate-javascript
+                               "new Audio('https://www.myinstants.com/media/sounds/amogus.mp3').play()"
+                               (current-frame-root))
+                              (message "~a" c)
+                              (next-iteration))))))
             (handler-case
                 (handle-event buffer event)
               (top-level ()
