@@ -43,19 +43,26 @@
                      (list (dissect:report r)))))))
          (setf (attribute el 'restart) r))))
     (setf (pos (focus)) (pos-down tbody)))
-  (let ((ol (make-element "ol" :start "0"))
-        (*print-case* :downcase))
+  (let ((tbody (make-element "tbody")))
     (insert-nodes
-     (end-pos (document-root buffer)) ol)
+     (end-pos (document-root buffer))
+     (make-element
+      "table" :class "backtrace-table" :children (list tbody)))
     (iter (for frame in (stack buffer))
       (for i from 0)
       (insert-nodes
-       (end-pos ol)
+       (end-pos tbody)
        (make-element
-        "li" :children
-        (list (print-dom
-               (cons (dissect:call frame)
-                     (dissect:args frame)))))))))
+        "tr" :children
+        (list
+         (make-element
+          "td" :class "frame-number" :children
+          (list (format nil "~a." i)))
+         (make-element
+          "td" :children
+          (list (print-dom
+                 (cons (dissect:call frame)
+                       (dissect:args frame)))))))))))
 
 (defun find-restart-by-name (name)
   (iter (for r in (restarts (current-buffer)))
@@ -103,7 +110,7 @@
 (defstyle debugger-mode
     `(("table" :width "100%"
                :border-collapse "collapse")
-      ("td" :padding-right "1em")
-      (".restart-name"
+      (".restart-table td" :padding-right "1em")
+      (".restart-name, .frame-number"
        :white-space "nowrap"
        :vertical-align "top")))
