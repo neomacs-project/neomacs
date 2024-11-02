@@ -62,13 +62,57 @@ BEG, they are swapped."
   "Test if RANGE is collapsed (`range-beg' and `range-end' are the same)."
   (equalp (range-beg range) (range-end range)))
 
-(defun extract-range (range)
-  "Extract contents inside RANGE.
-This may extract part of a node, examples (^ marks `range-beg' and
-_ marks `range-end'):
-DOM before => DOM after, returned nodes
-((a^ b) c (d _e)) => ((a)(e)), ( b) c (d )
-^(a (b _c) d) => ((c) d), (a (b ))"
+(defun copy-nodes (start end)
+  "Copy nodes between START and END, which must be sibling positions.
+
+Like `extract-ndoes', but only clone nodes, don't actually delete nodes.
+END might also be nil, which designates the end of node containing START."
+  (unless (or (not end)
+              (eq (node-containing start)
+                  (node-containing end)))
+    (warn "~a and ~a are not siblings" start end))
+  (let (nodes)
+    (block nil
+      (match start
+        ((text-pos node offset)
+         ;; Selecting inside a text node
+         (when (and (text-pos-p end)
+                    (eq (text-pos-node end) node))
+           (push
+            (make-instance
+             'text-node :text
+             (subseq (text node) offset (text-pos-offset end)))
+            nodes)
+           (return))
+
+         (push (make-instance
+                'text-node :text
+                (subseq (text node) offset))
+               nodes)
+         (if-let (next (next-sibling node))
+           (setq start next)
+           (return)))
+        ((end-pos)
+         (return)))
+      (match end
+        ((text-pos node offset)
+         (when (> offset 0)
+           (push (make-instance
+                  'text-node :text
+                  (subseq (text node) 0 offset))
+                 nodes))
+         (setq end node))
+        ((end-pos) (setq end nil)))
+      (iter (for node first start then (next-sibling node))
+        (until (eql node end))
+        (while node)
+        (push (clone-node node) nodes)))
+    (nreverse nodes)))
+
+(defun map-range-collect (range fn)
+  "Decompose RANGE into a set of sibling ranges and map FN over them.
+
+Like `map-range', but also collect the result into a DOM tree."
   (unless (range-collapsed-p range)
     (bind ((a-1 (nreverse (ancestors (range-beg range))))
            (a-2 (nreverse (ancestors (range-end range))))
@@ -81,7 +125,7 @@ DOM before => DOM after, returned nodes
                  (for pos = (car tail))
                  (append-children
                   parent
-                  (extract-nodes (pos-down (node-containing pos)) pos))
+                  (funcall fn (pos-down (node-containing pos)) pos))
                  (when (cdr tail)
                    (setq parent (append-child parent (clone-node pos nil)))))
                (list root)))
@@ -89,10 +133,10 @@ DOM before => DOM after, returned nodes
              (error "Should not reach here!"))
             (t
              (let ((nodes
-                     (extract-nodes (if (cdr tail-1)
-                                        (pos-right (car tail-1))
-                                        (car tail-1))
-                                    (car tail-2))))
+                     (funcall fn (if (cdr tail-1)
+                                     (pos-right (car tail-1))
+                                     (car tail-1))
+                              (car tail-2))))
                (when (cdr tail-1)
                  (push (clone-node (car tail-1) nil) nodes))
                (iter (with parent = (car nodes))
@@ -103,12 +147,12 @@ DOM before => DOM after, returned nodes
                        (append-child parent (clone-node pos nil))
                        (append-children
                         parent
-                        (extract-nodes (pos-right pos) nil))
+                        (funcall fn (pos-right pos) nil))
                        (setq parent (first-child parent)))
                      (append-children
                       parent
-                      (extract-nodes (car tail)
-                                     nil))))
+                      (funcall fn (car tail)
+                               nil))))
                (when (cdr tail-2)
                  (alex:nconcf nodes (list (clone-node (car tail-2) nil)))
                  (iter (with parent = (lastcar nodes))
@@ -116,16 +160,29 @@ DOM before => DOM after, returned nodes
                    (for pos = (car tail))
                    (append-children
                     parent
-                    (extract-nodes (pos-down (node-containing pos)) pos))
+                    (funcall fn (pos-down (node-containing pos)) pos))
                    (when (cdr tail)
                      (setq parent (append-child parent (clone-node pos nil))))))
                nodes))))))
+
+(defun extract-range (range)
+  "Extract contents inside RANGE.
+This may extract part of a node, examples (^ marks `range-beg' and
+_ marks `range-end'):
+DOM before => DOM after, returned nodes
+((a^ b) c (d _e)) => ((a)(e)), ( b) c (d )
+^(a (b _c) d) => ((c) d), (a (b ))"
+  (map-range-collect range #'extract-nodes))
+
+(defun clone-range (range)
+  "Like `extract-range', but only copy and does not mutate the DOM."
+  (map-range-collect range #'copy-nodes))
 
 (defun map-range (range fn)
   "Decompose RANGE into a set of sibling ranges and call FN on them.
 
 FN is called with two arguments BEG and END, which are sibling
-positions. END might be nil, which signifies the end of node
+positions. END might be nil, which designates the end of node
 containing BEG."
   (unless (range-collapsed-p range)
     (bind ((a-1 (nreverse (ancestors (range-beg range))))

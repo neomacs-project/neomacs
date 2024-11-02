@@ -584,7 +584,12 @@ If selection is active, cut selected contents instead."
 (define-command copy-element ()
   "Copy element under focus into clipboard."
   (if (selection-active (current-buffer))
-      (error "TODO")
+      (progn
+        (clipboard-insert
+         (clone-range
+          (range (pos (selection-marker (current-buffer)))
+                 (pos (focus)))))
+        (setf (selection-active (current-buffer)) nil))
       (let ((pos (or (pos-up-ensure (focus) #'element-p)
                      (error 'top-of-subtree))))
         (clipboard-insert (list (clone-node pos))))))
