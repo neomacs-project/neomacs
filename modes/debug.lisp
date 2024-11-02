@@ -23,6 +23,8 @@
    (make-element
     "p" :children
     (list (princ-to-string (for-condition buffer)))))
+  (insert-nodes (end-pos (document-root buffer))
+                (make-element "p" :children (list "Restarts:")))
   (let ((tbody (make-element "tbody")))
     (insert-nodes
      (end-pos (document-root buffer))
@@ -43,6 +45,8 @@
                      (list (dissect:report r)))))))
          (setf (attribute el 'restart) r))))
     (setf (pos (focus)) (pos-down tbody)))
+  (insert-nodes (end-pos (document-root buffer))
+                (make-element "p" :children (list "Backtrace:")))
   (let ((tbody (make-element "tbody")))
     (insert-nodes
      (end-pos (document-root buffer))
@@ -111,6 +115,7 @@
     `(("table" :width "100%"
                :border-collapse "collapse")
       (".restart-table td" :padding-right "1em")
+      ("p" :margin-bottom 0)
       (".restart-name, .frame-number"
        :white-space "nowrap"
        :vertical-align "top")))
