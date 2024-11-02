@@ -1,6 +1,6 @@
 (in-package #:neomacs)
 
-(define-mode debugger-mode (read-only-mode)
+(define-mode debugger-mode (read-only-mode lisp-mode)
   ((for-condition
     :initform (alex:required-argument :condition)
     :initarg :condition)
@@ -53,9 +53,9 @@
        (end-pos ol)
        (make-element
         "li" :children
-        (list (format nil "(~{~s~^ ~})"
-                      (cons (dissect:call frame)
-                            (dissect:args frame)))))))))
+        (list (print-dom
+               (cons (dissect:call frame)
+                     (dissect:args frame)))))))))
 
 (defun find-restart-by-name (name)
   (iter (for r in (restarts (current-buffer)))
