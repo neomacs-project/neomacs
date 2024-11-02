@@ -1,6 +1,7 @@
 (in-package #:neomacs)
 
 (defun start ()
+  (ceramic:setup)
   (ceramic:start)
   (let* ((buffer (get-buffer-create "*scratch*" :modes '(lisp-mode file-mode)))
          (frame (make-frame-root buffer)))
