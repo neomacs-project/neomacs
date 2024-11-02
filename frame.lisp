@@ -349,7 +349,7 @@ If nil, disable message logging. If t, log messages but don't truncate
 `*Messages*' buffer.")
 
 (defun get-message-buffer ()
-  (get-buffer-create "*Messages*" :modes '(doc-mode)))
+  (get-buffer-create "*Messages*" :modes '(read-only-mode doc-mode)))
 
 (defun truncate-node (node n)
   (iter
@@ -372,11 +372,12 @@ If nil, disable message logging. If t, log messages but don't truncate
         (insert-nodes (end-pos (document-root (current-buffer))) message)
         (when *message-log-max*
           (with-current-buffer (get-message-buffer)
-            (unless (eql *message-log-max* t)
-              (truncate-node (document-root (current-buffer)) *message-log-max*))
-            (insert-nodes (end-pos (document-root (current-buffer)))
-                          message
-                          (make-new-line-node))))))))
+            (let ((*inhibit-read-only* t))
+              (unless (eql *message-log-max* t)
+                (truncate-node (document-root (current-buffer)) *message-log-max*))
+              (insert-nodes (end-pos (document-root (current-buffer)))
+                            message
+                            (make-new-line-node)))))))))
 
 (define-command open-dev-tools ()
   (evaluate-javascript
