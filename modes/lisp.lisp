@@ -465,6 +465,9 @@ Highlights compiler notes and echo the result."
         (message "=> ~a" result)))))
 
 (defun last-expression (pos)
+  (when (and (end-pos-p pos)
+             (symbol-node-p (end-pos-node pos)))
+    (return-from last-expression (end-pos-node pos)))
   (iter
     (unless pos (error 'beginning-of-subtree))
     (for node = (node-before pos))
