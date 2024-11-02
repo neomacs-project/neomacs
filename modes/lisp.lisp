@@ -572,11 +572,12 @@ sb-introspect:definition-source)'."
 
 (define-command xref-list-goto-definition
   :mode xref-list-mode ()
-  (visit-definition
-   (attribute
-    (pos-up-ensure (focus) (alex:rcurry #'tag-name-p "tr"))
-    'definition))
-  (quit-buffer))
+  (if-let (row (pos-up-ensure (focus) (alex:rcurry #'tag-name-p "tr")))
+    (progn
+      (visit-definition
+       (attribute row 'definition))
+      (quit-buffer))
+    (message "No xref item under focus")))
 
 (define-command goto-definition
   :mode lisp-mode ()

@@ -12,7 +12,9 @@
     :initarg :stack)))
 
 (define-keys debugger-mode
-  "a" 'debugger-invoke-abort)
+  "a" 'debugger-invoke-abort
+  "c" 'debugger-invoke-continue
+  "enter" 'debugger-invoke-restart)
 
 (defmethod revert-buffer-aux ((buffer debugger-mode))
   (erase-buffer)
@@ -30,25 +32,55 @@
       (for i from 1)
       (insert-nodes
        (end-pos tbody)
-       (make-element
-        "tr" :children
-        (list
-         (make-element
-          "td" :class "restart-name" :children
-          (list (format nil "~a. ~a" i (dissect:name r))))
-         (make-element
-          "td" :children
-          (list (dissect:report r)))))))
+       (lret ((el (make-element
+                   "tr" :children
+                   (list
+                    (make-element
+                     "td" :class "restart-name" :children
+                     (list (format nil "~a. ~a" i (dissect:name r))))
+                    (make-element
+                     "td" :children
+                     (list (dissect:report r)))))))
+         (setf (attribute el 'restart) r))))
     (setf (pos (focus)) (pos-down tbody)))
-  )
+  (let ((ol (make-element "ol"))
+        (*print-case* :downcase))
+    (insert-nodes
+     (end-pos (document-root buffer)) ol)
+    (iter (for frame in (stack buffer))
+      (for i from 1)
+      (insert-nodes
+       (end-pos ol)
+       (make-element
+        "li" :children
+        (list (format nil "(~{~a~^ ~})"
+                      (cons (dissect:call frame)
+                            (dissect:args frame)))))))))
+
+(defun find-restart-by-name (name)
+  (iter (for r in (restarts (current-buffer)))
+    (when (equal (symbol-name (dissect:name r)) name)
+      (return r))))
 
 (define-command debugger-invoke-abort
   :mode debugger-mode ()
-  (iter (for r in (restarts (current-buffer)))
-    (when (member (symbol-name (dissect:name r))
-                  '("ABORT" "ABORT*")
-                  :test 'equal)
-      (dissect:invoke r))))
+  (if-let (r (find-restart-by-name "ABORT"))
+    (dissect:invoke r)
+    (message "No restart named abort")))
+
+(define-command debugger-invoke-continue
+  :mode debugger-mode ()
+  (if-let (r (find-restart-by-name "CONTINUE"))
+    (dissect:invoke r)
+    (message "No restart named continue")))
+
+(define-command debugger-invoke-restart
+  :mode debugger-mode ()
+  (if-let (restart
+           (when-let (row (pos-up-ensure (focus) (alex:rcurry #'tag-name-p "tr")))
+             (attribute row 'restart)))
+    (dissect:invoke restart)
+    (message "No restart under focus")))
 
 (defun debug-for-condition (c)
   (let ((debugger
