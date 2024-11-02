@@ -29,7 +29,7 @@
      (make-element
       "table" :class "restart-table" :children (list tbody)))
     (iter (for r in (restarts buffer))
-      (for i from 1)
+      (for i from 0)
       (insert-nodes
        (end-pos tbody)
        (lret ((el (make-element
@@ -43,17 +43,17 @@
                      (list (dissect:report r)))))))
          (setf (attribute el 'restart) r))))
     (setf (pos (focus)) (pos-down tbody)))
-  (let ((ol (make-element "ol"))
+  (let ((ol (make-element "ol" :start "0"))
         (*print-case* :downcase))
     (insert-nodes
      (end-pos (document-root buffer)) ol)
     (iter (for frame in (stack buffer))
-      (for i from 1)
+      (for i from 0)
       (insert-nodes
        (end-pos ol)
        (make-element
         "li" :children
-        (list (format nil "(~{~a~^ ~})"
+        (list (format nil "(~{~s~^ ~})"
                       (cons (dissect:call frame)
                             (dissect:args frame)))))))))
 
