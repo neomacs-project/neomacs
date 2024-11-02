@@ -445,7 +445,7 @@ WIDTH and HEIGHT are numbers in pixels."
 (defun clear-focus (buffer)
   (evaluate-javascript
    (ps:ps
-    (clear-class "focus")
+     (clear-class "focus")
      (clear-class "focus-tail")
      (ps:chain
       -array
@@ -459,25 +459,26 @@ WIDTH and HEIGHT are numbers in pixels."
                                     (ps:chain e (get-attribute
                                                  "neomacs-identifier"))))
            (ps:chain parent (replace-child newline e))))))
-    (let ((highlight (ps:chain -c-s-s highlights (get "neomacs"))))
-      (when highlight (ps:chain highlight (clear)))))
+     (let ((highlight (ps:chain -c-s-s highlights (get "neomacs"))))
+       (when highlight (ps:chain highlight (clear)))))
    buffer))
 
-(defun render-element-focus (element)
+(defun render-element-focus (element &optional (class "focus"))
   (evaluate-javascript
    (ps:ps
      (let* ((element (js-node-1 element))
             (rect (ps:chain element (get-bounding-client-rect))))
-       (ps:chain element class-list (add "focus"))
+       (ps:chain element class-list (add (ps:lisp class)))
        (scroll-to-focus (ps:chain rect left) (ps:chain rect top))))
    (host element)))
 
-(defun render-element-focus-tail (element)
+(defun render-element-focus-tail
+    (element &optional (class "focus-tail"))
   (evaluate-javascript
    (ps:ps
      (let* ((element (js-node-1 element))
             (rect (ps:chain element (get-bounding-client-rect))))
-       (ps:chain element class-list (add "focus-tail"))
+       (ps:chain element class-list (add (ps:lisp class)))
        (scroll-to-focus (ps:chain rect right) (ps:chain rect bottom))))
    (host element)))
 
@@ -496,23 +497,24 @@ WIDTH and HEIGHT are numbers in pixels."
        (scroll-to-focus (ps:chain rect right) (ps:chain rect bottom))))
    (host element)))
 
-(defun render-text-focus (pos)
+(defun render-text-focus
+    (text-node start end &optional (highlight "neomacs"))
   (evaluate-javascript
    (ps:ps
     (let ((range (ps:new (-range)))
-          (text-node (js-node-1 (text-pos-node pos)))
-          (highlight (ps:chain -c-s-s highlights (get "neomacs"))))
-      (ps:chain range (set-start text-node
-                                 (ps:lisp (text-pos-offset pos))))
-      (ps:chain range (set-end text-node
-                               (ps:lisp (1+ (text-pos-offset pos)))))
+          (text-node (js-node-1 text-node))
+          (highlight (ps:chain -c-s-s highlights
+                               (get (ps:lisp highlight)))))
+      (ps:chain range (set-start text-node (ps:lisp start)))
+      (ps:chain range (set-end text-node (ps:lisp end)))
       (unless highlight
         (setq highlight (ps:new (-highlight)))
-        (ps:chain -c-s-s highlights (set "neomacs" highlight)))
+        (ps:chain -c-s-s highlights (set (ps:lisp highlight)
+                                         highlight)))
       (ps:chain highlight (add range))
       (let ((rect (ps:chain range (get-bounding-client-rect))))
         (scroll-to-focus (ps:chain rect left) (ps:chain rect top)))))
-   (host pos)))
+   (host text-node)))
 
 (defun render-focus (pos)
   (setq pos (resolve-marker pos))
@@ -527,7 +529,7 @@ WIDTH and HEIGHT are numbers in pixels."
            (render-br-focus pos)
            (render-element-focus pos)))
       ((end-pos node) (render-element-focus-tail node))
-      ((text-pos) (render-text-focus pos)))))
+      ((text-pos node offset) (render-text-focus node offset (1+ offset))))))
 
 ;;; Read-only state
 
@@ -631,6 +633,8 @@ WIDTH and HEIGHT are numbers in pixels."
 (defstyle focus `(:background-color "rgba(169,151,160,0.1)"))
 (defstyle selection `(:background-color "rgba(169,151,160,0.5)"
                       :color "#54454d"))
+(defstyle range-selection
+    `(:background-color "rgba(169,151,160,0.1)"))
 (defstyle keyword `(:color "#d29fa8"))
 (defstyle macro `(:color "#d29fa8"))
 (defstyle special-operator `(:color "#d29fa8"))
@@ -682,6 +686,7 @@ This is suitable for whitespace-sensitive editing."))
     `(("body" :inherit default)
       (".focus" :inherit focus)
       (".focus-tail" :inherit focus-tail)
+      (".range-selection" :inherit range-selection)
       (".newline"
        :display "inline"
        :min-width "0.4em" :inherit selection)
@@ -690,5 +695,6 @@ This is suitable for whitespace-sensitive editing."))
        :inherit selection)
       (".invisible" :display "none")
       ("::highlight(neomacs)" :inherit cursor)
+      ("::highlight(neomacs-range)" :inherit range-selection)
       ("#neomacs-cursor" :inherit cursor)
       ("::-webkit-scrollbar" :display "none")))

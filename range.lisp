@@ -166,3 +166,51 @@ DOM before => DOM after
         (end (range-end range)))
     (and (or (equalp beg pos) (before-p beg pos))
          (or (equalp end pos) (before-p pos end)))))
+
+(defun render-sibling-selection (start end)
+  (setq start (resolve-marker start)
+        end (resolve-marker end))
+  (unless (eq (node-containing start)
+              (node-containing end))
+    (warn "~a and ~a are not siblings" start end))
+  (match start
+    ((text-pos node offset)
+     ;; Selecting inside a text node
+     (when (and (text-pos-p end)
+                (eq (text-pos-node end) node))
+       (render-text-focus node offset (text-pos-offset end)
+                          "neomacs-range")
+       (return-from render-sibling-selection))
+
+     (render-text-focus node offset (length (text node))
+                        "neomacs-range")
+     (if-let (next (next-sibling node))
+       (setq start next)
+       (return-from render-sibling-selection))))
+  (match end
+    ((text-pos node offset)
+     (render-text-focus node 0 offset
+                        "neomacs-range")
+     (setq end node))
+    ((end-pos) (setq end nil)))
+  (iter (for node first start then (next-sibling node))
+    (until (eql node end))
+    (while node)
+    (cond
+      ((new-line-node-p node)) ;; TODO
+      ((element-p node) (render-element-focus node "range-selection"))
+      ((text-node-p node)
+       (render-text-focus node 0 (length (text node))
+                          "neomacs-range")))))
+
+(defun clear-range-selection (buffer)
+  (evaluate-javascript
+   (ps:ps
+     (clear-class "range-selection")
+     (let ((highlight (ps:chain -c-s-s highlights (get "neomacs-range"))))
+       (when highlight (ps:chain highlight (clear)))))
+   buffer))
+
+(define-command set-selection ()
+  (setf (pos (selection-marker (current-buffer)))
+        (pos (focus))))
