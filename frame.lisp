@@ -244,7 +244,7 @@ fixed in future Electron, our logic may be simplified."
      (buffer
       (get-buffer
        (completing-read "Switch to buffer: " 'buffer-list-mode)))
-     (victim (current-buffer)))
+     (victim (focused-buffer)))
   (check-displayed victim)
   (check-displayable buffer)
   (with-current-buffer (frame-root victim)
@@ -295,7 +295,8 @@ A replacement buffer has to be alive and not already displayed."
     (unless (class-p (node-containing (focus)) "vertical")
       (wrap-node (focus) (make-element "div" :class "vertical")))
     (insert-nodes (pos-right (focus))
-                  (make-window-decoration buffer))))
+                  (make-window-decoration buffer))
+    buffer))
 
 (define-command display-buffer-below (&optional (buffer (replacement-buffer)))
   "Split a window to the bottom and display BUFFER in it."
@@ -304,7 +305,8 @@ A replacement buffer has to be alive and not already displayed."
     (unless (class-p (node-containing (focus)) "horizontal")
       (wrap-node (focus) (make-element "div" :class "horizontal")))
     (insert-nodes (pos-right (focus))
-                  (make-window-decoration buffer))))
+                  (make-window-decoration buffer))
+    buffer))
 
 (defun focus-buffer (buffer)
   "Give BUFFER focus.
@@ -312,7 +314,8 @@ A replacement buffer has to be alive and not already displayed."
 BUFFER must be already displayed."
   (check-displayed buffer)
   (with-current-buffer (frame-root buffer)
-    (setf (pos (focus)) (window-decoration buffer))))
+    (setf (pos (focus)) (window-decoration buffer))
+    buffer))
 
 (define-keys global
   "C-x o" 'other-window

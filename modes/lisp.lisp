@@ -516,6 +516,9 @@ Highlight compiler notes."
   "SB-INTROSPECT definition types.")
 
 (defun visit-definition (definition)
+  "Switch to a buffer displaying DEFINITION.
+
+DEFINITION should be a `sb-introspect:definition-source'."
   (with-current-buffer
       (find-file (sb-introspect:definition-source-pathname
                   definition))
@@ -525,6 +528,56 @@ Highlight compiler notes."
            (car (sb-introspect:definition-source-form-path
                  definition))))))
 
+(define-mode xref-list-mode (list-mode)
+  ((for-symbol :initform (alex:required-argument :symbol)
+               :initarg :symbol)))
+
+(define-keys xref-list-mode
+  "q" 'quit-buffer
+  "enter" 'xref-list-goto-definition)
+
+(defmethod generate-rows ((buffer xref-list-mode))
+  (let ((*print-case* :downcase)
+        (symbol (for-symbol buffer)))
+    (iter (for (type def) in (find-definitions symbol))
+      (insert-nodes
+       (focus)
+       (lret ((el (make-element
+                   "tr"
+                   :children
+                   (list (make-element
+                          "td" :children
+                          (list (prin1-to-string type)))
+                         (make-element
+                          "td" :children
+                          (list (print-arglist
+                                 (sb-introspect::definition-source-description def)
+                                 (symbol-package symbol))))
+                         (make-element
+                          "td" :children
+                          (list (princ-to-string
+                                 (sb-introspect::definition-source-pathname def))))))))
+         (setf (attribute el 'definition) def))))))
+
+(defun find-definitions (symbol)
+  "Find all definitions for SYMBOL.
+
+Return a list with items of the form `(definition-type
+sb-introspect:definition-source)'."
+  (iter (for type in *definition-types*)
+    (appending
+     (mapcar (alex:curry #'list type)
+             (sb-introspect:find-definition-sources-by-name
+              symbol type)))))
+
+(define-command xref-list-goto-definition
+  :mode xref-list-mode ()
+  (visit-definition
+   (attribute
+    (pos-up-ensure (focus) (alex:rcurry #'tag-name-p "tr"))
+    'definition))
+  (quit-buffer))
+
 (define-command goto-definition
   :mode lisp-mode ()
   "Goto definition of symbol under focus."
@@ -533,15 +586,17 @@ Highlight compiler notes."
       (when (> (length name) 0)
         (when-let (symbol (find-symbol (string-upcase name)
                                        (current-package)))
-          (let ((definitions
-                  (mapcan
-                   (alex:curry
-                    #'sb-introspect:find-definition-sources-by-name
-                    symbol)
-                   *definition-types*)))
+          (let ((definitions (find-definitions symbol)))
             (if (= (length definitions) 1)
-                (visit-definition (car definitions))
-                (error "TODO"))))))))
+                (visit-definition (cadr (car definitions)))
+                (focus-buffer
+                 (display-buffer-right
+                  (with-current-buffer
+                      (make-buffer
+                       "*xref*" :modes '(xref-list-mode)
+                       :symbol symbol)
+                    (revert-buffer)
+                    (current-buffer)))))))))))
 
 ;;; Auto-completion
 
