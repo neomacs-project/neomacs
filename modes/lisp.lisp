@@ -465,6 +465,7 @@ Highlights compiler notes and echo the result."
         (message "=> ~a" result)))))
 
 (defun last-expression (pos)
+  (setq pos (resolve-marker pos))
   (when (and (end-pos-p pos)
              (symbol-node-p (end-pos-node pos)))
     (return-from last-expression (end-pos-node pos)))
