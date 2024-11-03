@@ -17,8 +17,7 @@
 (defmethod selectable-p-aux ((buffer minibuffer-find-file-mode) pos)
   (class-p (node-containing pos) "path-component"))
 
-(defmethod check-read-only progn
-    ((buffer minibuffer-find-file-mode) pos)
+(defmethod check-read-only ((buffer minibuffer-find-file-mode) pos)
   (unless (class-p (node-containing pos)
                    "path-component" "input")
     (error 'element-read-only-error :element (node-containing pos))))

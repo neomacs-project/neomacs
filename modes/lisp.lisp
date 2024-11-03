@@ -44,7 +44,7 @@
       (not (class-p element "list" "comment"))
       (call-next-method)))
 
-(defmethod check-read-only progn ((buffer lisp-mode) pos)
+(defmethod check-read-only ((buffer lisp-mode) pos)
   (when (class-p (node-containing pos) "object")
     (error 'element-read-only-error :element (node-containing pos))))
 

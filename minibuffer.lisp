@@ -9,7 +9,7 @@
 (defmethod selectable-p-aux ((buffer minibuffer-mode) pos)
   (class-p (node-containing pos) "input"))
 
-(defmethod check-read-only progn ((buffer minibuffer-mode) pos)
+(defmethod check-read-only ((buffer minibuffer-mode) pos)
   (unless (class-p (node-containing pos) "input")
     (error 'element-read-only-error :element (node-containing pos))))
 
