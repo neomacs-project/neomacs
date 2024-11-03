@@ -17,6 +17,11 @@
 (defmethod selectable-p-aux ((buffer minibuffer-find-file-mode) pos)
   (class-p (node-containing pos) "path-component"))
 
+(defmethod check-read-only ((buffer minibuffer-find-file-mode) pos)
+  (unless (class-p (node-containing pos)
+                   "path-component" "input")
+    (error 'element-read-only-error :element (node-containing pos))))
+
 (defmethod revert-buffer-aux ((buffer minibuffer-find-file-mode))
   (call-next-method)
   (let ((last (make-element "span" :class "path-component"))
