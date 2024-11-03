@@ -14,7 +14,8 @@
 (define-keys debugger-mode
   "a" 'debugger-invoke-abort
   "c" 'debugger-invoke-continue
-  "enter" 'debugger-invoke-restart)
+  "enter" 'debugger-invoke-restart
+  "v" 'debugger-show-source)
 
 (defmethod revert-buffer-aux ((buffer debugger-mode))
   (erase-buffer)
@@ -58,36 +59,37 @@
       (for i from 0)
       (insert-nodes
        (end-pos tbody)
-       (make-element
-        "tr" :children
-        (list
-         (make-element
-          "td" :class "frame-number" :children
-          (list (format nil "~a." i)))
-         (make-element
-          "td" :children
-          (list*
-           (print-dom
-            (cons (dissect:call frame)
-                  (dissect:args frame)))
-           (when-let (locals (dissect:locals frame))
-             (list
-              (make-element
-               "table" :class "locals-table" :children
-               (list
-                (make-element
-                 "tbody" :children
-                 (iter (for (name . value) in locals)
-                   (collect
-                       (make-element
-                        "tr" :children
+       (lret ((el (make-element
+                   "tr" :children
+                   (list
+                    (make-element
+                     "td" :class "frame-number" :children
+                     (list (format nil "~a." i)))
+                    (make-element
+                     "td" :children
+                     (list*
+                      (print-dom
+                       (cons (dissect:call frame)
+                             (dissect:args frame)))
+                      (when-let (locals (dissect:locals frame))
                         (list
                          (make-element
-                          "td" :children
-                          (list (princ-to-string name)))
-                         (make-element
-                          "td" :children
-                          (list (print-dom value))))))))))))))))))))
+                          "table" :class "locals-table" :children
+                          (list
+                           (make-element
+                            "tbody" :children
+                            (iter (for (name . value) in locals)
+                              (collect
+                                  (make-element
+                                   "tr" :children
+                                   (list
+                                    (make-element
+                                     "td" :children
+                                     (list (princ-to-string name)))
+                                    (make-element
+                                     "td" :children
+                                     (list (print-dom value))))))))))))))))))
+         (setf (attribute el 'frame) frame))))))
 
 (defun find-restart-by-name (name)
   (iter (for r in (restarts (current-buffer)))
@@ -113,6 +115,47 @@
         (dissect:invoke restart)
         t)
       (message "No restart under focus")))
+
+(define-command debugger-show-source
+  :mode debugger-mode ()
+  (or (when-let (frame (when-let (row (focused-row))
+                         (attribute row 'frame)))
+        (or
+         (when-let*
+             ((frame (dissect::frame frame))
+              (location (sb-di:frame-code-location frame))
+              (namestring
+               (sb-c::debug-source-namestring
+                (sb-di::code-location-debug-source
+                 location)))
+              (path (pathname namestring))
+              (tlf-number
+               (sb-di::code-location-toplevel-form-offset
+                location))
+              (form-number
+               (sb-di::code-location-form-number
+                location)))
+           (with-current-buffer (find-file path)
+             (let* ((tlf (sexp-nth-child
+                          (document-root (current-buffer))
+                          tlf-number))
+                    (translation
+                      (sb-di::form-number-translations
+                       (node-to-sexp tlf) 0))
+                    (form-path
+                      (if (< form-number (length translation))
+                          (reverse
+                           (aref translation form-number))
+                          (progn
+                            (message "Inconsistent form-number translation")
+                            nil))))
+               (pop form-path)
+               (setf (pos (focus))
+                     (find-node-for-form-path tlf form-path))))
+           t)
+         (message "No source information"))
+        t)
+      (message "No frame under focus")))
 
 (defun debug-for-condition (c)
   (let ((debugger

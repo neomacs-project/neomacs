@@ -359,6 +359,13 @@ Used for resolving source-path to DOM node.")
                 (ghost-symbol-p node)))
           (child-nodes node))))
 
+(defun find-node-for-form-path (root path)
+  (iter (with node = root)
+    (for i in path)
+    (when-let (child (sexp-nth-child node i))
+      (setq node child))
+    (finally (return node))))
+
 (defun find-node-for-compiler-note (context)
   (or
    (when-let (form (sb-c::compiler-error-context-original-form
@@ -369,11 +376,8 @@ Used for resolving source-path to DOM node.")
        (unless (eql (car path) 0)
          (warn "Compiling single form but source path ~a does not start with 0." path))
        (pop path))
-     (iter (with node = *compilation-document-root*)
-       (for i in path)
-       (when-let (child (sexp-nth-child node i))
-         (setq node child))
-       (finally (return node))))))
+     (find-node-for-form-path
+      *compilation-document-root* path))))
 
 (defun handle-notification-condition (condition)
   (let (id)
