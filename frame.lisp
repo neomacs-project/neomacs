@@ -38,8 +38,18 @@
 (define-mode frame-root-mode ()
   ((echo-area :initform (make-buffer " *echo-area*"
                                      :modes 'echo-area-mode
-                                     :styles nil)))
+                                     :styles nil))
+   (buffer-list :initform nil))
   (:documentation "Mode for frame root buffer."))
+
+(defmethod buffer-list :around ((buffer frame-root-mode))
+  (remove-if-not #'buffer-alive-p (call-next-method)))
+
+(defun all-buffer-list (frame-root)
+  (delete-duplicates
+   (append (buffer-list frame-root)
+           (alex:hash-table-values *buffer-table*))
+   :from-end t))
 
 (defmethod on-buffer-loaded progn
     ((buffer frame-root-mode) (url t) (err t))
@@ -212,7 +222,11 @@ fixed in future Electron, our logic may be simplified."
           (if (member id *frame-remove-views* :test 'equal)
               (alex:deletef *frame-remove-views* id)
               (push id *frame-add-views*))
-          (add-view id))))
+          (add-view id))
+      (when (class-p node "main")
+        (let ((buf (gethash (parse-integer id) *buffer-table*)))
+          (setf (buffer-list buffer)
+                (cons buf (remove buf (buffer-list buffer))))))))
   (when (class-p node "vertical" "horizontal")
     (with-post-command (node 'first-child 'last-child)
       (when (eql (first-child node) (last-child node))
@@ -229,6 +243,8 @@ fixed in future Electron, our logic may be simplified."
 
 (defun check-displayable (buffer)
   "Signal error if BUFFER is not suitable for display."
+  (unless (buffer-alive-p buffer)
+    (error "~A is deleted" buffer))
   (when (typep buffer 'frame-root-mode)
     (error "Cannot display frame root ~A" buffer))
   (when (frame-root buffer)
@@ -243,7 +259,9 @@ fixed in future Electron, our logic may be simplified."
     (&optional
      (buffer
       (get-buffer
-       (completing-read "Switch to buffer: " 'buffer-list-mode)))
+       (completing-read
+        "Switch to buffer: " 'buffer-list-mode
+        :exclude-buffers (list (current-buffer)))))
      (victim (focused-buffer)))
   (check-displayed victim)
   (check-displayable buffer)

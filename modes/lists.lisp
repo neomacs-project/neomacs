@@ -45,7 +45,10 @@
 (define-mode buffer-list-mode (list-mode)
   ((show-hidden
     :initform nil :initarg :show-hidden
-    :documentation "Whether to show hidden buffers, i.e. those with name started with a space.")))
+    :documentation "Whether to show hidden buffers, i.e. those with name started with a space.")
+   (exclude-buffers
+    :initform nil :initarg :exclude-buffers
+    :documentation "A list of buffers to exclude from display.")))
 
 (define-keys buffer-list-mode
   "enter" 'buffer-list-switch-to-buffer
@@ -68,12 +71,14 @@
   (revert-buffer))
 
 (defmethod generate-rows ((buffer buffer-list-mode))
-  (iter (for (name buf) in-hashtable *buffer-name-table*)
+  (iter (for buf in (all-buffer-list (current-frame-root)))
+    (for name = (name buf))
     (for modes =
          (sera:mapconcat (alex:compose #'string-downcase #'symbol-name)
                          (modes buf) " "))
-    (unless (and (not (show-hidden buffer))
-                 (sera:string-prefix-p " " name))
+    (unless (or (member buf (exclude-buffers buffer))
+                (and (not (show-hidden buffer))
+                     (sera:string-prefix-p " " name)))
       (insert-nodes (focus)
                     (dom `((:tr :buffer ,(id buf))
                            (:td ,name)
