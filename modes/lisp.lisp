@@ -140,6 +140,12 @@
 (defmethod print-dom ((string string) &key)
   (make-atom-node "string" string))
 
+(defmethod print-dom ((obj number) &key)
+  (make-atom-node "symbol" (prin1-to-string obj)))
+
+(defmethod print-dom ((obj character) &key)
+  (make-atom-node "symbol" (prin1-to-string obj)))
+
 (defmethod print-dom ((obj t) &key)
   (lret ((node (make-atom-node "object" (prin1-to-string obj))))
     (setf (attribute node 'presentation) obj)))

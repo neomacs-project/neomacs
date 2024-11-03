@@ -64,9 +64,28 @@
           (list (format nil "~a." i)))
          (make-element
           "td" :children
-          (list (print-dom
-                 (cons (dissect:call frame)
-                       (dissect:args frame)))))))))))
+          (list*
+           (print-dom
+            (cons (dissect:call frame)
+                  (dissect:args frame)))
+           (when-let (locals (dissect:locals frame))
+             (list
+              (make-element
+               "table" :children
+               (list
+                (make-element
+                 "tbody" :children
+                 (iter (for (name . value) in locals)
+                   (collect
+                       (make-element
+                        "tr" :children
+                        (list
+                         (make-element
+                          "td" :children
+                          (list (princ-to-string name)))
+                         (make-element
+                          "td" :children
+                          (list (print-dom value))))))))))))))))))))
 
 (defun find-restart-by-name (name)
   (iter (for r in (restarts (current-buffer)))
