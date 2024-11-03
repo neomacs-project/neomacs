@@ -188,5 +188,6 @@
                       key-code code)))))
      nil)))
 
-(define-command web-forward-key ()
+(define-command web-forward-key
+  :mode web-mode ()
   (web-send-key (lastcar *this-command-keys*)))
