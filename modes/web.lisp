@@ -48,6 +48,7 @@
   (make-web-send-key-command
    (car (parse-keyspec "end")))
   'self-insert-command 'web-forward-key
+  "escape" 'web-forward-key
   'backward-delete
   (make-web-send-key-command
    (car (parse-keyspec "backspace"))))
