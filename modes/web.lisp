@@ -51,7 +51,9 @@
   "escape" 'web-forward-key
   'backward-delete
   (make-web-send-key-command
-   (car (parse-keyspec "backspace"))))
+   (car (parse-keyspec "backspace")))
+  "C-M-f" 'web-go-forward
+  "C-M-b" 'web-go-backward)
 
 (define-command web-next-line
   :mode web-mode ()
