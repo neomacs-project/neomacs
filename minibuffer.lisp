@@ -214,10 +214,22 @@ when this row is selected.")))
                    :test 'equal))
       (return cmd))))
 
+(defun collect-keybindings (keymaps)
+  (lret (keys (table (make-hash-table)))
+    (iter (for keymap in keymaps)
+      (traverse-keymap
+       keymap (lambda (kseq cmd)
+                (declare (ignore cmd))
+                (push kseq keys))))
+    (iter (for k in (delete-duplicates keys :test 'equal))
+      (push k (gethash (lookup-keybind k keymaps) table)))))
+
 (define-command execute-command ()
   (let ((name (completing-read
                "M-x " 'command-list-mode
-               :include-modes (modes (current-buffer)))))
+               :include-modes (modes (current-buffer))
+               :keybinding-index
+               (collect-keybindings (keymaps (current-buffer))))))
     (if-let (cmd (find-command name (modes (current-buffer))))
       (funcall cmd)
       (message "No such command"))))

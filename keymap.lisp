@@ -178,7 +178,8 @@ Example: (set-key *global-keymap* \"C-'\" 'list-modes)"
        (setf shift nil sym (string translation))
        (setq sym (string-from-camel-case sym)))
      (format stream "~:[~;C-~]~:[~;M-~]~:[~;s-~]~:[~;H-~]~:[~;S-~]~A"
-             ctrl meta super hypher shift sym))))
+             ctrl meta super hypher shift sym))
+    ((list* keys) (sera:mapconcat #'key-description keys " "))))
 
 (defun keys-description (keys &optional stream)
   (sera:mapconcat #'key-description keys " " :stream stream))
@@ -229,6 +230,7 @@ Example: (set-key *global-keymap* \"C-'\" 'list-modes)"
       cmd)))
 
 (defun collect-command-keybindings (command keymap)
+  ;; TODO: handle function-table rebinds
   (let ((bindings '()))
     (traverse-keymap keymap
                      (lambda (kseq cmd)

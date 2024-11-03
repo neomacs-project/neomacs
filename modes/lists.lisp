@@ -20,7 +20,11 @@
     (setf (pos (focus)) (pos-down body-node))))
 
 (define-mode command-list-mode (list-mode)
-  ((include-modes :initform nil :initarg :include-modes)))
+  ((include-modes :initform nil :initarg :include-modes)
+   (keybinding-index
+    :initform (make-hash-table)
+    :type hash-table :initarg :keybinding-index
+    :documentation "Reverse index from command to list of key bindings.")))
 
 (defun short-doc (command)
   (let ((doc (documentation command 'function)))
@@ -36,11 +40,18 @@
        (make-element
         "tr" :children
         (list (make-element "td" :children (list name))
-              (make-element "td" :children
-                            (short-doc c))
+              (make-element
+               "td" :class "keybinds" :children
+               (when-let (bindings (gethash c (keybinding-index buffer)))
+                 (list (sera:mapconcat #'key-description bindings ", "))))
+              (make-element "td" :children (short-doc c))
               (make-element
                "td" :children
                (list (string-downcase (symbol-name mode))))))))))
+
+(defstyle command-list-mode
+    `((".keybinds" :max-width "5em" :overflow "hidden"
+       :text-overflow "ellipsis")))
 
 (define-mode buffer-list-mode (list-mode)
   ((show-hidden
