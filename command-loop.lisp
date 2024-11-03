@@ -77,6 +77,24 @@ command loop run the next command.")
 
 (defvar *debug-on-error* nil)
 
+(defun play-loud-audio (c)
+  (if (typep c 'quit)
+      (evaluate-javascript
+       "new Audio('https://www.myinstants.com/media/sounds/vine-boom.mp3').play()"
+       (current-frame-root))
+      (evaluate-javascript
+       "new Audio('https://www.myinstants.com/media/sounds/amogus.mp3').play()"
+       (current-frame-root))))
+
+(defun do-nothing (&rest args)
+  (declare (ignore args)))
+
+(defvar *quit-hook* 'play-loud-audio
+  "Invoked when a quit condition reaches command loop.")
+
+(defvar *error-hook* 'play-loud-audio
+  "Invoked when an error condition reaches command loop.")
+
 (define-command toggle-debug-on-error ()
   (setq *debug-on-error* (not *debug-on-error*))
   (message "Debug on error ~:[disabled~;enabled~]" *debug-on-error*))
@@ -149,10 +167,7 @@ command loop run the next command.")
       (restart-case
           (handler-bind
               ((quit (lambda (c)
-                       (declare (ignore c))
-                       (evaluate-javascript
-                        "new Audio('https://www.myinstants.com/media/sounds/vine-boom.mp3').play()"
-                        (current-frame-root))
+                       (funcall *quit-hook* c)
                        (message "Quit")
                        (next-iteration)))
                (error (lambda (c)
@@ -160,9 +175,7 @@ command loop run the next command.")
                             (unless (eql *debug-on-error* 'external)
                               (debug-for-condition c))
                             (progn
-                              (evaluate-javascript
-                               "new Audio('https://www.myinstants.com/media/sounds/amogus.mp3').play()"
-                               (current-frame-root))
+                              (funcall *error-hook* c)
                               (message "~a" c)
                               (next-iteration))))))
             (handler-case
