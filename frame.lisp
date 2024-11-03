@@ -104,6 +104,8 @@
                                     (let ((view (ps:getprop (ps:chain -ceramic buffers) buffer)))
                                       (when view
                                         (ps:chain view (set-bounds (ps:getprop result buffer)))))))))))))
+       (ps:chain frame (set-title "Neomacs"))
+       (ps:chain frame (set-menu nil))
        (ps:chain frame (on "resize" resize))
        (ps:chain frame (on "maximize" resize))))
    nil))

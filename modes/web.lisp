@@ -22,6 +22,9 @@
 (define-keys global
   "C-x C-l" 'find-url)
 
+(defnclo web-send-key-command (key) ()
+  (web-send-key key))
+
 (define-keys web-mode
   'next-line #+nil 'web-next-line
   (make-web-send-key-command
@@ -184,9 +187,6 @@
            (ps:create type "keyUp"
                       key-code code)))))
      nil)))
-
-(defnclo web-send-key-command (key) ()
-  (web-send-key key))
 
 (define-command web-forward-key ()
   (web-send-key (lastcar *this-command-keys*)))
