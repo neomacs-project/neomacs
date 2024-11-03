@@ -548,7 +548,8 @@ WIDTH and HEIGHT are numbers in pixels."
 (defvar *inhibit-read-only* nil)
 
 (defgeneric check-read-only (buffer pos)
-  (:method ((buffer buffer) (pos t)) nil)
+  (:method-combination progn)
+  (:method progn ((buffer buffer) (pos t)) nil)
   (:method :around ((buffer buffer) (pos t))
     (unless *inhibit-read-only*
       (restart-case
@@ -564,7 +565,7 @@ If it is, should signal a condition of type `read-only-error'."))
   (:documentation "Make this buffer read-only.")
   (:toggler t))
 
-(defmethod check-read-only ((buffer read-only-mode) (pos t))
+(defmethod check-read-only progn ((buffer read-only-mode) (pos t))
   (error 'read-only-error :buffer buffer))
 
 ;;; Styles

@@ -44,6 +44,10 @@
       (not (class-p element "list" "comment"))
       (call-next-method)))
 
+(defmethod check-read-only progn ((buffer lisp-mode) pos)
+  (when (class-p (node-containing pos) "object")
+    (error 'element-read-only-error :element (node-containing pos))))
+
 (defmethod on-focus-move progn ((buffer lisp-mode) old new)
   (declare (ignore old))
   (let ((node (node-containing new)))
@@ -137,7 +141,8 @@
   (make-atom-node "string" string))
 
 (defmethod print-dom ((obj t) &key)
-  (make-atom-node "symbol" (prin1-to-string obj)))
+  (lret ((node (make-atom-node "object" (prin1-to-string obj))))
+    (setf (attribute node 'presentation) obj)))
 
 (define-command open-paren :mode lisp-mode
   (&optional (marker (focus)))
@@ -299,6 +304,9 @@ It also takes into account any prefix preceding NODE."
                                     (parse-prefix (text-content node))))
                               (apply-wrappers wrappers (read-from-string rest))))
                            ((new-line-node-p node) nil)
+                           ((class-p node "object")
+                            (or (attribute node 'presentation)
+                                (error "Presentation attribute missing from ~a" node)))
                            (t (error "Unrecognized DOM node: ~a" node)))))
                (when *form-node-table*
                  (setf (gethash sexp *form-node-table*)
@@ -841,6 +849,8 @@ sb-introspect:definition-source)'."
                          :inherit selection)
                         :inherit (sexp-node string)))
 (defstyle symbol-node `(:inherit sexp-node))
+(defstyle object-node `(:inherit symbol-node
+                        :text-decoration "underline"))
 (defstyle empty-symbol-node `(((:append "::after")
                                :content "_")
                               ((:append ":not(:last-child)")
@@ -886,7 +896,7 @@ sb-introspect:definition-source)'."
     `((".symbol" :inherit symbol-node)
       (".symbol:empty" :inherit empty-symbol-node)
       (".string" :inherit string-node)
-      (".object" :inherit symbol-node)
+      (".object" :inherit object-node)
       (".symbol[symbol-type=\"macro\"][operator]" :inherit macro)
       (".symbol[symbol-type=\"keyword\"]" :inherit keyword)
       (".symbol[symbol-type=\"special-operator\"][operator]" :inherit special-operator)
