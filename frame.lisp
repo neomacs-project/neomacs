@@ -46,10 +46,12 @@
   (remove-if-not #'buffer-alive-p (call-next-method)))
 
 (defun all-buffer-list (frame-root)
-  (delete-duplicates
-   (append (buffer-list frame-root)
-           (alex:hash-table-values *buffer-table*))
-   :from-end t))
+  (if frame-root
+      (delete-duplicates
+       (append (buffer-list frame-root)
+               (alex:hash-table-values *buffer-table*))
+       :from-end t)
+      (alex:hash-table-values *buffer-table*)))
 
 (defmethod on-buffer-loaded progn
     ((buffer frame-root-mode) (url t) (err t))
@@ -283,13 +285,12 @@ fixed in future Electron, our logic may be simplified."
   "Find a buffer to display in place of BUFFER.
 
 A replacement buffer has to be alive and not already displayed."
-  (declare (ignore buffer))
   (let (replacement)
     ;; Try to find any buffer for replacement.
-    (iter (for (_ buffer) in-hashtable *buffer-name-table*)
-      (unless (or (frame-root buffer)
-                  (typep buffer 'frame-root-mode))
-        (setq replacement buffer)
+    (iter (for buf in (all-buffer-list (frame-root buffer)))
+      (unless (or (frame-root buf)
+                  (typep buf 'frame-root-mode))
+        (setq replacement buf)
         (return)))
     (or replacement (make-scratch))))
 
