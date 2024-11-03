@@ -271,6 +271,14 @@ fixed in future Electron, our logic may be simplified."
     (close-buffer-display victim))
   buffer)
 
+(defun make-scratch ()
+  (lret ((buffer (make-buffer "*scratch*" :modes '(lisp-mode file-mode))))
+    (with-current-buffer buffer
+      (setf (file-path buffer)
+            (asdf:system-relative-pathname :neomacs #p"scratch.lisp"))
+      (revert-buffer)
+      (disable 'file-mode))))
+
 (defun replacement-buffer (&optional (buffer (current-buffer)))
   "Find a buffer to display in place of BUFFER.
 
@@ -283,9 +291,7 @@ A replacement buffer has to be alive and not already displayed."
                   (typep buffer 'frame-root-mode))
         (setq replacement buffer)
         (return)))
-    (unless replacement
-      (error "TODO"))
-    replacement))
+    (or replacement (make-scratch))))
 
 (define-command bury-buffer (&optional (buffer (current-buffer)))
   "Stop displaying BUFFER."
