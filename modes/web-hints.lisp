@@ -100,7 +100,7 @@
            (string char) 'narrow-hint))
 
 (define-keys web-mode
-  "M-;" 'add-hints)
+  "M-g" 'add-hints)
 
 (defun add-hints ()
   (pushnew 'web-hints (content-scripts (current-buffer)))
