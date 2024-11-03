@@ -9,6 +9,10 @@
 (defmethod selectable-p-aux ((buffer minibuffer-mode) pos)
   (class-p (node-containing pos) "input"))
 
+(defmethod check-read-only ((buffer minibuffer-mode) pos)
+  (unless (class-p (node-containing pos) "input")
+    (error 'element-read-only-error :element (node-containing pos))))
+
 (defmethod window-decoration-aux ((buffer minibuffer-mode))
   (dom `((:div :class "minibuffer" :selectable "")
          ((:div :class "main content" :buffer ,(id buffer))))))

@@ -41,7 +41,6 @@
    (document-root)
    (restriction)
    (next-neomacs-id :initform 0 :type integer)
-   (read-only-p :type boolean)
    (scroll-margin
     :default 0.2
     :type (real 0 0.5)
@@ -540,25 +539,33 @@ WIDTH and HEIGHT are numbers in pixels."
    (lambda (c stream)
      (format stream "~a is read only." (slot-value c 'buffer)))))
 
+(define-condition element-read-only-error (error)
+  ((element :initarg :element))
+  (:report
+   (lambda (c stream)
+     (format stream "~a is read only." (slot-value c 'element)))))
+
 (defvar *inhibit-read-only* nil)
 
-(defun check-read-only (buffer)
-  (unless *inhibit-read-only*
-    (restart-case
-        (when (read-only-p buffer)
-          (error 'read-only-error :buffer buffer))
-      (continue ()
-        :report "Go on write to this buffer.")
-      (continue* ()
-        :report "Make buffer writable and go on."
-        (setf (read-only-p buffer) nil)))))
+(defgeneric check-read-only (buffer pos)
+  (:method ((buffer buffer) (pos t)) nil)
+  (:method :around ((buffer buffer) (pos t))
+    (unless *inhibit-read-only*
+      (restart-case
+          (call-next-method)
+        (continue ()
+          :report "Go on write to this buffer."))))
+  (:documentation
+   "Check if POS in BUFFER is read-only.
+
+If it is, should signal a condition of type `read-only-error'."))
 
 (define-mode read-only-mode () ()
   (:documentation "Make this buffer read-only.")
   (:toggler t))
 
-(defmethod read-only-p ((buffer read-only-mode))
-  t)
+(defmethod check-read-only ((buffer read-only-mode) (pos t))
+  (error 'read-only-error :buffer buffer))
 
 ;;; Styles
 

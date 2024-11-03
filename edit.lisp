@@ -167,7 +167,7 @@ THINGS can be DOM nodes or strings, which are converted to text nodes."
            (host (host pos)))
       (unless host
         (error "~a does not point inside an active document." pos))
-      (check-read-only host)
+      (check-read-only host pos)
       (let ((nodes
               ;; TODO: do more cleanup, like merging adjacent text nodes
               (iter (for n in things)
@@ -301,7 +301,7 @@ tree (which is usually taken care of by `delete-nodes' and
            (end (resolve-marker end)))
       (unless host
         (error "~a does not point inside an active document." beg))
-      (check-read-only host)
+      (check-read-only host beg)
       ;; Account for this edge case
       (unless (or (end-pos-p beg) (equalp beg end))
         (let ((nodes (delete-nodes-1 beg end)))
@@ -385,7 +385,7 @@ starting from BEG till the end of its parent."
         (error "~a does not point inside an active document." beg))
       (unless (eq (host beg) host)
         (error "~a and ~a not point inside the same document." beg to))
-      (check-read-only host)
+      (check-read-only host beg)
       ;; If END is nil, also move marker at (end-pos src-parent)
       (unless end
         (dolist (m (markers host))
