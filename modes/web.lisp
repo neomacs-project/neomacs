@@ -23,16 +23,34 @@
   "C-x C-l" 'find-url)
 
 (define-keys web-mode
-  'next-line 'web-next-line
-  'previous-line 'web-previous-line
-  'backward-node 'web-go-backward
-  'forward-node 'web-go-forward
-  'scroll-up-command 'web-scroll-up
-  'scroll-down-command 'web-scroll-down
-  'beginning-of-buffer 'web-scroll-to-top
-  'end-of-buffer 'web-scroll-to-bottom
+  'next-line #+nil 'web-next-line
+  (make-web-send-key-command
+   (car (parse-keyspec "down")))
+  'previous-line #+nil 'web-previous-line
+  (make-web-send-key-command
+   (car (parse-keyspec "up")))
+  'backward-node #+nil 'web-go-backward
+  (make-web-send-key-command
+   (car (parse-keyspec "left")))
+  'forward-node #+nil 'web-go-forward
+  (make-web-send-key-command
+   (car (parse-keyspec "right")))
+  'scroll-up-command #+nil 'web-scroll-up
+  (make-web-send-key-command
+   (car (parse-keyspec "page-up")))
+  'scroll-down-command #+nil 'web-scroll-down
+  (make-web-send-key-command
+   (car (parse-keyspec "page-down")))
+  'beginning-of-buffer #+nil 'web-scroll-to-top
+  (make-web-send-key-command
+   (car (parse-keyspec "home")))
+  'end-of-buffer #+nil 'web-scroll-to-bottom
+  (make-web-send-key-command
+   (car (parse-keyspec "end")))
   'self-insert-command 'web-forward-key
-  'backward-delete 'web-forward-key)
+  'backward-delete
+  (make-web-send-key-command
+   (car (parse-keyspec "backspace"))))
 
 (define-command web-next-line
   :mode web-mode ()
@@ -124,10 +142,8 @@
     (values (string translation) nil)
     (values sym shift)))
 
-(define-command web-forward-key ()
-  (let* ((key (lastcar *this-command-keys*))
-         (shift (key-shift key))
-         code)
+(defun web-send-key (key)
+  (let ((shift (key-shift key)) code)
     (setf (values code shift)
           (key-sym-to-electron (key-sym key) shift))
     (evaluate-javascript
@@ -165,3 +181,9 @@
            (ps:create type "keyUp"
                       key-code code)))))
      nil)))
+
+(defnclo web-send-key-command (key) ()
+  (web-send-key key))
+
+(define-command web-forward-key ()
+  (web-send-key (lastcar *this-command-keys*)))
