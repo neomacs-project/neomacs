@@ -25,7 +25,8 @@
     (list (princ-to-string (for-condition buffer)))))
   (insert-nodes (end-pos (document-root buffer))
                 (make-element "p" :children (list "Restarts:")))
-  (let ((tbody (make-element "tbody")))
+  (let ((tbody (make-element "tbody"))
+        (*print-case* :downcase))
     (insert-nodes
      (end-pos (document-root buffer))
      (make-element
@@ -47,7 +48,8 @@
     (setf (pos (focus)) (pos-down tbody)))
   (insert-nodes (end-pos (document-root buffer))
                 (make-element "p" :children (list "Backtrace:")))
-  (let ((tbody (make-element "tbody")))
+  (let ((tbody (make-element "tbody"))
+        (*print-case* :downcase))
     (insert-nodes
      (end-pos (document-root buffer))
      (make-element
@@ -71,7 +73,7 @@
            (when-let (locals (dissect:locals frame))
              (list
               (make-element
-               "table" :children
+               "table" :class "locals-table" :children
                (list
                 (make-element
                  "tbody" :children
@@ -134,7 +136,8 @@
     `(("table" :width "100%"
                :border-collapse "collapse")
       (".restart-table td" :padding-right "1em")
+      (".locals-table td" :padding-right "1em")
       ("p" :margin-bottom 0)
-      (".restart-name, .frame-number"
+      ("td"
        :white-space "nowrap"
        :vertical-align "top")))
