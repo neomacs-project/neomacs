@@ -119,17 +119,33 @@
        nil)
     (error "Can not go forward.")))
 
-(defun key-sym-to-electron (sym)
-  (if-let (translation (gethash (cons sym nil) *event-to-char*))
-    (string translation)
-    sym))
+(defun key-sym-to-electron (sym shift)
+  (if-let (translation (gethash (cons sym shift) *event-to-char*))
+    (values (string translation) nil)
+    (values sym shift)))
 
 (define-command web-forward-key ()
-  (let ((key (lastcar *this-command-keys*)))
+  (let* ((key (lastcar *this-command-keys*))
+         (shift (key-shift key))
+         code)
+    (setf (values code shift)
+          (key-sym-to-electron (key-sym key) shift))
     (evaluate-javascript
      (ps:ps
        (let ((buf (js-buffer (current-buffer)))
-             (code (ps:lisp (key-sym-to-electron (key-sym key)))))
+             (code (ps:lisp code))
+             (modes
+               (ps:lisp
+                (let (mods)
+                  (when shift
+                    (push "Shift" mods))
+                  (when (key-ctrl key)
+                    (push "Control" mods))
+                  (when (key-meta key)
+                    (push "Alt" mods))
+                  (when (key-super key)
+                    (push "Meta" mods))
+                  (cons 'list mods)))))
          (ps:chain buf ignore-keys
                    (push (ps:create type "keyDown"
                                     key (ps:lisp (key-sym key)))))
