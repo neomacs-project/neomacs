@@ -535,7 +535,7 @@ Highlight compiler notes."
   (let ((*compilation-document-root*
           (document-root (current-buffer))))
     (with-collecting-notes ()
-      (compile-file (file-path (current-buffer))))))
+      (load (compile-file (file-path (current-buffer)))))))
 
 ;;; Xref
 
