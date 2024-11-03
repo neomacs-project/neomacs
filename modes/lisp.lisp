@@ -359,6 +359,13 @@ Used for resolving source-path to DOM node.")
                 (ghost-symbol-p node)))
           (child-nodes node))))
 
+(defun sexp-child-number (node)
+  (position node (remove-if
+                  (lambda (node)
+                    (or (not (sexp-node-p node))
+                        (ghost-symbol-p node)))
+                  (child-nodes (parent node)))))
+
 (defun find-node-for-form-path (root path)
   (iter (with node = root)
     (for i in path)
@@ -473,14 +480,18 @@ Highlights compiler notes and echo the result."
   (with-marker (marker marker-or-pos)
     (beginning-of-defun marker)
     (with-collecting-notes ()
-      (let* ((*package* (current-package marker))
-             (*compilation-single-form* t)
-             (*compilation-document-root* (pos marker))
-             (result (eval (node-to-sexp (pos marker)))))
-        (unless (frame-root *compilation-buffer*)
-          (when (first-child (document-root *compilation-buffer*))
-            (display-buffer-right *compilation-buffer*)))
-        (message "=> ~a" result)))))
+      (with-compilation-unit
+          (:source-plist
+           (list :neomacs-buffer (name (current-buffer))
+                 :neomacs-tlf-number (sexp-child-number (pos marker))))
+        (let* ((*package* (current-package marker))
+               (*compilation-single-form* t)
+               (*compilation-document-root* (pos marker))
+               (result (eval (node-to-sexp (pos marker)))))
+          (unless (frame-root *compilation-buffer*)
+            (when (first-child (document-root *compilation-buffer*))
+              (display-buffer-right *compilation-buffer*)))
+          (message "=> ~a" result))))))
 
 (defun last-expression (pos)
   (setq pos (resolve-marker pos))
@@ -537,18 +548,37 @@ Highlight compiler notes."
     :alien-type)
   "SB-INTROSPECT definition types.")
 
+(defun visit-source (pathname tlf-number form-number plist)
+  (with-current-buffer
+      (or (get-buffer (getf plist :neomacs-buffer))
+          (find-file pathname)
+          (error "Unknown source location"))
+    (let* ((tlf (sexp-nth-child
+                 (document-root (current-buffer))
+                 (getf plist :neomacs-tlf-number tlf-number)))
+           (translation
+             (sb-di::form-number-translations
+              (node-to-sexp tlf) 0))
+           (form-path
+             (if (< form-number (length translation))
+                 (reverse
+                  (cdr (aref translation form-number)))
+                 (progn
+                   (message "Inconsistent form-number translation")
+                   nil))))
+      (pop form-path)
+      (setf (pos (focus))
+            (find-node-for-form-path tlf form-path)))))
+
 (defun visit-definition (definition)
   "Switch to a buffer displaying DEFINITION.
 
 DEFINITION should be a `sb-introspect:definition-source'."
-  (with-current-buffer
-      (find-file (sb-introspect:definition-source-pathname
-                  definition))
-    (setf (pos (focus))
-          (sexp-nth-child
-           (document-root (current-buffer))
-           (car (sb-introspect:definition-source-form-path
-                 definition))))))
+  (visit-source
+   (sb-introspect:definition-source-pathname definition)
+   (car (sb-introspect:definition-source-form-path definition))
+   (sb-introspect:definition-source-form-number definition)
+   (sb-introspect:definition-source-plist definition)))
 
 (define-mode xref-list-mode (list-mode)
   ((for-symbol :initform (alex:required-argument :symbol)

@@ -120,41 +120,16 @@
   :mode debugger-mode ()
   (or (when-let (frame (when-let (row (focused-row))
                          (attribute row 'frame)))
-        (or
-         (when-let*
-             ((frame (dissect::frame frame))
-              (location (sb-di:frame-code-location frame))
-              (namestring
-               (sb-c::debug-source-namestring
-                (sb-di::code-location-debug-source
-                 location)))
-              (path (pathname namestring))
-              (tlf-number
-               (sb-di::code-location-toplevel-form-offset
-                location))
-              (form-number
-               (sb-di::code-location-form-number
-                location)))
-           (with-current-buffer (find-file path)
-             (let* ((tlf (sexp-nth-child
-                          (document-root (current-buffer))
-                          tlf-number))
-                    (translation
-                      (sb-di::form-number-translations
-                       (node-to-sexp tlf) 0))
-                    (form-path
-                      (if (< form-number (length translation))
-                          (reverse
-                           (aref translation form-number))
-                          (progn
-                            (message "Inconsistent form-number translation")
-                            nil))))
-               (pop form-path)
-               (setf (pos (focus))
-                     (find-node-for-form-path tlf form-path))))
-           t)
-         (message "No source information"))
-        t)
+        (let* ((frame (dissect::frame frame))
+               (location (sb-di:frame-code-location frame))
+               (source (sb-di::code-location-debug-source location))
+               (namestring (sb-c::debug-source-namestring source)))
+          (visit-source
+           (when namestring (pathname namestring))
+           (sb-di::code-location-toplevel-form-offset location)
+           (sb-di::code-location-form-number location)
+           (sb-c::debug-source-plist source))
+          t))
       (message "No frame under focus")))
 
 (defun debug-for-condition (c)
