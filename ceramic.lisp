@@ -13,7 +13,7 @@ BUFFER is NIL. Returns NIL."
       (cera.d:js
        cera.d:*driver*
        (ps:ps (ps:chain (js-buffer buffer) web-contents
-                        (execute-java-script (ps:lisp code) ps:false))))
+                        (execute-java-script (ps:lisp code) t))))
       (cera.d:js cera.d:*driver* code))
   nil)
 
@@ -28,7 +28,7 @@ BUFFER is NIL."
        (ps:ps
          (return
            (ps:chain (js-buffer buffer) web-contents
-                     (execute-java-script (ps:lisp code) ps:false)))))
+                     (execute-java-script (ps:lisp code) t)))))
       (cera.d:sync-js
        cera.d:*driver*
        (ps:ps (return (eval (ps:lisp code)))))))

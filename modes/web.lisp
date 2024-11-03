@@ -12,7 +12,7 @@
    (make-buffer "Web" :modes 'web-mode :url url
                 :styles nil)))
 
-(define-mode web-mode ()
+(define-mode web-mode (read-only-mode)
   ((scroll-multiplier :default 16 :type (integer 1))
    (hints-selector :default "a, button, input, textarea, details, select"
                    :type string)))
@@ -30,7 +30,9 @@
   'scroll-up-command 'web-scroll-up
   'scroll-down-command 'web-scroll-down
   'beginning-of-buffer 'web-scroll-to-top
-  'end-of-buffer 'web-scroll-to-bottom)
+  'end-of-buffer 'web-scroll-to-bottom
+  'self-insert-command 'web-forward-key
+  'backward-delete 'web-forward-key)
 
 (define-command web-next-line
   :mode web-mode ()
@@ -116,3 +118,34 @@
              t)))
        nil)
     (error "Can not go forward.")))
+
+(defun key-sym-to-electron (sym)
+  (if-let (translation (gethash (cons sym nil) *event-to-char*))
+    (string translation)
+    sym))
+
+(define-command web-forward-key ()
+  (let ((key (lastcar *this-command-keys*)))
+    (evaluate-javascript
+     (ps:ps
+       (let ((buf (js-buffer (current-buffer)))
+             (code (ps:lisp (key-sym-to-electron (key-sym key)))))
+         (ps:chain buf ignore-keys
+                   (push (ps:create type "keyDown"
+                                    key (ps:lisp (key-sym key)))))
+         (ps:chain
+          buf web-contents
+          (send-input-event
+           (ps:create type "keyDown"
+                      key-code code)))
+         (ps:chain
+          buf web-contents
+          (send-input-event
+           (ps:create type "char"
+                      key-code code)))
+         (ps:chain
+          buf web-contents
+          (send-input-event
+           (ps:create type "keyUp"
+                      key-code code)))))
+     nil)))

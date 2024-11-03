@@ -61,10 +61,14 @@ Ceramic.closeFrame = function(id) {
 };
 
 Ceramic.createBuffer = function(id, url, options) {
-    var buf = new WebContentsView(options);
+    const buf = new WebContentsView(options);
+    buf.ignoreKeys = [];
     buf.webContents.on('before-input-event', (event, input) => {
-        RemoteJS.send(JSON.stringify({inputEvent: input, buffer: id}));
-        event.preventDefault(); });
+        const ignoreIndex = buf.ignoreKeys.findIndex((i) => true);
+        if(ignoreIndex >= 0){
+            buf.ignoreKeys.splice(ignoreIndex, 1);}
+        else{RemoteJS.send(JSON.stringify({inputEvent: input, buffer: id}));
+             event.preventDefault();}});
     buf.webContents.on('dom-ready', () => {
         RemoteJS.send(JSON.stringify({inputEvent: {type: "dom-ready"}, buffer: id}));});
     buf.webContents.on('page-title-updated', (event, title, explicitSet) => {
