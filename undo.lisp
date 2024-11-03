@@ -24,6 +24,8 @@
                              :modes '(undo-history-mode))))
   (:documentation "Transient mode when undo history panel is active."))
 
+(defmethod undo-buffer ((buffer buffer)) nil)
+
 (defmethod window-decoration-aux ((buffer active-undo-mode))
   (let* ((node (call-next-method))
          (container (only-elt
@@ -190,7 +192,7 @@ This amalgamate the undo entry if `*this-command*' is the same as
     (update-undo-history)))
 
 (defun update-undo-history ()
-  (let ((undo-buffer (undo-buffer (current-buffer))))
+  (when-let (undo-buffer (undo-buffer (current-buffer)))
     (if-let ((node (gethash (undo-entry (current-buffer))
                             (node-table (current-buffer)))))
       (with-current-buffer undo-buffer
