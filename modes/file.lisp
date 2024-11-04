@@ -2,7 +2,7 @@
 
 (define-mode minibuffer-find-file-mode
     (minibuffer-completion-mode)
-  ((file-path :initform nil :initarg :file-path)))
+  ((file-path :initarg :file-path)))
 
 (define-keys minibuffer-find-file-mode
   "/" 'split-node)
@@ -106,8 +106,8 @@
            :disambiguate
            (if (uiop:directory-pathname-p path)
                (car (last (pathname-directory path) 2))
-               (lastcar (pathname-directory path)))))
-    (setf (file-path (current-buffer)) path)
+               (lastcar (pathname-directory path)))
+           :file-path path))
     (set-auto-mode)
     (revert-buffer)
     (current-buffer)))
@@ -127,6 +127,8 @@
 
 (define-mode file-mode ()
   ((file-path
+    :initform (alex:required-argument :file-path)
+    :initarg :file-path
     :documentation
     "Pathname of the file visited by this buffer.")
    (modified

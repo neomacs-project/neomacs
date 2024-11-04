@@ -279,11 +279,10 @@ fixed in future Electron, our logic may be simplified."
         buffer)))
 
 (defun make-scratch ()
-  (lret ((buffer (make-buffer "*scratch*" :modes '(lisp-mode file-mode))))
+  (lret ((buffer (make-buffer "*scratch*" :modes '(lisp-mode file-mode) :file-path (asdf:system-relative-pathname :neomacs #p"scratch.lisp"))))
     (with-current-buffer buffer
-      (setf (file-path buffer)
-            (asdf:system-relative-pathname :neomacs #p"scratch.lisp"))
       (revert-buffer)
+      (disable 'auto-save-mode)
       (disable 'file-mode))))
 
 (defun replacement-buffer (&optional (buffer (current-buffer)))
@@ -369,7 +368,7 @@ BUFFER must be already displayed."
    (ps:ps (ps:chain (js-frame frame-root) (emit "resize")))
    nil))
 
-(defvar *current-frame-root*)
+(defvar *current-frame-root* nil)
 
 (defun current-frame-root ()
   *current-frame-root*)
@@ -404,19 +403,21 @@ If nil, disable message logging. If t, log messages but don't truncate
 
 (defun message (control-string &rest format-arguments)
   "Log a message in `*Messages*' buffer."
-  (with-current-buffer (echo-area *current-frame-root*)
-    (erase-buffer)
-    (when control-string
-      (let ((message (apply #'format nil control-string format-arguments)))
-        (insert-nodes (end-pos (document-root (current-buffer))) message)
-        (when *message-log-max*
-          (with-current-buffer (get-message-buffer)
-            (let ((*inhibit-read-only* t))
-              (unless (eql *message-log-max* t)
-                (truncate-node (document-root (current-buffer)) *message-log-max*))
-              (insert-nodes (end-pos (document-root (current-buffer)))
-                            message
-                            (make-new-line-node)))))))))
+  (if *current-frame-root*
+      (with-current-buffer (echo-area *current-frame-root*)
+        (erase-buffer)
+        (when control-string
+          (let ((message (apply #'format nil control-string format-arguments)))
+            (insert-nodes (end-pos (document-root (current-buffer))) message)
+            (when *message-log-max*
+              (with-current-buffer (get-message-buffer)
+                (let ((*inhibit-read-only* t))
+                  (unless (eql *message-log-max* t)
+                    (truncate-node (document-root (current-buffer)) *message-log-max*))
+                  (insert-nodes (end-pos (document-root (current-buffer)))
+                                message
+                                (make-new-line-node))))))))
+      (apply #'format *error-output* control-string format-arguments)))
 
 (define-command open-dev-tools ()
   (evaluate-javascript
