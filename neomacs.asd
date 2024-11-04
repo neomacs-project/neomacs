@@ -29,6 +29,7 @@
                (:file "modes/lists")
                (:file "modes/occur")
                (:file "modes/file")
+               (:file "modes/auto-save")
                (:file "modes/text")
                (:file "modes/prog")
                (:file "modes/completion")

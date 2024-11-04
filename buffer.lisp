@@ -555,6 +555,11 @@ WIDTH and HEIGHT are numbers in pixels."
 (defun not-supported (buffer operation)
   (signal 'not-supported :buffer buffer :operation operation))
 
+(defmacro with-demoted-errors (format &body body)
+  `(handler-case
+       (progn ,@body)
+     (error (c) (message ,format c))))
+
 ;;; Read-only state
 
 (defun user-error (control-string &rest format-arguments)
