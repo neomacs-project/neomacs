@@ -124,7 +124,14 @@
   (and (symbol-node-p node) (first-child node)))
 
 (defmethod print-dom ((cons cons) &key)
-  (make-list-node (mapcar #'print-dom cons)))
+  (make-list-node
+   (iter (for tail first cons then (cdr cons))
+     (typecase tail
+       (cons (collect (print-dom (car tail))))
+       (null)
+       (t (collect (make-atom-node "symbol" "."))
+        (collect (print-dom tail))))
+     (while (consp tail)))))
 
 (defmethod print-dom ((null null) &key)
   (make-list-node nil))
@@ -294,15 +301,23 @@ It also takes into account any prefix preceding NODE."
              (iter (for w in wrappers)
                (setq node (funcall w node)))
              node)
+           (dot-p (node)
+             (and (symbol-node-p node)
+                  (equal (text-content node) ".")))
            (process (node)
              (let ((sexp
                      (cond ((list-node-p node)
-                            (mapcar #'process
+                            (let ((children
                                     (remove-if (alex:disjoin
                                                 #'text-node-p
                                                 #'ghost-symbol-p
                                                 #'new-line-node-p)
                                                (child-nodes node))))
+                              (if (dot-p (car (last children 2)))
+                                  (nconc
+                                   (mapcar #'process (butlast children 2))
+                                   (process (lastcar children)))
+                                  (mapcar #'process children))))
                            ((equal "string" (attribute node "class"))
                             (text-content node))
                            ((symbol-node-p node)
