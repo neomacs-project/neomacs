@@ -109,7 +109,12 @@
                (lastcar (pathname-directory path)))
            :file-path path))
     (set-auto-mode)
-    (revert-buffer)
+    (when (or (not (modtime (current-buffer)))
+              (not (eql (modtime (current-buffer))
+                        (osicat-posix:stat-mtime
+                         (osicat-posix:stat path))))
+              (modified (current-buffer)))
+      (revert-buffer))
     (current-buffer)))
 
 (define-command find-file
