@@ -423,12 +423,16 @@ Used for resolving source-path to DOM node.")
               (t "error")))
       (setf (attribute node "compiler-note-id") id))))
 
+(define-mode compilation-buffer-mode (read-only-mode)
+  ((for-buffer :initform nil :initarg :buffer)))
+
 (defmacro with-collecting-notes (() &body body)
   `(let ((*form-node-table* (make-hash-table))
          (*compilation-buffer*
            (get-buffer-create "*compilation*"
-                              :modes '(read-only-mode))))
+                              :modes '(compilation-buffer-mode))))
      (clear-compiler-notes)
+     (setf (for-buffer *compilation-buffer*) (current-buffer))
      (with-current-buffer *compilation-buffer*
        (let ((*inhibit-read-only* t))
          (erase-buffer)))
@@ -450,14 +454,16 @@ Used for resolving source-path to DOM node.")
 
 (defun goto-compiler-note (id)
   (when-let (buffer (get-buffer "*compilation*"))
-    (with-current-buffer buffer
-      (do-elements
-          (lambda (node)
-            (when (equal (attribute node "neomacs-identifier")
-                         id)
-              (setf (pos (focus)) node)
-              (return-from goto-compiler-note)))
-        (document-root buffer)))))
+    (if (eql (current-buffer) (for-buffer buffer))
+        (with-current-buffer buffer
+          (do-elements
+              (lambda (node)
+                (when (equal (attribute node "neomacs-identifier")
+                             id)
+                  (setf (pos (focus)) node)
+                  (return-from goto-compiler-note)))
+            (document-root buffer)))
+        (message "Compilation output has been overwrite by other buffer"))))
 
 (define-command previous-compiler-note (&optional (marker (focus)))
   "Move to next compiler note."
@@ -525,7 +531,9 @@ Highlights compiler notes."
                                :if-exists :supersede)
               (write-dom-aux (current-buffer) node s))
             (unwind-protect
-                 (load (setq output-file (compile-file input-file)))
+                 (progn
+                   (load (setq output-file (compile-file input-file)))
+                   (message "Compilation finished"))
               (uiop:delete-file-if-exists input-file)
               (uiop:delete-file-if-exists output-file))
             (unless (frame-root *compilation-buffer*)
@@ -623,7 +631,8 @@ Highlight compiler notes."
 (defun visit-source (pathname tlf-number form-number plist)
   (with-current-buffer
       (or (get-buffer (getf plist :neomacs-buffer))
-          (when pathname (find-file pathname))
+          (when (and pathname (uiop:file-exists-p pathname))
+            (find-file pathname))
           (error "Unknown source location"))
     (setf (pos (focus))
           (find-node-for-source

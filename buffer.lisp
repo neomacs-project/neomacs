@@ -115,7 +115,9 @@ for which MODE-NAME is being disabled."))
   (focus-marker buffer))
 
 (defun buffer-alive-p (buffer)
-  (eql (gethash (slot-value buffer 'id) *buffer-table*) buffer))
+  (when (eql (gethash (slot-value buffer 'id) *buffer-table*)
+             buffer)
+    buffer))
 
 (defmethod print-object ((buffer buffer) stream)
   (print-unreadable-object (buffer stream)
