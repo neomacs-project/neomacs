@@ -12,7 +12,7 @@
   "M-s" 'lisp-splice
 
   "C-M-x" 'eval-defun
-  ;; "C-c C-c" 'compile-defun
+  "C-c C-c" 'compile-defun
   "C-c C-k" 'lisp-compile-file
   "M-p" 'previous-compiler-note
   "M-n" 'next-compiler-note
@@ -472,26 +472,50 @@ Used for resolving source-path to DOM node.")
 
 ;;; Eval/compile commands
 
-(define-command eval-defun :mode lisp-mode
-  (&optional (marker-or-pos (focus)))
+(define-command eval-defun :mode lisp-mode ()
   "Evaluate the surrounding top-level form.
 
-Highlights compiler notes and echo the result."
-  (with-marker (marker marker-or-pos)
+Echo the result."
+  (with-marker (marker (focus))
     (beginning-of-defun marker)
-    (with-collecting-notes ()
-      (with-compilation-unit
-          (:source-plist
-           (list :neomacs-buffer (name (current-buffer))
-                 :neomacs-tlf-number (sexp-child-number (pos marker))))
-        (let* ((*package* (current-package marker))
-               (*compilation-single-form* t)
-               (*compilation-document-root* (pos marker))
-               (result (eval (node-to-sexp (pos marker)))))
-          (unless (frame-root *compilation-buffer*)
-            (when (first-child (document-root *compilation-buffer*))
-              (display-buffer-right *compilation-buffer*)))
-          (message "=> ~a" result))))))
+    (let* ((node (pos marker))
+           (*package* (current-package marker))
+           (result (eval (node-to-sexp node))))
+      (message "=> ~a" result))))
+
+(define-command compile-defun :mode lisp-mode ()
+  "Compile the surrounding top-level form.
+
+Highlights compiler notes."
+  (with-marker (marker (focus))
+    (beginning-of-defun marker)
+    (let ((cookie (uuid:format-as-urn nil (uuid:make-v4-uuid)))
+          (node (pos marker)))
+      (setf (attribute node 'compile-cookie) cookie)
+      (with-collecting-notes ()
+        (with-compilation-unit
+            (:source-plist
+             (list :neomacs-buffer (name (current-buffer))
+                   :neomacs-compile-cookie cookie))
+          (let* ((*package* (current-package marker))
+                 (*compilation-single-form* t)
+                 (*compilation-document-root* node)
+                 (input-file
+                   (make-pathname
+                    :name cookie :type "lisp"
+                    :defaults (uiop:temporary-directory)))
+                 output-file)
+            (with-open-file (s input-file
+                               :direction :output
+                               :if-exists :supersede)
+              (write-dom-aux (current-buffer) node s))
+            (unwind-protect
+                 (load (setq output-file (compile-file input-file)))
+              (uiop:delete-file-if-exists input-file)
+              (uiop:delete-file-if-exists output-file))
+            (unless (frame-root *compilation-buffer*)
+              (when (first-child (document-root *compilation-buffer*))
+                (display-buffer-right *compilation-buffer*)))))))))
 
 (defun last-expression (pos)
   (setq pos (resolve-marker pos))
@@ -535,6 +559,11 @@ Highlight compiler notes."
   (let ((*compilation-document-root*
           (document-root (current-buffer))))
     (with-collecting-notes ()
+      (iter (with i = 0)
+        (for c in (child-nodes *compilation-document-root*))
+        (when (sexp-node-p c)
+          (setf (attribute c 'tlf-number) i)
+          (incf i)))
       (load (compile-file (file-path (current-buffer)))))))
 
 ;;; Xref
@@ -548,14 +577,21 @@ Highlight compiler notes."
     :alien-type)
   "SB-INTROSPECT definition types.")
 
-(defun visit-source (pathname tlf-number form-number plist)
-  (with-current-buffer
-      (or (get-buffer (getf plist :neomacs-buffer))
-          (find-file pathname)
-          (error "Unknown source location"))
-    (let* ((tlf (sexp-nth-child
-                 (document-root (current-buffer))
-                 (getf plist :neomacs-tlf-number tlf-number)))
+(defun find-node-for-source
+    (pathname tlf-number form-number plist)
+  (when-let (buf (or (get-buffer (getf plist :neomacs-buffer))
+                     (find-file-buffer pathname)))
+    (let* ((candidate-nodes
+             (if-let (c (getf plist :neomacs-compile-cookie))
+               (remove-if-not
+                (lambda (n)
+                  (equal c (attribute n 'compile-cookie)))
+                (child-nodes (document-root (current-buffer))))
+               (remove-if-not #'sexp-node-p
+                              (document-root (current-buffer)))))
+           (tlf (or (find tlf-number candidate-nodes
+                          :key (alex:rcurry #'attribute 'tlf-number))
+                    (nth tlf-number candidate-nodes)))
            (translation
              (sb-di::form-number-translations
               (node-to-sexp tlf) 0))
@@ -567,8 +603,16 @@ Highlight compiler notes."
                    (message "Inconsistent form-number translation")
                    nil))))
       (pop form-path)
-      (setf (pos (focus))
-            (find-node-for-form-path tlf form-path)))))
+      (find-node-for-form-path tlf form-path))))
+
+(defun visit-source (pathname tlf-number form-number plist)
+  (with-current-buffer
+      (or (get-buffer (getf plist :neomacs-buffer))
+          (when pathname (find-file pathname))
+          (error "Unknown source location"))
+    (setf (pos (focus))
+          (find-node-for-source
+           pathname tlf-number form-number plist))))
 
 (defun visit-definition (definition)
   "Switch to a buffer displaying DEFINITION.
