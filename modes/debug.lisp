@@ -71,7 +71,7 @@
                       (print-dom
                        (cons (dissect:call frame)
                              (dissect:args frame)))
-                      #+nil (when-let (locals (dissect:locals frame))
+                      (when-let (locals (dissect:locals frame))
                         (list
                          (make-element
                           "table" :class "locals-table" :children

@@ -125,13 +125,13 @@
 
 (defmethod print-dom ((cons cons) &key)
   (make-list-node
-   (iter (for tail first cons then (cdr cons))
+   (iter (for tail first cons then (cdr tail))
      (typecase tail
        (cons (collect (print-dom (car tail))))
        (null)
        (t (collect (make-atom-node "symbol" "."))
         (collect (print-dom tail))))
-     (while (consp tail)))))
+           (while (consp tail)))))
 
 (defmethod print-dom ((null null) &key)
   (make-list-node nil))
