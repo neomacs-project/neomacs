@@ -56,6 +56,7 @@ form (text annotation)."))
           (compute-completion (current-buffer) marker)))
     (unless completions
       (unless silent (message "No completion."))
+      (hide-completions)
       (return-from show-completions))
     (enable 'active-completion-mode)
     (setf (completions (completion-buffer (current-buffer)))
@@ -117,7 +118,12 @@ X and Y are numbers in pixels."
              (car *completion-menu-size*)
              (cadr *completion-menu-size*)
              (assoc-value buffer-bounds :width)
-             (assoc-value buffer-bounds :height))))
+             (assoc-value buffer-bounds :height)))
+           (min-width
+            (progn
+              (evaluate-javascript-sync
+               "document.body.scrollWidth"
+               (completion-buffer (current-buffer))))))
       (with-current-buffer (frame-root (current-buffer))
         (evaluate-javascript
          (ps:ps
@@ -125,7 +131,9 @@ X and Y are numbers in pixels."
              (setf (ps:chain node style left)
                    (ps:lisp (format nil "~apx" x))
                    (ps:chain node style top)
-                   (ps:lisp (format nil "~apx" y)))))
+                   (ps:lisp (format nil "~apx" y))
+                   (ps:chain node style min-width)
+                   (ps:lisp (format nil "~apx" min-width)))))
          (current-buffer))))))
 
 (defun maybe-hide-completions ()

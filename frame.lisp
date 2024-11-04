@@ -239,6 +239,8 @@ fixed in future Electron, our logic may be simplified."
 (defmethod on-node-cleanup progn ((buffer frame-root-mode) node)
   (when (class-p node "content")
     (when-let (id (attribute node "buffer"))
+      (setf (window-min-height buffer) nil
+            (window-min-width buffer) nil)
       (if *delay-frame-update-views*
           (if (member id *frame-add-views* :test 'equal)
               (alex:deletef *frame-add-views* id)
@@ -400,23 +402,60 @@ If nil, disable message logging. If t, log messages but don't truncate
       (delete-nodes (pos-down node) pos)
       (return))))
 
+(defun fit-buffer-size
+    (buffer client-property decoration-property
+     slot size)
+  (check-displayed buffer)
+  (let ((size
+          (or size
+              (evaluate-javascript-sync
+               (format
+                nil "document.documentElement.~a"
+                client-property)
+               buffer))))
+    ;; Avoid set size if possible to reduce flickering
+    (unless (eql (slot-value buffer slot) size)
+      (with-current-buffer (frame-root buffer)
+        (evaluate-javascript-sync
+         (ps:ps
+           (setf
+            (ps:getprop
+             (ps:chain (js-node-1 (window-decoration buffer))
+                       style)
+             (ps:lisp decoration-property))
+            (ps:lisp (format nil "~apx" size)))
+           nil)
+         (frame-root buffer)))
+      (setf (slot-value buffer slot) size))))
+
+(defun fit-buffer-height (buffer &optional height)
+  (fit-buffer-size buffer "scrollHeight" "min-height"
+                   'window-min-height height))
+
+(defun fit-buffer-width (buffer &optional width)
+  (fit-buffer-size buffer "scrollWidth" "min-width"
+                   'window-min-width width))
+
 (defun message (control-string &rest format-arguments)
   "Log a message in `*Messages*' buffer."
   (if *current-frame-root*
       (with-current-buffer (echo-area *current-frame-root*)
         (erase-buffer)
-        (when control-string
-          (let ((message (apply #'format nil control-string format-arguments)))
-            (insert-nodes (end-pos (document-root (current-buffer))) message)
-            (when *message-log-max*
-              (with-current-buffer (get-message-buffer)
-                (let ((*inhibit-read-only* t))
-                  (unless (eql *message-log-max* t)
-                    (truncate-node (document-root (current-buffer)) *message-log-max*))
-                  (insert-nodes (end-pos (document-root (current-buffer)))
-                                message
-                                (make-new-line-node))))))))
-      (apply #'format *error-output* control-string format-arguments)))
+        (if control-string
+            (let ((message (apply #'format nil control-string format-arguments)))
+              (insert-nodes (end-pos (document-root (current-buffer))) message)
+              (fit-buffer-height (current-buffer) nil)
+              (when *message-log-max*
+                (with-current-buffer (get-message-buffer)
+                  (let ((*inhibit-read-only* t))
+                    (unless (eql *message-log-max* t)
+                      (truncate-node (document-root (current-buffer)) *message-log-max*))
+                    (insert-nodes (end-pos (document-root (current-buffer)))
+                                  message
+                                  (make-new-line-node))))))
+            (fit-buffer-height (current-buffer) 0)))
+      (when control-string
+        (apply #'format *error-output* control-string format-arguments))))
 
 (define-command open-dev-tools ()
   (evaluate-javascript

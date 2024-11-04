@@ -53,7 +53,9 @@
     :initform nil
     :documentation "Thunks to run at the end of current command.")
    (window-decoration :initform nil)
-   (frame-root :initform nil))
+   (frame-root :initform nil)
+   (window-min-height :initform nil)
+   (window-min-width :initform nil))
   (:default-initargs :url (quri:uri "about:blank")))
 
 (defmethod id :around ((buffer buffer))
@@ -104,17 +106,22 @@ for which MODE-NAME is being disabled."))
 (defmethod update-instance-for-different-class
     :after ((previous-instance buffer)
             (current-instance buffer) &key)
-  (let ((previous
-          (sb-mop:class-precedence-list
-           (class-of previous-instance)))
-        (current
-          (sb-mop:class-precedence-list
-           (class-of current-instance))))
-    (dolist (old (stable-set-difference previous current))
+  (let* ((previous
+           (sb-mop:class-precedence-list
+            (class-of previous-instance)))
+         (current
+           (sb-mop:class-precedence-list
+            (class-of current-instance)))
+         (disabled-classes (stable-set-difference previous current))
+         (enabled-classes (reverse (stable-set-difference current previous))))
+    (dolist (old disabled-classes)
       (disable-aux (class-name old) previous-instance))
-    (dolist (new (reverse (stable-set-difference current previous)))
+    (dolist (new enabled-classes)
       (enable-aux (class-name new)))
-    (update-window-decoration (current-buffer))))
+    ;; Sometimes no class are add and removed but CLOS still calls us,
+    ;; test for this to reduce flickering
+    (when (or disabled-classes enabled-classes)
+      (update-window-decoration (current-buffer)))))
 
 (defun focus (&optional (buffer (current-buffer)))
   (focus-marker buffer))
