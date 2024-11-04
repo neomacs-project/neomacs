@@ -633,7 +633,7 @@ Highlight compiler notes."
       (or (get-buffer (getf plist :neomacs-buffer))
           (when (and pathname (uiop:file-exists-p pathname))
             (find-file pathname))
-          (error "Unknown source location"))
+          (user-error "Unknown source location"))
     (setf (pos (focus))
           (find-node-for-source
            pathname tlf-number form-number plist))))
