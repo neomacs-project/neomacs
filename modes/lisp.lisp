@@ -529,7 +529,7 @@ Highlights compiler notes."
             (unwind-protect
                  (progn
                    (load (setq output-file (compile-file input-file)))
-                   (message "Compilation finished"))
+                   (message "Compiled and loaded"))
               (uiop:delete-file-if-exists input-file)
               (uiop:delete-file-if-exists output-file))
             (unless (frame-root *compilation-buffer*)
@@ -573,8 +573,9 @@ Highlights compiler notes."
   "Compile current file.
 
 Highlight compiler notes."
-  (when (read-yes-or-no "Save file? ")
-    (save-buffer))
+  (when (modified (current-buffer))
+    (when (read-yes-or-no "Save file? ")
+      (save-buffer)))
   (let ((*compilation-document-root*
           (document-root (current-buffer))))
     (with-collecting-notes ()
@@ -583,7 +584,8 @@ Highlight compiler notes."
         (when (sexp-node-p c)
           (setf (attribute c 'tlf-number) i)
           (incf i)))
-      (load (compile-file (file-path (current-buffer)))))))
+      (load (compile-file (file-path (current-buffer))))
+      (message "Compiled and loaded"))))
 
 ;;; Xref
 
