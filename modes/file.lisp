@@ -82,10 +82,12 @@
 
 (defun find-file-buffer (path)
   "Find a buffer already opening PATH, if any."
-  (bt:with-recursive-lock-held (*buffer-table-lock*)
-    (iter (for (_ b) in-hashtable *buffer-table*)
-      (when (equal path (file-path b))
-        (return b)))))
+  (when path
+    (setq path (translate-logical-pathname path))
+    (bt:with-recursive-lock-held (*buffer-table-lock*)
+      (iter (for (_ b) in-hashtable *buffer-table*)
+        (when (equal path (file-path b))
+          (return b))))))
 
 (defun find-file-no-select (path)
   (setq path (translate-logical-pathname path))

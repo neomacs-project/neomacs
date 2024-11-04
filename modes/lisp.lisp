@@ -610,8 +610,9 @@ Highlight compiler notes."
                 (lambda (n)
                   (equal c (attribute n 'compile-cookie)))
                 (child-nodes (document-root (current-buffer))))
-               (remove-if-not #'sexp-node-p
-                              (document-root (current-buffer)))))
+               (remove-if-not
+                #'sexp-node-p
+                (child-nodes (document-root (current-buffer))))))
            (tlf (or (find tlf-number candidate-nodes
                           :key (alex:rcurry #'attribute 'tlf-number))
                     (nth tlf-number candidate-nodes)))
