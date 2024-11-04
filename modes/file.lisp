@@ -133,6 +133,12 @@
     :initform nil
     :documentation
     "Whether this buffer has been modified since last revert or save.")
+   (saved-undo-entry
+    :initform nil
+    :documentation
+    "Undo entry (if applicable) of last revert or save.
+
+This overrides `modified' test in `undo-mode' buffers.")
    (modtime
     :initform nil
     :documentation
@@ -168,17 +174,7 @@ Used to detect modification from other processes before saving."))
       nil)))
 
 (defmethod check-read-only :after ((buffer file-mode) (pos t))
-  (unless (modified buffer)
-    (setf (modified buffer) t)
-    (when-let (timestamp (modtime buffer))
-      (record-undo
-       (nclo undo-set-modified ()
-         (when (eql timestamp (modtime buffer))
-           (setf (modified buffer) nil)))
-       (nclo redo-set-modified ()
-         (when (eql timestamp (modtime buffer))
-           (setf (modified buffer) t)))
-       buffer))))
+  (setf (modified buffer) t))
 
 (defmethod save-buffer-aux :around ((buffer file-mode))
   (if (modified buffer)
@@ -196,17 +192,25 @@ Used to detect modification from other processes before saving."))
               (modtime buffer)
               (osicat-posix:stat-mtime
                (osicat-posix:stat (file-path buffer))))
-        (let ((timestamp (modtime buffer)))
-          (record-undo
-           (nclo undo-clear-modified ()
-             (when (eql timestamp (modtime buffer))
-               (setf (modified buffer) t)))
-           (nclo redo-clear-modified ()
-             (when (eql timestamp (modtime buffer))
-               (setf (modified buffer) nil)))
-           buffer))
         (message "Wrote ~a" (file-path buffer)))
       (message "No changes need to be saved")))
+
+(defun normalize-undo-entry (undo-entry)
+  (if (undo-boundary-p undo-entry)
+      (parent undo-entry)
+      undo-entry))
+
+(defmethod modified ((buffer undo-mode))
+  (not (eql (saved-undo-entry buffer)
+            (normalize-undo-entry (undo-entry buffer)))))
+
+(defmethod save-buffer-aux :after ((buffer undo-mode))
+  (setf (saved-undo-entry buffer)
+        (normalize-undo-entry (undo-entry buffer))))
+
+(defmethod revert-buffer-aux :after ((buffer undo-mode))
+  (setf (saved-undo-entry buffer)
+        (normalize-undo-entry (undo-entry buffer))))
 
 (define-command save-buffer ()
   (save-buffer-aux (current-buffer)))
