@@ -267,13 +267,16 @@ fixed in future Electron, our logic may be simplified."
         "Switch to buffer: " 'buffer-list-mode
         :exclude-buffers (list (current-buffer)))))
      (victim (focused-buffer)))
-  (check-displayed victim)
-  (check-displayable buffer)
-  (with-current-buffer (frame-root victim)
-    (insert-nodes (pos-right (window-decoration victim))
-                  (make-window-decoration buffer))
-    (close-buffer-display victim))
-  buffer)
+  (if (frame-root buffer)
+      (focus-buffer buffer)
+      (progn
+        (check-displayed victim)
+        (check-displayable buffer)
+        (with-current-buffer (frame-root victim)
+          (insert-nodes (pos-right (window-decoration victim))
+                        (make-window-decoration buffer))
+          (close-buffer-display victim))
+        buffer)))
 
 (defun make-scratch ()
   (lret ((buffer (make-buffer "*scratch*" :modes '(lisp-mode file-mode))))

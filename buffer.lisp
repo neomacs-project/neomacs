@@ -186,7 +186,7 @@ More specifically, this runs before entering the first
   "Run BODY at the end of current command, if any SLOTS of NODE is
 changed."
   `(call-with-post-command
-    node (list ,@slots) (lambda () ,@body)))
+    ,node (list ,@slots) (lambda () ,@body)))
 
 (ps:defpsmacro js-buffer (buffer)
   `(ps:getprop (ps:chain -ceramic buffers) (ps:lisp (id ,buffer))))
