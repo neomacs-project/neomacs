@@ -533,7 +533,7 @@ WIDTH and HEIGHT are numbers in pixels."
       ((end-pos node) (render-element-focus-tail node))
       ((text-pos node offset) (render-text-focus node offset (1+ offset))))))
 
-;;; Read-only state
+;;; User error
 
 (define-condition user-error (error)
   ((message :initform nil :initarg :message))
@@ -542,6 +542,20 @@ WIDTH and HEIGHT are numbers in pixels."
      (if-let (message (slot-value c 'message))
        (write-string message stream)
        (write-string "User error" stream)))))
+
+(define-condition not-supported (user-error)
+  ((buffer :initarg :buffer)
+   (operation :initarg :operation))
+  (:report
+   (lambda (c stream)
+     (format stream "~a does not support ~a"
+             (slot-value c 'buffer)
+             (slot-value c 'operation)))))
+
+(defun not-supported (buffer operation)
+  (signal 'not-supported :buffer buffer :operation operation))
+
+;;; Read-only state
 
 (defun user-error (control-string &rest format-arguments)
   (signal 'user-error

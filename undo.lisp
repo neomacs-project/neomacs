@@ -101,20 +101,22 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
 
 (defun undo-boundary (&optional (buffer (current-buffer)))
   "Ensure undo state is at a undo boudary, insert one if necessary."
-  (let ((entry (undo-entry buffer)))
-    (when (leaf-p entry)
-      (unless (undo-boundary-p entry)
-        (setf (undo-entry buffer)
-              (make-instance 'undo-child :parent entry))))
-    nil))
+  (when (typep buffer 'undo-mode)
+    (let ((entry (undo-entry buffer)))
+      (when (leaf-p entry)
+        (unless (undo-boundary-p entry)
+          (setf (undo-entry buffer)
+                (make-instance 'undo-child :parent entry))))
+      nil)))
 
 (defun remove-undo-boundary (buffer)
   "Remove undo boudary (if any) at current undo state."
-  (let ((entry (undo-entry buffer)))
-    (when (undo-boundary-p entry)
-      (setf (undo-entry buffer) (parent entry))
-      (alex:deletef (child-entries (parent entry)) entry)
-      nil)))
+  (when (typep buffer 'undo-mode)
+    (let ((entry (undo-entry buffer)))
+      (when (undo-boundary-p entry)
+        (setf (undo-entry buffer) (parent entry))
+        (alex:deletef (child-entries (parent entry)) entry)
+        nil))))
 
 (defun undo-auto-amalgamate ()
   "Call at the beginning of a command to amalgamate undo entry.
@@ -138,7 +140,7 @@ This amalgamate the undo entry if `*this-command*' is the same as
   (let ((entry (undo-entry buffer))
         (*inhibit-record-undo* t))
     (setf (undo-entry buffer)
-          (or (parent entry) (error "No more undo.")))
+          (or (parent entry) (user-error "No more undo")))
     (mapc #'funcall (undo-thunks entry))
     nil))
 
@@ -148,7 +150,7 @@ This amalgamate the undo entry if `*this-command*' is the same as
          (*inhibit-record-undo* t))
     (if entry
         (setf (undo-entry buffer) entry)
-        (error "No more redo."))
+        (user-error "No more redo"))
     (mapc #'funcall (reverse (redo-thunks entry)))
     nil))
 
@@ -170,10 +172,10 @@ This amalgamate the undo entry if `*this-command*' is the same as
   "Goto next sibling branch in undo history."
   (let* ((entry (undo-entry buffer))
          (parent (or (parent entry)
-                     (error "No next branch.")))
+                     (user-error "No next branch")))
          (current-index (position entry (child-entries parent))))
     (unless (< (1+ current-index) (length (child-entries parent)))
-      (error "No next branch."))
+      (user-error "No next branch"))
     (undo buffer)
     (redo (1+ current-index) buffer)
     (update-undo-history)))
@@ -183,10 +185,10 @@ This amalgamate the undo entry if `*this-command*' is the same as
   "Goto previous sibling branch in undo history."
   (let* ((entry (undo-entry buffer))
          (parent (or (parent entry)
-                     (error "No next branch.")))
+                     (user-error "No previous branch")))
          (current-index (position entry (child-entries parent))))
     (unless (> current-index 0)
-      (error "No previous branch."))
+      (user-error "No previous branch"))
     (undo buffer)
     (redo (1- current-index) buffer)
     (update-undo-history)))
@@ -205,7 +207,7 @@ This amalgamate the undo entry if `*this-command*' is the same as
   :mode undo-mode ()
   "Show undo history and enable `active-undo-mode'."
   (when (typep (current-buffer) 'active-undo-mode)
-    (error "Already showing undo history"))
+    (user-error "Already showing undo history"))
   (enable 'active-undo-mode)
   (let ((undo-buffer (undo-buffer (current-buffer)))
         (node-table (node-table (current-buffer))))

@@ -144,7 +144,9 @@ Used to detect modification from other processes before saving."))
 
 (defmethod file-path ((buffer buffer)) nil)
 
-(defgeneric write-file (file-mode))
+(defgeneric save-buffer-aux (buffer)
+  (:method ((buffer buffer))
+    (not-supported buffer 'save-buffer)))
 
 (defmethod revert-buffer-aux ((buffer file-mode))
   (erase-buffer)
@@ -157,7 +159,7 @@ Used to detect modification from other processes before saving."))
   (setf (restriction buffer) (document-root buffer)
         (pos (focus buffer)) (pos-down (document-root buffer))))
 
-(defmethod write-file ((buffer file-mode))
+(defmethod save-buffer-aux ((buffer file-mode))
   (with-open-file (s (file-path buffer)
                      :direction :output :if-exists :supersede)
     (with-standard-io-syntax
@@ -178,7 +180,7 @@ Used to detect modification from other processes before saving."))
            (setf (modified buffer) t)))
        buffer))))
 
-(define-command save-buffer (&optional (buffer (current-buffer)))
+(defmethod save-buffer-aux :around ((buffer file-mode))
   (if (modified buffer)
       (progn
         (when (and (modtime buffer)
@@ -189,13 +191,25 @@ Used to detect modification from other processes before saving."))
                    (format nil "~a has changed since visited. Save anyway? "
                            (name buffer)))
             (user-error "Save not confirmed")))
-        (write-file buffer)
+        (call-next-method)
         (setf (modified buffer) nil
               (modtime buffer)
               (osicat-posix:stat-mtime
                (osicat-posix:stat (file-path buffer))))
+        (let ((timestamp (modtime buffer)))
+          (record-undo
+           (nclo undo-clear-modified ()
+             (when (eql timestamp (modtime buffer))
+               (setf (modified buffer) t)))
+           (nclo redo-clear-modified ()
+             (when (eql timestamp (modtime buffer))
+               (setf (modified buffer) nil)))
+           buffer))
         (message "Wrote ~a" (file-path buffer)))
       (message "No changes need to be saved")))
+
+(define-command save-buffer ()
+  (save-buffer-aux (current-buffer)))
 
 (define-keys global
   "C-x C-f" 'find-file
