@@ -100,37 +100,37 @@
   :mode debugger-mode ()
   (if-let (r (find-restart-by-name "ABORT"))
     (dissect:invoke r)
-    (message "No restart named abort")))
+    (user-error "No restart named abort")))
 
 (define-command debugger-invoke-continue
   :mode debugger-mode ()
   (if-let (r (find-restart-by-name "CONTINUE"))
     (dissect:invoke r)
-    (message "No restart named continue")))
+    (user-error "No restart named continue")))
 
 (define-command debugger-invoke-restart
   :mode debugger-mode ()
-  (or (when-let (restart (when-let (row (focused-row))
-                           (attribute row 'restart)))
-        (dissect:invoke restart)
-        t)
-      (message "No restart under focus")))
+  (let ((restart (when-let (row (focused-row))
+                   (attribute row 'restart))))
+    (unless restart
+      (user-error "No restart under focus"))
+    (dissect:invoke restart)))
 
 (define-command debugger-show-source
   :mode debugger-mode ()
-  (or (when-let (frame (when-let (row (focused-row))
-                         (attribute row 'frame)))
-        (let* ((frame (dissect::frame frame))
-               (location (sb-di:frame-code-location frame))
-               (source (sb-di::code-location-debug-source location))
-               (namestring (sb-c::debug-source-namestring source)))
-          (visit-source
-           (when namestring (pathname namestring))
-           (sb-di::code-location-toplevel-form-offset location)
-           (sb-di::code-location-form-number location)
-           (sb-c::debug-source-plist source))
-          t))
-      (message "No frame under focus")))
+  (let ((frame (when-let (row (focused-row))
+                 (attribute row 'frame))))
+    (unless frame
+      (user-error "No frame under focus"))
+    (let* ((frame (dissect::frame frame))
+           (location (sb-di:frame-code-location frame))
+           (source (sb-di::code-location-debug-source location))
+           (namestring (sb-c::debug-source-namestring source)))
+      (visit-source
+       (when namestring (pathname namestring))
+       (sb-di::code-location-toplevel-form-offset location)
+       (sb-di::code-location-form-number location)
+       (sb-c::debug-source-plist source)))))
 
 (defun debug-for-condition (c)
   (let ((debugger

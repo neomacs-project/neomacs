@@ -33,7 +33,7 @@ Test if POS is selectable in BUFFER."))
   (and (word-character-p (host pos) (node-before pos))
        (not (word-character-p (host pos) (node-after pos)))))
 
-(define-condition motion-error (error) ())
+(define-condition motion-error (user-error) ())
 
 (define-condition end-of-subtree (motion-error) ()
   (:report "End of subtree."))

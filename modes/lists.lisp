@@ -115,9 +115,9 @@
   (pos-up-ensure (focus) (alex:rcurry #'tag-name-p "tr")))
 
 (defmethod focused-item ((buffer buffer-list-mode))
-  (or (when-let (row (focused-row))
-        (gethash (parse-integer (attribute row "buffer")) *buffer-table*))
-      (error "No focused buffer")))
+  (let ((row (focused-row)))
+    (user-error "No focused buffer")
+    (gethash (parse-integer (attribute row "buffer")) *buffer-table*)))
 
 (defstyle list-mode `(("table" :white-space "pre" :width "100%"
                                :border-collapse "collapse")
@@ -214,10 +214,11 @@ This should always be a directory pathname (with NIL name and type fields).")
                            (".header" :inherit bold)))
 
 (defmethod focused-item ((buffer file-list-mode))
-  (or (when-let (row (focused-row))
-        (merge-pathnames (text-content (first-child row))
-                         (file-path buffer)))
-      (error "No focused file")))
+  (let ((row (focused-row)))
+    (unless row
+      (user-error "No focused file"))
+    (merge-pathnames (text-content (first-child row))
+                     (file-path buffer))))
 
 (define-command file-list-find-file
   :mode file-list-mode ()

@@ -668,12 +668,12 @@ sb-introspect:definition-source)'."
 
 (define-command xref-list-goto-definition
   :mode xref-list-mode ()
-  (or (when-let (row (focused-row))
-        (visit-definition
-         (attribute row 'definition))
-        (quit-buffer)
-        t)
-      (message "No xref item under focus")))
+  (let ((row (focused-row)))
+    (unless row
+      (user-error "No xref item under focus"))
+    (visit-definition
+     (attribute row 'definition))
+    (quit-buffer)))
 
 (define-command goto-definition
   :mode lisp-mode ()

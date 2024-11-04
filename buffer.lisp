@@ -533,7 +533,18 @@ WIDTH and HEIGHT are numbers in pixels."
 
 ;;; Read-only state
 
-(define-condition read-only-error (error)
+(define-condition user-error (error)
+  ((message :initform nil :initarg :message))
+  (:report
+   (lambda (c stream)
+     (if message (write-string message stream)
+         (write-string "User error" stream)))))
+
+(defun user-error (control-string &rest format-arguments)
+  (signal 'user-error
+          :message (format nil control-string format-arguments)))
+
+(define-condition read-only-error (user-error)
   ((buffer :initarg :buffer))
   (:report
    (lambda (c stream)

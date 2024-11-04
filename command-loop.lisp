@@ -78,7 +78,7 @@ command loop run the next command.")
 (defvar *debug-on-error* nil)
 
 (defun play-loud-audio (c)
-  (if (typep c 'quit)
+  (if (or (typep c 'quit) (typep c 'user-error))
       (evaluate-javascript
        "new Audio('https://www.myinstants.com/media/sounds/vine-boom.mp3').play()"
        (current-frame-root))
@@ -170,6 +170,11 @@ command loop run the next command.")
                        (funcall *quit-hook* c)
                        (message "Quit")
                        (next-iteration)))
+               (user-error
+                 (lambda (c)
+                   (funcall *error-hook* c)
+                   (message "~a" c)
+                   (next-iteration)))
                (error (lambda (c)
                         (if *debug-on-error*
                             (unless (eql *debug-on-error* 'external)
