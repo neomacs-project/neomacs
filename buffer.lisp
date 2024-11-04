@@ -539,8 +539,9 @@ WIDTH and HEIGHT are numbers in pixels."
   ((message :initform nil :initarg :message))
   (:report
    (lambda (c stream)
-     (if message (write-string message stream)
-         (write-string "User error" stream)))))
+     (if-let (message (slot-value c 'message))
+       (write-string message stream)
+       (write-string "User error" stream)))))
 
 (defun user-error (control-string &rest format-arguments)
   (signal 'user-error
