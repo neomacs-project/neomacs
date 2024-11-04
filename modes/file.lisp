@@ -126,7 +126,19 @@
   (switch-to-buffer (find-file-no-select path)))
 
 (define-mode file-mode ()
-  ((file-path))
+  ((file-path
+    :documentation
+    "Pathname of the file visited by this buffer.")
+   (modified
+    :initform nil
+    :documentation
+    "Whether this buffer has been modified since last revert or save.")
+   (modtime
+    :initform nil
+    :documentation
+    "Timestamp of last revert or save Neomacs knows of.
+
+Used to detect modification from other processes before saving."))
   (:documentation
    "Generic mode for buffer backed by files."))
 
@@ -138,6 +150,10 @@
   (erase-buffer)
   (apply #'insert-nodes (end-pos (document-root buffer))
          (read-from-file (file-path buffer)))
+  (setf (modified buffer) nil
+        (modtime buffer)
+        (osicat-posix:stat-mtime
+         (osicat-posix:stat (file-path buffer))))
   (setf (restriction buffer) (document-root buffer)
         (pos (focus buffer)) (pos-down (document-root buffer))))
 
@@ -149,9 +165,37 @@
         (write-dom-aux buffer c s))
       nil)))
 
+(defmethod check-read-only :after ((buffer file-mode) (pos t))
+  (unless (modified buffer)
+    (setf (modified buffer) t)
+    (when-let (timestamp (modtime buffer))
+      (record-undo
+       (nclo undo-set-modified ()
+         (when (eql timestamp (modtime buffer))
+           (setf (modified buffer) nil)))
+       (nclo redo-set-modified ()
+         (when (eql timestamp (modtime buffer))
+           (setf (modified buffer) t)))
+       buffer))))
+
 (define-command save-buffer (&optional (buffer (current-buffer)))
-  (write-file buffer)
-  (message "Wrote ~a" (file-path buffer)))
+  (if (modified buffer)
+      (progn
+        (when (and (modtime buffer)
+                   (not (eql (modtime buffer)
+                             (osicat-posix:stat-mtime
+                              (osicat-posix:stat (file-path buffer))))))
+          (unless (read-yes-or-no
+                   (format nil "~a has changed since visited. Save anyway? "
+                           (name buffer)))
+            (user-error "Save not confirmed")))
+        (write-file buffer)
+        (setf (modified buffer) nil
+              (modtime buffer)
+              (osicat-posix:stat-mtime
+               (osicat-posix:stat (file-path buffer))))
+        (message "Wrote ~a" (file-path buffer)))
+      (message "No changes need to be saved")))
 
 (define-keys global
   "C-x C-f" 'find-file
