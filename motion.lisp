@@ -232,6 +232,9 @@ non-interactive use."
       (top-of-subtree ()))
     (unless moved
       (let ((pos (pos marker)))
+        (iter (for up = (pos-up pos))
+          (while up)
+          (setq pos up))
         (setq pos (npos-left-until
                    pos (alex:compose #'not #'new-line-node-p)))
         (setf (pos marker) (or pos (error 'top-of-subtree)))))))

@@ -308,11 +308,7 @@ It also takes into account any prefix preceding NODE."
              (let ((sexp
                      (cond ((list-node-p node)
                             (let ((children
-                                    (remove-if (alex:disjoin
-                                                #'text-node-p
-                                                #'ghost-symbol-p
-                                                #'new-line-node-p)
-                                               (child-nodes node))))
+                                    (remove-if-not #'sexp-node-p (child-nodes node))))
                               (if (dot-p (car (last children 2)))
                                   (nconc
                                    (mapcar #'process (butlast children 2))
