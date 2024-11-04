@@ -60,15 +60,20 @@
   (format nil "~A" (call-next-method)))
 
 (defun enable (mode-name)
-  (unless (member mode-name (modes (current-buffer)))
-    (dynamic-mixins:ensure-mix (current-buffer) mode-name)))
+  (dynamic-mixins:ensure-mix (current-buffer) mode-name))
 
 (defun disable (mode-name)
-  (when (member mode-name (modes (current-buffer)))
-    (dynamic-mixins:delete-from-mix (current-buffer) mode-name)))
+  (when-let
+      (delete-modes
+       (iter (for m in (modes (current-buffer)))
+         (when (subtypep m mode-name)
+           (collect m))))
+    (apply #'dynamic-mixins:delete-from-mix
+           (current-buffer)
+           delete-modes)))
 
 (defun toggle (mode-name)
-  (if (member mode-name (modes (current-buffer)))
+  (if (typep (current-buffer) mode-name)
       (progn (disable mode-name) nil)
       (progn (enable mode-name) t)))
 

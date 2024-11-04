@@ -282,7 +282,6 @@ fixed in future Electron, our logic may be simplified."
   (lret ((buffer (make-buffer "*scratch*" :modes '(lisp-mode file-mode) :file-path (asdf:system-relative-pathname :neomacs #p"scratch.lisp"))))
     (with-current-buffer buffer
       (revert-buffer)
-      (disable 'auto-save-mode)
       (disable 'file-mode))))
 
 (defun replacement-buffer (&optional (buffer (current-buffer)))
