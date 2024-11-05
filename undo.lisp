@@ -33,18 +33,18 @@
                       node "vertical-child-container"))))
     (append-child
      container
-     (dom `((:div :class "content"
-                  :style "flex: 0 0 10em;"
-                  :buffer ,(id (undo-buffer buffer))))))
+     (dom `(:div :class "content"
+                 :style "flex: 0 0 10em;"
+                 :buffer ,(id (undo-buffer buffer)))))
     node))
 
 (define-mode undo-history-mode () ()
   (:documentation "Mode for undo history buffers."))
 
 (defmethod window-decoration-aux ((buffer undo-history-mode))
-  (dom `((:div :class "content"
-               :style "flex: 0 0 5em;"
-               :buffer ,(id buffer)))))
+  (dom `(:div :class "content"
+              :style "flex: 0 0 5em;"
+              :buffer ,(id buffer))))
 
 (define-keys active-undo-mode
   "p" 'undo-command

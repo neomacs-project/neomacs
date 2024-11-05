@@ -329,3 +329,21 @@ This includes `element's and `text-node's. Returns NODE."
          (push child nodes)))
      node)
     (nreverse nodes)))
+
+(defun dom (sexp)
+  (labels ((process (sexp)
+             (etypecase sexp
+               (cons
+                (multiple-value-bind (attrs children)
+                    (split-args (cdr sexp))
+                  (lret ((el (make-instance
+                              'element :tag-name
+                              (string-downcase (symbol-name (car sexp))))))
+                    (iter (for (k v) on attrs by #'cddr)
+                      (setf (attribute el (string-downcase (symbol-name k))) v))
+                    (append-children el (mapcar #'process children)))))
+               ((or element text-node)
+                sexp)
+               (string
+                (make-instance 'text-node :text sexp)))))
+    (process sexp)))

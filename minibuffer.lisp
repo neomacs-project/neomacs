@@ -16,8 +16,8 @@
     (error 'element-read-only-error :element (node-containing pos))))
 
 (defmethod window-decoration-aux ((buffer minibuffer-mode))
-  (dom `((:div :class "minibuffer" :selectable "")
-         ((:div :class "main content" :buffer ,(id buffer))))))
+  (dom `(:div :class "minibuffer" :selectable ""
+              (:div :class "main content" :buffer ,(id buffer)))))
 
 (define-command exit-minibuffer
   :mode minibuffer-mode ()
@@ -30,10 +30,10 @@
   (text-content (minibuffer-input-element buffer)))
 
 (defmethod revert-buffer-aux ((buffer minibuffer-mode))
-  (let ((input (dom `((:span :class "input")))))
+  (let ((input (dom `(:span :class "input"))))
     (insert-nodes (end-pos (document-root (current-buffer)))
-                  (dom `((:span :class "prompt")
-                         ,(prompt buffer)))
+                  (dom `(:span :class "prompt"
+                               ,(prompt buffer)))
                   input)
     (setf (pos (focus)) (end-pos input))))
 
@@ -148,11 +148,11 @@ when this row is selected.")))
   (tag-name-p (node-after pos) "tr"))
 
 (defmethod window-decoration-aux ((buffer minibuffer-completion-mode))
-  (dom `((:div :class "buffer" :selectable "")
-         ((:div :class "main content" :style "flex:0 0 2em;"
-                :buffer ,(id buffer)))
-         ((:div :class "content"
-                :buffer ,(id (completion-buffer buffer)))))))
+  (dom `(:div :class "buffer" :selectable ""
+              (:div :class "main content" :style "flex:0 0 2em;"
+                    :buffer ,(id buffer))
+              (:div :class "content"
+                    :buffer ,(id (completion-buffer buffer))))))
 
 (defmethod on-delete-buffer progn ((buffer minibuffer-completion-mode))
   (delete-buffer (completion-buffer buffer)))

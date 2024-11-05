@@ -32,8 +32,8 @@
   (:documentation "Mode for echo area buffer."))
 
 (defmethod window-decoration-aux ((buffer echo-area-mode))
-  (dom `((:div :class "minibuffer")
-         ((:div :class "content" :buffer ,(id buffer))))))
+  (dom `(:div :class "minibuffer"
+              (:div :class "content" :buffer ,(id buffer)))))
 
 (define-mode frame-root-mode ()
   ((echo-area :initform (make-buffer " *echo-area*"

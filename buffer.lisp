@@ -277,17 +277,17 @@ This runs only when NODE is an element (i.e. not a text node)."))
 
 (defgeneric window-decoration-aux (buffer)
   (:method ((buffer buffer))
-    (dom `((:div :class "buffer" :selectable "")
-           ((:div :class "header")
-            ((:div :class "header-buffer-name") ,(name buffer))
-            ((:div :class "header-buffer-modes")
-             ,@(let ((modes
-                       (sera:mapconcat #'lighter (modes buffer)
-                                       " ")))
-                 (when (> (length modes) 0)
-                   (list modes)))))
-           ((:div :class "vertical-child-container")
-            ((:div :class "main content" :buffer ,(id buffer)))))))
+    (dom `(:div :class "buffer" :selectable ""
+                (:div :class "header"
+                      (:div :class "header-buffer-name" ,(name buffer))
+                      (:div :class "header-buffer-modes"
+                            ,@(let ((modes
+                                      (sera:mapconcat #'lighter (modes buffer)
+                                                      " ")))
+                                (when (> (length modes) 0)
+                                  (list modes)))))
+                (:div :class "vertical-child-container"
+                      (:div :class "main content" :buffer ,(id buffer))))))
   (:documentation "Create window-decoration for BUFFER.
 
 Should return a `div' with `buffer' or `minibuffer' CSS class, which

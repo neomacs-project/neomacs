@@ -91,10 +91,10 @@
                 (and (not (show-hidden buffer))
                      (sera:string-prefix-p " " name)))
       (insert-nodes (focus)
-                    (dom `((:tr :buffer ,(id buf))
-                           (:td ,name)
-                           (:td ,@(when (> (length modes) 0)
-                                    (list modes)))))))))
+                    (dom `(:tr :buffer ,(id buf)
+                               (:td ,name)
+                               (:td ,@(when (> (length modes) 0)
+                                        (list modes)))))))))
 
 (define-command list-commands ()
   (with-current-buffer
@@ -116,7 +116,8 @@
 
 (defmethod focused-item ((buffer buffer-list-mode))
   (let ((row (focused-row)))
-    (user-error "No focused buffer")
+    (unless row
+      (user-error "No focused buffer"))
     (gethash (parse-integer (attribute row "buffer")) *buffer-table*)))
 
 (defstyle list-mode `(("table" :white-space "pre" :width "100%"
@@ -177,8 +178,8 @@ This should always be a directory pathname (with NIL name and type fields).")
     (for stat = (osicat-posix:stat path))
     (insert-nodes (focus)
                   (dom `(:tr
-                         ((:td :class "directory")
-                          ,(lastcar (pathname-directory path)))
+                         (:td :class "directory"
+                              ,(lastcar (pathname-directory path)))
                          (:td)
                          (:td ,(osicat-posix:getpwuid
                                 (osicat-posix:stat-uid stat)))

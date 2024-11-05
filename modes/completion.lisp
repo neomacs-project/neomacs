@@ -9,9 +9,9 @@
      (focus)
      (dom `(:tr
             (:td ,completion)
-            ((:td :class "completion-annotation")
-             ,@(when (> (length annotation) 0)
-                 (list annotation))))))))
+            (:td :class "completion-annotation"
+                 ,@(when (> (length annotation) 0)
+                     (list annotation))))))))
 
 (defmethod (setf completions)
     :after (new-val (buffer completion-list-mode))
@@ -76,12 +76,12 @@ Should be a list of the form (WIDTH HEIGHT)")
                  node "main"))))
     (append-child
      main
-     (dom `((:div :class "content completion-menu"
-                  :style
-                  ,(format nil "position: absolute; width: ~apx; height: ~apx;"
-                           (car *completion-menu-size*)
-                           (cadr *completion-menu-size*))
-                  :buffer ,(id (completion-buffer buffer))))))
+     (dom `(:div :class "content completion-menu"
+                 :style
+                 ,(format nil "position: absolute; width: ~apx; height: ~apx;"
+                          (car *completion-menu-size*)
+                          (cadr *completion-menu-size*))
+                 :buffer ,(id (completion-buffer buffer)))))
     node))
 
 (defun compute-floating-buffer-position

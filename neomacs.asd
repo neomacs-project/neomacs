@@ -12,7 +12,6 @@
                (:file "command")
                (:file "pos-marker")
                (:file "defstyle")
-               (:file "plump-hack")
                (:file "mode")
                (:file "keymap")
                (:file "buffer")
