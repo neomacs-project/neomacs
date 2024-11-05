@@ -373,19 +373,39 @@ Used for resolving source-path to DOM node.")
 (defvar *compilation-single-form* nil
   "If t, the first element in source-path should always be 0 and is ignored.")
 
+(defun handle-feature-expressions (nodes)
+  (iter
+    (for n = (car nodes))
+    (cond
+      ((and (symbol-node-p n)
+            (sera:string-prefix-p "#+" (text-content n)))
+       (if (find (string-upcase (subseq (text-content n) 2))
+                 *features* :key #'symbol-name)
+           (setq nodes (cdr nodes))
+           (setq nodes (cddr nodes))))
+      ((and (symbol-node-p n)
+            (sera:string-prefix-p "#-" (text-content n)))
+       (if (find (string-upcase (subseq (text-content n) 2))
+                 *features* :key #'symbol-name)
+           (setq nodes (cddr nodes))
+           (setq nodes (cdr nodes))))
+      (t (collect n)
+         (setq nodes (cdr nodes))))
+    (while nodes)))
+
+(defun sexp-children (node)
+  (handle-feature-expressions
+   (remove-if
+    (lambda (node)
+      (or (not (sexp-node-p node))
+          (ghost-symbol-p node)))
+    (child-nodes node))))
+
 (defun sexp-nth-child (node n)
-  (nth n (remove-if
-          (lambda (node)
-            (or (not (sexp-node-p node))
-                (ghost-symbol-p node)))
-          (child-nodes node))))
+  (nth n (sexp-children node)))
 
 (defun sexp-child-number (node)
-  (position node (remove-if
-                  (lambda (node)
-                    (or (not (sexp-node-p node))
-                        (ghost-symbol-p node)))
-                  (child-nodes (parent node)))))
+  (position node (sexp-children (parent node))))
 
 (defun find-node-for-form-path (root path)
   (iter (with node = root)
@@ -618,9 +638,7 @@ Highlight compiler notes."
                 (lambda (n)
                   (equal c (attribute n 'compile-cookie)))
                 (child-nodes (document-root (current-buffer))))
-               (remove-if-not
-                #'sexp-node-p
-                (child-nodes (document-root (current-buffer))))))
+               (sexp-children (document-root (current-buffer)))))
            (tlf (or (find tlf-number candidate-nodes
                           :key (alex:rcurry #'attribute 'tlf-number))
                     (nth tlf-number candidate-nodes)))
