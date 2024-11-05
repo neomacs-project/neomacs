@@ -36,15 +36,10 @@
       (for i from 0)
       (insert-nodes
        (end-pos tbody)
-       (lret ((el (make-element
-                   "tr" :children
-                   (list
-                    (make-element
-                     "td" :class "restart-name" :children
-                     (list (format nil "~a. ~a" i (dissect:name r))))
-                    (make-element
-                     "td" :children
-                     (list (dissect:report r)))))))
+       (lret ((el (dom `(:tr
+                         (:td :class "restart-name"
+                              ,(format nil "~a. ~a" i (dissect:name r)))
+                         (:td ,(dissect:report r))))))
          (setf (attribute el 'restart) r))))
     (setf (pos (focus)) (pos-down tbody)))
   (insert-nodes (end-pos (document-root buffer))
@@ -59,36 +54,23 @@
       (for i from 0)
       (insert-nodes
        (end-pos tbody)
-       (lret ((el (make-element
-                   "tr" :children
-                   (list
-                    (make-element
-                     "td" :class "frame-number" :children
-                     (list (format nil "~a." i)))
-                    (make-element
-                     "td" :children
-                     (list*
-                      (print-dom
-                       (cons (dissect:call frame)
-                             (dissect:args frame)))
-                      (when-let (locals (dissect:locals frame))
-                        (list
-                         (make-element
-                          "table" :class "locals-table" :children
-                          (list
-                           (make-element
-                            "tbody" :children
-                            (iter (for (name . value) in locals)
-                              (collect
-                                  (make-element
-                                   "tr" :children
-                                   (list
-                                    (make-element
-                                     "td" :children
-                                     (list (princ-to-string name)))
-                                    (make-element
-                                     "td" :children
-                                     (list (print-dom value))))))))))))))))))
+       (lret ((el
+               (dom `(:tr
+                      (:td :class "frame-number"
+                           ,(format nil "~a." i))
+                      (:td
+                       ,(print-dom
+                         (cons (dissect:call frame)
+                               (dissect:args frame)))
+                       ,@(when-let (locals (dissect:locals frame))
+                           `((:table
+                              :class "locals-table"
+                              (:tbody
+                               ,@(iter (for (name . value) in locals)
+                                   (collect
+                                       `(:tr
+                                         (:td ,(princ-to-string name))
+                                         (:td ,(print-dom value))))))))))))))
          (setf (attribute el 'frame) frame))))))
 
 (defun find-restart-by-name (name)
