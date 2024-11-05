@@ -224,9 +224,7 @@ changed."
   (:method :around ((buffer buffer) (url t) err)
     (when err
       (message "~a failed to load URL ~a: ~a"
-               buffer
-               (assoc-value err :url)
-               (assoc-value err :code)))
+               buffer url (assoc-value err :code)))
     (when (equal url (url buffer))
       (setf (load-status buffer) (if err :failed :loaded)))
     (call-next-method))

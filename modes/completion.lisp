@@ -200,10 +200,7 @@ X and Y are numbers in pixels."
 (defstyle completion-match `(:color "#000"))
 (defstyle completion-annotation `(:text-align "right"
                                   :font-style "italic"))
-(defstyle completion-selection `(:inherit focus))
-
 (defstyle completion-list-mode
     `(("body" :inherit completion-menu)
       (".completion-match" :inherit completion-match)
-      (".completion-annotation" :inherit completion-annotation)
-      (".completion-selection" :inherit completion-selection)))
+      (".completion-annotation" :inherit completion-annotation)))
