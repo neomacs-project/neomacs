@@ -365,11 +365,15 @@ before MARKER-OR-POS."
          (handler-case
              (iter (beginning-of-defun marker)
                (for node = (node-after marker))
-               (when (and (list-node-p node)
-                          (eql 'in-package (compute-symbol (first-child node))))
-                 (let ((p (npos-right-until (first-child node) #'sexp-node-p)))
-                   (when-let (s (compute-symbol p))
-                     (return (symbol-name s))))))
+               (for c = (sexp-children node))
+               (when (and
+                      (car c)
+                      (equal "IN-PACKAGE"
+                             (string-upcase (text-content (car c)))))
+                 (when-let (name (cadr c))
+                   (return (string-upcase
+                            (str:trim (text-content name)
+                                      :char-bag "#:"))))))
            (top-of-subtree ())))
         (find-package "NEOMACS"))))
 
@@ -395,6 +399,7 @@ Used for resolving source-path to DOM node.")
 
 (defun handle-feature-expressions (nodes)
   (iter
+    (while nodes)
     (for n = (car nodes))
     (cond
       ((and (symbol-node-p n)
@@ -402,7 +407,7 @@ Used for resolving source-path to DOM node.")
        (if (evaluate-feature-expression-node
             (if (> (length (text-content n)) 2)
                 (subseq (text-content n) 2)
-                (prog1 (car nodes)
+                (prog1 (cadr nodes)
                   (setq nodes (cdr nodes)))))
            (setq nodes (cdr nodes))
            (setq nodes (cddr nodes))))
@@ -411,13 +416,12 @@ Used for resolving source-path to DOM node.")
        (if (evaluate-feature-expression-node
             (if (> (length (text-content n)) 2)
                 (subseq (text-content n) 2)
-                (prog1 (car nodes)
+                (prog1 (cadr nodes)
                   (setq nodes (cdr nodes)))))
            (setq nodes (cddr nodes))
            (setq nodes (cdr nodes))))
       (t (collect n)
-         (setq nodes (cdr nodes))))
-    (while nodes)))
+         (setq nodes (cdr nodes))))))
 
 (defun sexp-children (node)
   (handle-feature-expressions
