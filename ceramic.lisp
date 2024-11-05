@@ -11,12 +11,14 @@
 
 Evaluate CODE in BUFFER's webContents, or main Electron process if
 BUFFER is NIL. Returns NIL."
-  (if buffer
-      (cera.d:js
-       cera.d:*driver*
-       (ps:ps (ps:chain (js-buffer buffer) web-contents
-                        (execute-java-script (ps:lisp code) t))))
-      (cera.d:js cera.d:*driver* code))
+  (if *force-sync-evaluate*
+      (evaluate-javascript-sync code buffer)
+      (if buffer
+          (cera.d:js
+           cera.d:*driver*
+           (ps:ps (ps:chain (js-buffer buffer) web-contents
+                            (execute-java-script (ps:lisp code) t))))
+          (cera.d:js cera.d:*driver* code)))
   nil)
 
 (defun evaluate-javascript-sync (code buffer)
