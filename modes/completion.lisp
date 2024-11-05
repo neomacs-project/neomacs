@@ -23,8 +23,12 @@
 (define-mode active-completion-mode (completion-mode)
   ((replace-range)
    (completion-buffer
-    :initform (make-buffer "*completion*"
-                           :modes '(completion-list-mode))))
+    :initform
+    (lret ((buf (make-buffer "*completion*"
+                             :modes '(completion-list-mode))))
+      (recursive-edit
+       (lambda () (eql (load-status buf) :loading))
+       nil))))
   (:documentation "Transient mode when completion menu is active."))
 
 (define-keys prog-mode
@@ -187,12 +191,8 @@ X and Y are numbers in pixels."
 
 (defstyle completion-menu
     `(:white-space "nowrap"
-      ;; :background-color "#fff"
-      ;; :border "1px solid #bde1ff"
       :font-size "0.8em"
-                   ;; :color "#777"
-                   ;; :box-shadow "0 0 0.4em"
-                   ;; :max-width "20em"
+      :overflow-x "hidden"
       :backdrop-filter "blur(10px)"
       :overflow-y "scroll"
       :border-collapse "collapse"))

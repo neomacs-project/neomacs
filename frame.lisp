@@ -142,7 +142,8 @@ fixed in future Electron, our logic may be simplified."
          (attribute node "selectable"))))
 
 (defun focused-buffer (&optional (frame-root (current-frame-root)))
-  (window-buffer (node-after (focus frame-root))))
+  (when frame-root
+    (window-buffer (node-after (focus frame-root)))))
 
 (defun current-buffer ()
   (or *current-buffer* (focused-buffer)))

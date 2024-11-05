@@ -26,8 +26,7 @@
   ;; Enter recursive edit to wait for buffer to load, so that
   ;; buffer state is updated when `revert-buffer' returns.
   (recursive-edit
-   (lambda ()
-     (eql (load-status buffer) :loading))
+   (lambda () (eql (load-status buffer) :loading))
    nil))
 
 (defmethod on-buffer-loaded progn ((buffer html-doc-mode) url err)
