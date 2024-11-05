@@ -4,7 +4,12 @@
   (:report "Return to top-level command loop"))
 
 (define-condition exit-recursive-edit () ()
-  (:report "Return from recursive edit"))
+  (:report "Return from recursive edit")
+  (:documentation
+   "Cause recursive edit level to exit.
+
+This is handled by the innermost recursive edit level started with
+non-nil HANDLER-P, which would return and signal a `quit' condition."))
 
 (define-condition quit () ()
   (:report "Quit"))
@@ -201,6 +206,11 @@ command loop run the next command.")
 
 (defun recursive-edit (&optional (guard-fn (constantly t))
                          (handlers-p t))
+  "Start a recursive edit level.
+
+GUARD-FN is called after every command invocation and the level exits
+if GUARD-FN returns nil. If HANDLERS-P is non-nil, set up condition
+and restart handlers."
   (cleanup-locked-buffers)
   (lwcells::evaluate-activations)
   (let (*locked-buffers* lwcells::*delay-evaluation-p*)
