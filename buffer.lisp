@@ -32,6 +32,7 @@
   ((id :initform (generate-buffer-id) :type integer)
    (name :type string)
    (url :initarg :url :type quri:uri)
+   (load-status :initform :loading)
    (word-boundary-list :default (list #\  #\-))
    (focus-marker)
    (selection-marker)
@@ -56,7 +57,7 @@
    (frame-root :initform nil)
    (window-min-height :initform nil)
    (window-min-width :initform nil))
-  (:default-initargs :url (quri:uri "about:blank")))
+  (:default-initargs :url "about:blank"))
 
 (defmethod id :around ((buffer buffer))
   (format nil "~A" (call-next-method)))
@@ -144,7 +145,7 @@ for which MODE-NAME is being disabled."))
   (cera.d:js cera.d:*driver*
              (format nil "Ceramic.createBuffer(~S, ~S, {});
 Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
-                     (id buffer) (quri:render-uri (url buffer))
+                     (id buffer) (url buffer)
                      (id buffer)))
   (setf (document-root buffer)
         (make-instance 'element :tag-name "body" :host buffer)
@@ -226,6 +227,8 @@ changed."
                buffer
                (assoc-value err :url)
                (assoc-value err :code)))
+    (when (equal url (url buffer))
+      (setf (load-status buffer) (if err :failed :loaded)))
     (call-next-method))
   (:documentation
    "Invoked when BUFFER finishes loading.
@@ -347,6 +350,7 @@ when URL finishes loading. We use this instead of Electron's
 information, and getting url with `webContents.getURL()' isn't
 reliable because it may get the URL of a later issued unfinished load
 operation."
+  (setf (url buffer) url)
   (evaluate-javascript
    (format nil "Ceramic.buffers[~S].webContents.loadURL(~S).then(()=>
         {RemoteJS.send(JSON.stringify({inputEvent: {type: 'load', url: ~S}, buffer: ~S}));},

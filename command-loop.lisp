@@ -3,8 +3,7 @@
 (define-condition top-level () ()
   (:report "Return to top-level command loop"))
 
-(define-condition exit-recursive-edit ()
-  ((condition :initform nil :initarg :condition))
+(define-condition exit-recursive-edit () ()
   (:report "Return from recursive edit"))
 
 (define-condition quit () ()
@@ -158,48 +157,54 @@ command loop run the next command.")
           ((equal type "keyUp"))
           (t (warn "Unrecoginized Electron event: ~a" event)))))
 
-(defun command-loop (&optional recursive-p)
-  (let (exit-condition *this-command-keys*)
+(defun command-loop (&optional recursive-p
+                       (guard-fn (constantly t))
+                       (handlers-p t))
+  (let (*this-command-keys*)
     (iter (for data = (sb-concurrency:receive-message *event-queue*))
       (until (eql data 'quit))
       (for buffer = (gethash (parse-integer (assoc-value data :buffer)) *buffer-table*))
       (for event = (assoc-value data :input-event))
-      (restart-case
-          (handler-bind
-              ((quit (lambda (c)
-                       (funcall *quit-hook* c)
-                       (message "Quit")
+      (if handlers-p
+          (restart-case
+              (handler-bind
+                  ((quit (lambda (c)
+                           (funcall *quit-hook* c)
+                           (message "Quit")
+                           (next-iteration)))
+                   (user-error
+                     (lambda (c)
+                       (funcall *error-hook* c)
+                       (message "~a" c)
                        (next-iteration)))
-               (user-error
-                 (lambda (c)
-                   (funcall *error-hook* c)
-                   (message "~a" c)
-                   (next-iteration)))
-               (error (lambda (c)
-                        (if *debug-on-error*
-                            (unless (eql *debug-on-error* 'external)
-                              (debug-for-condition c))
-                            (progn
-                              (funcall *error-hook* c)
-                              (message "~a" c)
-                              (next-iteration))))))
-            (handler-case
-                (handle-event buffer event)
-              (top-level ()
-                (when recursive-p (error 'top-level)))
-              (exit-recursive-edit (c)
-                (when recursive-p
-                  (setq exit-condition (slot-value c 'condition))
-                  (return)))))
-        (abort ()
-          :report "Return to command loop")))
-    (when exit-condition (error exit-condition))))
+                   (error (lambda (c)
+                            (if *debug-on-error*
+                                (unless (eql *debug-on-error* 'external)
+                                  (debug-for-condition c))
+                                (progn
+                                  (funcall *error-hook* c)
+                                  (message "~a" c)
+                                  (next-iteration)))))
+                   (exit-recursive-edit
+                     (lambda (c)
+                       (declare (ignore c))
+                       (when recursive-p (error 'quit))))
+                   (top-level
+                     (lambda (c)
+                       (declare (ignore c))
+                       (unless recursive-p (next-iteration)))))
+                (handle-event buffer event))
+            (abort ()
+              :report "Return to command loop"))
+          (handle-event buffer event))
+      (while (funcall guard-fn)))))
 
-(defun recursive-edit ()
+(defun recursive-edit (&optional (guard-fn (constantly t))
+                         (handlers-p t))
   (cleanup-locked-buffers)
   (lwcells::evaluate-activations)
   (let (*locked-buffers* lwcells::*delay-evaluation-p*)
-    (command-loop t)))
+    (command-loop t guard-fn handlers-p)))
 
 (defvar *command-loop-thread* nil)
 
@@ -222,6 +227,10 @@ function `command-loop' to take effect."
   "Signal a `quit' condition."
   (setf (selection-active (current-buffer)) nil)
   (error 'quit))
+
+(define-command exit-recursive-edit ()
+  "Exit current recursive edit level."
+  (error 'exit-recursive-edit))
 
 (define-keys global
   "C-g" 'keyboard-quit)

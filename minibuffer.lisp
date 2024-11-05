@@ -1,10 +1,12 @@
 (in-package #:neomacs)
 
-(define-mode minibuffer-mode () ((prompt :initarg :prompt)))
+(define-mode minibuffer-mode ()
+  ((prompt :initarg :prompt)
+   (completed :initform nil)))
 
 (define-keys minibuffer-mode
   "enter" 'exit-minibuffer
-  "C-g" 'abort-minibuffer)
+  "C-g" 'exit-recursive-edit)
 
 (defmethod selectable-p-aux ((buffer minibuffer-mode) pos)
   (class-p (node-containing pos) "input"))
@@ -19,11 +21,7 @@
 
 (define-command exit-minibuffer
   :mode minibuffer-mode ()
-  (error 'exit-recursive-edit))
-
-(define-command abort-minibuffer
-  :mode minibuffer-mode ()
-  (error 'exit-recursive-edit :condition 'quit))
+  (setf (completed (current-buffer)) t))
 
 (defun minibuffer-input-element (buffer)
   (only-elt (get-elements-by-class-name (document-root buffer) "input")))
@@ -54,7 +52,7 @@ ARGS are passed to `make-buffer' to create the minibuffer."
     (unwind-protect
          (with-current-buffer minibuf
            (revert-buffer)
-           (recursive-edit)
+           (recursive-edit (lambda () (not (completed minibuf))))
            (minibuffer-input minibuf))
       (focus-buffer saved-focus)
       (close-buffer-display minibuf)
