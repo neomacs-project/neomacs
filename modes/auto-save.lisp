@@ -1,4 +1,4 @@
-f(in-package #:neomacs)
+(in-package #:neomacs)
 
 (defun make-auto-save-path (file-path)
   (make-pathname
