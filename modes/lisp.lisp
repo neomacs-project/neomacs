@@ -798,30 +798,33 @@ sb-introspect:definition-source)'."
             (setq arglist l operator symbol
                   form (node-to-sexp cur nil))
             (return))))
-      (let ((arglist (swank::decode-arglist arglist)))
-        (swank::decoded-arglist-to-string
-         arglist
-         :operator operator
-         :highlight (swank::form-path-to-arglist-path
-                     form-path form arglist))
-        (append
-         (format-swank-highlighted-arglist
+      (when operator
+        (let ((arglist (swank::decode-arglist arglist)))
           (swank::decoded-arglist-to-string
            arglist
            :operator operator
-           :highlight (swank::form-path-to-arglist-path form-path form arglist)))
-         (list ": "
-               (make-element
-                "span" :class "docstring"
-                :children (short-doc operator))))))))
+           :highlight (swank::form-path-to-arglist-path
+                       form-path form arglist))
+          (append
+           (format-swank-highlighted-arglist
+            (swank::decoded-arglist-to-string
+             arglist
+             :operator operator
+             :highlight (swank::form-path-to-arglist-path form-path form arglist)))
+           (when (documentation operator 'function)
+             (list ": "
+                   (make-element
+                    "span" :class "docstring"
+                    :children (short-doc operator))))))))))
 
 (defun maybe-show-autodoc ()
   (when-let* ((frame-root (current-frame-root))
               (echo-area (echo-area frame-root)))
     (unless (first-child (document-root echo-area))
-      (let (*message-log-max*)
-        (pushnew 'echo-area-autodoc (styles echo-area))
-        (message (compute-autodoc (pos (focus))))))))
+      (when-let (nodes (compute-autodoc (pos (focus))))
+        (let (*message-log-max*)
+          (pushnew 'echo-area-autodoc (styles echo-area))
+          (message nodes))))))
 
 (defmethod on-post-command progn ((buffer autodoc-mode))
   (maybe-show-autodoc))
