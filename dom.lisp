@@ -166,7 +166,12 @@ which ensures renderer side ATTRIBUTE of NODE matches value of CELL."
 
 (defmethod print-object ((node element) stream)
   (print-unreadable-object (node stream :identity t :type t)
-    (format stream "~a" (tag-name node))))
+    (format stream "~a (~a)"
+            (tag-name node) (attribute node "class"))))
+
+(defmethod print-object ((node text-node) stream)
+  (print-unreadable-object (node stream :identity t :type t)
+    (format stream "~a" (text node))))
 
 (defvar *serialize-exclude-attributes* nil)
 
