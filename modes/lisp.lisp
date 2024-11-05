@@ -1,5 +1,7 @@
 (in-package #:neomacs)
 
+;;; Lisp mode
+
 (define-mode lisp-mode (prog-mode) ()
   (:documentation "Lisp mode.")
   (:hooks auto-completion-mode))
@@ -1021,7 +1023,3 @@ sb-introspect:definition-source)'."
        :inherit compiler-warning)
       ("[compiler-note-severity=\"error\"]"
        :inherit compiler-error)))
-
-;;; Default hooks
-#+nil (add-mode-hook 'lisp-mode 'undo-mode)
-#+nil (add-mode-hook 'lisp-mode 'auto-completion-mode)
