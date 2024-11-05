@@ -33,7 +33,9 @@
 (defun attribute-cell (element name)
   (or (gethash name (attributes element))
       (setf (gethash name (attributes element))
-            (add-attribute-observer (make-eager-cell) element name))))
+            (add-attribute-observer
+             (make-eager-cell :no-news-p #'equal)
+             element name))))
 
 (defun (setf attribute-cell) (new-val element name)
   (setf (gethash name (attributes element))
