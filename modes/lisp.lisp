@@ -528,7 +528,7 @@ Used for resolving source-path to DOM node.")
     (progn
       (setf (pos marker) pos)
       (goto-compiler-note (attribute pos "compiler-note-id")))
-    (error "No previous compiler note")))
+    (user-error "No previous compiler note")))
 
 (define-command next-compiler-note (&optional (marker (focus)))
   "Move to previous compiler note."
@@ -541,7 +541,7 @@ Used for resolving source-path to DOM node.")
     (progn
       (setf (pos marker) pos)
       (goto-compiler-note (attribute pos "compiler-note-id")))
-    (error "No next compiler note")))
+    (user-error "No next compiler note")))
 
 ;;; Eval/compile commands
 
