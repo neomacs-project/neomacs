@@ -9,7 +9,7 @@
         (setq url parsed)
         (setq url (quri:uri (str:concat "https://duckduckgo.com/?q=" url)))))
   (switch-to-buffer
-   (make-buffer "Web" :modes 'web-mode :url url
+   (make-buffer "Web" :modes 'web-mode :url (quri:render-uri url)
                 :styles nil)))
 
 (define-mode web-mode (read-only-mode)
