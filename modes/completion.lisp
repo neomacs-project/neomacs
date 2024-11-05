@@ -123,7 +123,8 @@ X and Y are numbers in pixels."
            (min-width
             (progn
               (evaluate-javascript-sync
-               "document.body.scrollWidth"
+               "new Promise((resolve)=>{
+setTimeout(()=>{resolve(document.body.scrollWidth)},0)})"
                (completion-buffer (current-buffer))))))
       (with-current-buffer (frame-root (current-buffer))
         (evaluate-javascript

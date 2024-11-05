@@ -89,15 +89,20 @@
                            (execute-java-script
                             (ps:lisp
                              (ps:ps
-                               (let ((result (ps:create)))
-                                 (dolist (c (ps:chain document (get-elements-by-class-name "content")))
-                                   (let ((rect (ps:chain c (get-bounding-client-rect)))))
-                                   (setf (ps:getprop result (ps:chain c (get-attribute "buffer")))
-                                         (ps:create :x (ps:chain rect :x)
-                                                    :y (ps:chain rect :y)
-                                                    :width (ps:chain rect :width)
-                                                    :height (ps:chain rect :height))))
-                                 result))))
+                               (ps:new (-promise
+                                        (lambda (resolve)
+                                          (set-timeout
+                                           (lambda ()
+                                             (let ((result (ps:create)))
+                                               (dolist (c (ps:chain document (get-elements-by-class-name "content")))
+                                                 (let ((rect (ps:chain c (get-bounding-client-rect)))))
+                                                 (setf (ps:getprop result (ps:chain c (get-attribute "buffer")))
+                                                       (ps:create :x (ps:chain rect :x)
+                                                                  :y (ps:chain rect :y)
+                                                                  :width (ps:chain rect :width)
+                                                                  :height (ps:chain rect :height))))
+                                               (funcall resolve result)))
+                                           0)))))))
                            (then (lambda (result)
                                    (ps:for-in
                                     (buffer result)
