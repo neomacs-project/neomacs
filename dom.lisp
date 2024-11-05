@@ -215,7 +215,8 @@ DEEP defaults to T.")
                (iter (for c first (first-child node)
                           then (next-sibling c))
                  (while c)
-                 (insert-before n (clone-node c) nil))))))
+                 (insert-before n (clone-node c) nil)))))
+  (:method ((node string) &optional deep) node))
 
 (defun insert-before (parent new-node reference)
   "Insert NEW-NODE under PARENT before REFERENCE.

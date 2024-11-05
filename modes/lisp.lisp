@@ -296,9 +296,12 @@ the following node."
       (when (zerop (length rest))
         wrappers))))
 
-(defun node-to-sexp (node)
+(defun node-to-sexp (node &optional (intern t))
   "Parse DOM NODE as a Lisp object.
-It also takes into account any prefix preceding NODE."
+It also takes into account any prefix preceding NODE.
+
+If INTERN is t, this function interns symbol; otherwise, symbols not
+found are replaced with a dummy symbol."
   (labels ((apply-wrappers (wrappers node)
              (iter (for w in wrappers)
                (setq node (funcall w node)))
@@ -321,7 +324,12 @@ It also takes into account any prefix preceding NODE."
                            ((symbol-node-p node)
                             (bind (((:values wrappers rest)
                                     (parse-prefix (text-content node))))
-                              (apply-wrappers wrappers (read-from-string rest))))
+                              (apply-wrappers
+                               wrappers
+                               (if intern
+                                   (read-from-string rest)
+                                   (or (find-symbol rest *package*)
+                                       'dummy)))))
                            ((new-line-node-p node) nil)
                            ((class-p node "object")
                             (or (attribute node 'presentation)
@@ -754,6 +762,70 @@ sb-introspect:definition-source)'."
        (iter (for c in completions)
          (collect (list (car c) (remove #\- (lastcar c)))))))))
 
+;;; Autodoc
+
+(define-mode autodoc-mode () ()
+  (:documentation
+   "Show documentation of form around focus."))
+
+(defun format-swank-highlighted-arglist (string)
+  (let ((match (ppcre:all-matches "===>.*<===" string)))
+    (if match
+        (list (subseq string 0 (car match))
+              (make-element
+               "span" :class "focus-arg" :children
+               (list (str:trim (subseq string
+                                       (+ (car match) 4)
+                                       (- (cadr match) 4)))))
+              (subseq string (cadr match)))
+        (list string))))
+
+(defun compute-autodoc (pos)
+  (let ((*package* (current-package pos)))
+    (let (form form-path operator arglist)
+      (setq pos (or (pos-up-ensure pos #'sexp-node-p)
+                    (return-from compute-autodoc nil)))
+      (iter
+        (for last first nil then cur)
+        (for cur first pos then (pos-up cur))
+        (while cur)
+        (when last
+          (push (sexp-child-number last) form-path))
+        (for symbol = (compute-symbol (first-child cur)))
+        (when (fboundp symbol)
+          (when-let (l (sb-introspect:function-lambda-list
+                        symbol))
+            (setq arglist l operator symbol
+                  form (node-to-sexp cur nil))
+            (return))))
+      (let ((arglist (swank::decode-arglist arglist)))
+        (swank::decoded-arglist-to-string
+         arglist
+         :operator operator
+         :highlight (swank::form-path-to-arglist-path
+                     form-path form arglist))
+        (append
+         (format-swank-highlighted-arglist
+          (swank::decoded-arglist-to-string
+           arglist
+           :operator operator
+           :highlight (swank::form-path-to-arglist-path form-path form arglist)))
+         (list ": "
+               (make-element
+                "span" :class "docstring"
+                :children (short-doc operator))))))))
+
+(defun maybe-show-autodoc ()
+  (when-let* ((frame-root (current-frame-root))
+              (echo-area (echo-area frame-root)))
+    (unless (first-child (document-root echo-area))
+      (let (*message-log-max*)
+        (pushnew 'echo-area-autodoc (styles echo-area))
+        (message (compute-autodoc (pos (focus))))))))
+
+(defmethod on-post-command progn ((buffer autodoc-mode))
+  (maybe-show-autodoc))
+
 ;;; Parser
 
 (defun read-string (stream c)
@@ -1023,3 +1095,11 @@ sb-introspect:definition-source)'."
        :inherit compiler-warning)
       ("[compiler-note-severity=\"error\"]"
        :inherit compiler-error)))
+
+(defstyle echo-area-autodoc
+    `((".focus-arg" :inherit keyword)
+      (".docstring" :inherit comment)))
+
+;;; Mode hooks
+
+(pushnew 'autodoc-mode (hooks 'lisp-mode))
