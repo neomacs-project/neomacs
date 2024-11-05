@@ -65,8 +65,7 @@
     ""))
 
 (defun compute-symbol (node)
-  (ignore-errors
-   (swank::parse-symbol (text (first-child node)))))
+  (ignore-errors (swank::parse-symbol (text-content node))))
 
 (defun compute-symbol-type (node)
   (when-let (symbol (compute-symbol node))
@@ -836,7 +835,9 @@ sb-introspect:definition-source)'."
         (while cur)
         (when last
           (push (sexp-child-number last) form-path))
-        (for symbol = (compute-symbol (first-child cur)))
+        (for operator-node = (first-child cur))
+        (for symbol = (when (symbol-node-p operator-node)
+                        (compute-symbol operator-node)))
         (when (fboundp symbol)
           (when-let (l (sb-introspect:function-lambda-list
                         symbol))
@@ -845,11 +846,6 @@ sb-introspect:definition-source)'."
             (return))))
       (when operator
         (let ((arglist (swank::decode-arglist arglist)))
-          (swank::decoded-arglist-to-string
-           arglist
-           :operator operator
-           :highlight (swank::form-path-to-arglist-path
-                       form-path form arglist))
           (append
            (format-swank-highlighted-arglist
             (swank::decoded-arglist-to-string
@@ -860,16 +856,43 @@ sb-introspect:definition-source)'."
              (list ": "
                    (make-element
                     "span" :class "docstring"
-                    :children (short-doc operator))))))))))
+                           :children (short-doc operator))))))))))
+
+(defun autodoc-for-thing (symbol)
+  (let ((doc
+          (when (documentation symbol 'function)
+            (list (make-element
+                   "span" :class "docstring"
+                          :children (short-doc symbol))))))
+    (append
+     (when (fboundp symbol)
+       (let ((*print-case* :downcase))
+         (list
+          (str:concat
+           (print-arglist
+            (cons symbol
+                  (sb-introspect:function-lambda-list
+                   symbol))
+            (symbol-package symbol))
+           (when doc ": ")))))
+     doc)))
 
 (defun maybe-show-autodoc ()
   (when-let* ((frame-root (current-frame-root))
               (echo-area (echo-area frame-root)))
     (unless (first-child (document-root echo-area))
-      (when-let (nodes (compute-autodoc (pos (focus))))
-        (let (*message-log-max*)
-          (pushnew 'echo-area-autodoc (styles echo-area))
-          (message nodes))))))
+      (if (typep (current-buffer) 'active-completion-mode)
+          (message
+           (let ((*package* (current-package (focus)))
+                 (row (node-after (focus (completion-buffer (current-buffer))))))
+             (autodoc-for-thing
+              (ignore-errors
+               (swank::parse-symbol
+                (text-content (first-child row)))))))
+          (when-let (nodes (compute-autodoc (pos (focus))))
+            (let (*message-log-max*)
+              (pushnew 'echo-area-autodoc (styles echo-area))
+              (message nodes)))))))
 
 (defmethod on-post-command progn ((buffer autodoc-mode))
   (maybe-show-autodoc))
