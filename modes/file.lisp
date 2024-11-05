@@ -228,12 +228,14 @@ Used to detect modification from other processes before saving."))
             (normalize-undo-entry (undo-entry buffer)))))
 
 (defmethod save-buffer-aux :after ((buffer undo-mode))
-  (setf (saved-undo-entry buffer)
-        (normalize-undo-entry (undo-entry buffer))))
+  (when (typep buffer 'file-mode)
+    (setf (saved-undo-entry buffer)
+          (normalize-undo-entry (undo-entry buffer)))))
 
 (defmethod revert-buffer-aux :after ((buffer undo-mode))
-  (setf (saved-undo-entry buffer)
-        (normalize-undo-entry (undo-entry buffer))))
+  (when (typep buffer 'file-mode)
+    (setf (saved-undo-entry buffer)
+          (normalize-undo-entry (undo-entry buffer)))))
 
 (define-command save-buffer ()
   (save-buffer-aux (current-buffer)))
