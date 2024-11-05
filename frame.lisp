@@ -486,6 +486,7 @@ If nil, disable message logging. If t, log messages but don't truncate
        :display "flex" :flex-flow "column"
        :backdrop-filter "blur(10px)")
       (".header" :inherit header)
+      (".header > div" :padding-right "1em")
       (".focus .header" :inherit header-focus)
       (".header-buffer-name" :inherit header-buffer-name)
       (".header-buffer-modes" :inherit header-buffer-modes)
@@ -507,12 +508,14 @@ If nil, disable message logging. If t, log messages but don't truncate
                    :margin-bottom "8px"
                    :background-color "rgba(169,151,160,0.2)"))
 
-(defstyle header-buffer-name `(:flex "1 0 1em"))
+(defstyle header-buffer-name `(:flex "1 0 1em"
+                               :white-space "nowrap"))
 
 (defstyle header-buffer-modes
     `(:flex "1 0 1em"
       :text-align "right"
       :white-space "nowrap"
+      :overflow "hidden"
       :text-overflow "ellipsis"))
 
 (defstyle header-focus `(:background-color "rgba(169,151,160,0.4)"))
