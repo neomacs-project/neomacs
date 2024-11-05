@@ -328,7 +328,10 @@ found are replaced with a dummy symbol."
                                wrappers
                                (if intern
                                    (read-from-string rest)
-                                   (or (find-symbol rest *package*)
+                                   (or (find-symbol
+                                        ;; TODO: handle *readtable-case*
+                                        (string-upcase rest)
+                                        *package*)
                                        'dummy)))))
                            ((new-line-node-p node) nil)
                            ((class-p node "object")
@@ -373,20 +376,33 @@ Used for resolving source-path to DOM node.")
 (defvar *compilation-single-form* nil
   "If t, the first element in source-path should always be 0 and is ignored.")
 
+(defun evaluate-feature-expression-node (node)
+  (let ((*package* (find-package :keyword)))
+    (if (stringp node)
+        (sb-int:featurep
+         (find-symbol (string-upcase node) *package*))
+        (sb-int:featurep (node-to-sexp node nil)))))
+
 (defun handle-feature-expressions (nodes)
   (iter
     (for n = (car nodes))
     (cond
       ((and (symbol-node-p n)
             (sera:string-prefix-p "#+" (text-content n)))
-       (if (find (string-upcase (subseq (text-content n) 2))
-                 *features* :key #'symbol-name)
+       (if (evaluate-feature-expression-node
+            (if (> (length (text-content n)) 2)
+                (subseq (text-content n) 2)
+                (prog1 (car nodes)
+                  (setq nodes (cdr nodes)))))
            (setq nodes (cdr nodes))
            (setq nodes (cddr nodes))))
       ((and (symbol-node-p n)
             (sera:string-prefix-p "#-" (text-content n)))
-       (if (find (string-upcase (subseq (text-content n) 2))
-                 *features* :key #'symbol-name)
+       (if (evaluate-feature-expression-node
+            (if (> (length (text-content n)) 2)
+                (subseq (text-content n) 2)
+                (prog1 (car nodes)
+                  (setq nodes (cdr nodes)))))
            (setq nodes (cddr nodes))
            (setq nodes (cdr nodes))))
       (t (collect n)
