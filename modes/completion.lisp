@@ -121,11 +121,9 @@ X and Y are numbers in pixels."
              (assoc-value buffer-bounds :width)
              (assoc-value buffer-bounds :height)))
            (min-width
-            (progn
-              (evaluate-javascript-sync
-               "new Promise((resolve)=>{
-setTimeout(()=>{resolve(document.body.scrollWidth)},0)})"
-               (completion-buffer (current-buffer))))))
+            (evaluate-javascript-sync
+             "document.body.scrollWidth"
+             (completion-buffer (current-buffer)))))
       (with-current-buffer (frame-root (current-buffer))
         (evaluate-javascript
          (ps:ps
