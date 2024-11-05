@@ -252,7 +252,7 @@ This runs only when NODE is an element (i.e. not a text node)."))
 
 (defgeneric insert-text-aux (buffer text-node parent)
   (:method ((buffer buffer) text-node (parent t))
-    text-node)
+    (list text-node))
   (:documentation
    "Transform TEXT-NODE when inserting into BUFFER under PARENT.
 

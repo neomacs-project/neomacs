@@ -175,9 +175,10 @@ THINGS can be DOM nodes or strings, which are converted to text nodes."
                   (if (> (length n) 0)
                       (setq n (make-instance 'text-node :text n))
                       (setq n nil)))
-                (when (text-node-p n)
-                  (setq n (insert-text-aux host n (node-containing pos))))
-                (when n (collect n)))))
+                (cond
+                  ((text-node-p n)
+                   (appending (insert-text-aux host n (node-containing pos))))
+                  (n (collect n))))))
         (record-undo
          (nclo undo-node-setup ()
            (mapc (alex:curry #'do-dom #'node-cleanup) nodes))

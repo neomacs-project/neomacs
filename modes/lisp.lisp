@@ -248,9 +248,14 @@
 
 (defmethod insert-text-aux
     ((buffer sexp-editing-mode) text-node parent)
-  (if (symbol-node-p parent)
-      text-node
-      (make-atom-node "symbol" (text text-node))))
+  (let ((nodes
+          (with-input-from-string (s (text text-node))
+            (read-dom s))))
+    (if (and (single nodes)
+             (symbol-node-p (car nodes))
+             (symbol-node-p parent))
+        (list text-node)
+        nodes)))
 
 ;;; DOM to Sexp parser
 
