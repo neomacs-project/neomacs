@@ -1,5 +1,5 @@
 const electron = require('electron');
-const {app,WebContentsView,BaseWindow} = electron;
+const {app,WebContentsView,BaseWindow,protocol} = electron;
 const WebSocket = require('ws');
 const dialog = require('electron').dialog;
 
@@ -100,8 +100,14 @@ app.on('window-all-closed', function() {
 
 /* Start up */
 
+var Contents = {};
+
 app.on('ready', function() {
     // Start the WebSockets server
     Ceramic.startWebSockets(process.argv[2],
                             parseInt(process.argv[3]));
+    protocol.handle('neomacs', (req) => {
+        const content = Contents[req.url];
+        delete Contents[req.url];
+        return new Response(content,{headers: {'content-type': "text/html"}});});
 });
