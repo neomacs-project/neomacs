@@ -24,11 +24,8 @@
   ((replace-range)
    (completion-buffer
     :initform
-    (lret ((buf (make-buffer " *completion*"
-                             :modes '(completion-list-mode))))
-      (recursive-edit
-       (lambda () (eql (load-status buf) :loading))
-       nil))))
+    (make-buffer " *completion*"
+                 :modes '(completion-list-mode))))
   (:documentation "Transient mode when completion menu is active."))
 
 (define-keys prog-mode
@@ -142,8 +139,8 @@ X and Y are numbers in pixels."
 
 (defun maybe-hide-completions ()
   (let ((buffer (current-buffer)))
-    (unless
-        (inside-range-inclusive-p (focus) (replace-range buffer))
+    (unless (inside-range-inclusive-p
+             (focus) (replace-range buffer))
       (hide-completions))))
 
 (define-command hide-completions ()
