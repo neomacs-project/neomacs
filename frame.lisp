@@ -479,6 +479,8 @@ If nil, disable message logging. If t, log messages but don't truncate
        :flex "1 0 1em"
        :display "flex" :flex-flow "row")
       (".buffer" :flex "1 0 1em"
+                 :min-width "1em"
+                 :min-height "1em"
                  :display "flex" :flex-flow "column"
                  :backdrop-filter "blur(10px)")
       (".minibuffer"
