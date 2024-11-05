@@ -199,7 +199,7 @@ when this row is selected.")))
     (end-of-buffer)))
 
 (defun make-completion-buffer (modes &rest args)
-  (lret ((buffer (apply #'make-buffer "*completion*" :modes modes
+  (lret ((buffer (apply #'make-buffer " *completion*" :modes modes
                         args)))
     (with-current-buffer buffer
       (revert-buffer))))

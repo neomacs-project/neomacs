@@ -24,7 +24,7 @@
   ((replace-range)
    (completion-buffer
     :initform
-    (lret ((buf (make-buffer "*completion*"
+    (lret ((buf (make-buffer " *completion*"
                              :modes '(completion-list-mode))))
       (recursive-edit
        (lambda () (eql (load-status buf) :loading))
