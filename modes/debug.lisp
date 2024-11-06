@@ -3,7 +3,8 @@
 (define-mode debugger-mode (read-only-mode lisp-mode)
   ((environment
     :initform (alex:required-argument :environment)
-    :initarg :environment)))
+    :initarg :environment)
+   (mailbox :initform nil :initarg :mailbox)))
 
 (define-keys debugger-mode
   "a" 'debugger-invoke-abort
@@ -79,7 +80,9 @@
 
 (defun debugger-invoke (restart)
   (quit-buffer (current-buffer))
-  (dissect:invoke restart))
+  (if-let (mailbox (mailbox (current-buffer)))
+    (sb-concurrency:send-message mailbox (list restart))
+    (dissect:invoke restart)))
 
 (define-command debugger-invoke-abort
   :mode debugger-mode ()
@@ -117,18 +120,44 @@
        (sb-di::code-location-form-number location)
        (sb-c::debug-source-plist source)))))
 
-(defun debug-for-environment (env)
+(defun debug-for-environment (env mailbox)
   (let ((debugger
           (with-current-buffer
               (make-buffer
                "*debugger*"
                :modes '(debugger-mode)
-               :environment env)
+               :environment env
+               :mailbox mailbox)
             (revert-buffer)
             (current-buffer))))
     (focus-buffer
      (display-buffer-right
       debugger))))
+
+(defun invoke-neomacs-debugger (c)
+  (if (eq (bt:current-thread) *command-loop-thread*)
+      (progn
+        (debug-for-environment
+         (dissect:capture-environment c)
+         nil)
+        (recursive-edit))
+      (let ((mailbox (sb-concurrency:make-mailbox)))
+        (sb-concurrency:send-message
+         *event-queue*
+         (list (cons
+                :input-event
+                (list (cons :type 'debug-request)
+                      (cons :environment
+                            (dissect:capture-environment c))
+                      (cons :mailbox mailbox)))
+               ;; Dummy buffer
+               (cons :buffer "-1")))
+        (apply #'dissect:invoke
+               (sb-concurrency:receive-message mailbox)))))
+
+(defun neomacs-debugger-hook (c hook)
+  (declare (ignore hook))
+  (invoke-neomacs-debugger c))
 
 (defstyle debugger-mode
     `(("table" :width "100%"

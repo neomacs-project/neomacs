@@ -82,6 +82,8 @@ command loop run the next command.")
 
 (defvar *debug-on-error* nil)
 
+(defvar *use-neomacs-debugger* nil)
+
 (defun play-loud-audio (c)
   (if (or (typep c 'quit) (typep c 'user-error))
       (evaluate-javascript
@@ -161,11 +163,18 @@ command loop run the next command.")
              (on-buffer-title-updated
               buffer (assoc-value event :title))))
           ((equal type "keyUp"))
+          ((eq type 'debug-request)
+           (debug-for-environment
+            (assoc-value event :environment)
+            (assoc-value event :mailbox)))
           (t (warn "Unrecoginized Electron event: ~a" event)))))
 
 (defun command-loop (&optional recursive-p
                        (guard-fn (constantly t))
                        (handlers-p t))
+  (when *use-neomacs-debugger*
+    (trivial-custom-debugger:install-debugger
+     #'neomacs-debugger-hook))
   (let (*this-command-keys*)
     (iter (for data = (sb-concurrency:receive-message *event-queue*))
       (until (eql data 'quit))
@@ -184,15 +193,10 @@ command loop run the next command.")
                        (message "~a" c)
                        (next-iteration)))
                    (error (lambda (c)
-                            (if *debug-on-error*
-                                (unless (eql *debug-on-error* 'external)
-                                  (debug-for-environment
-                                   (dissect:capture-environment c))
-                                  (recursive-edit))
-                                (progn
-                                  (funcall *error-hook* c)
-                                  (message "~a" c)
-                                  (next-iteration)))))
+                            (unless *debug-on-error*
+                              (funcall *error-hook* c)
+                              (message "~a" c)
+                              (next-iteration))))
                    (exit-recursive-edit
                      (lambda (c)
                        (declare (ignore c))
