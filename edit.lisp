@@ -561,12 +561,37 @@ Called by `self-insert-command' to get the character for insertion."
 
 (defun clipboard-insert (items)
   (if items
+      (progn
+        (containers:insert-item
+         *clipboard-ring*
+         (make-clipboard-item
+          :styles (styles (current-buffer))
+          :nodes items))
+        (let ((text
+                (with-output-to-string (s)
+                  (dolist (n items)
+                    (write-dom-aux
+                     (current-buffer)
+                     n s)))))
+          (evaluate-javascript
+           (ps:ps
+             (ps:chain clipboard (write-text (ps:lisp text))))
+           :global)
+          (setq *system-clipboard-last-read* text)))
+      (user-error "Nothing to copy")))
+
+(defvar *system-clipboard-last-read* nil)
+
+(defun read-system-clipboard-maybe ()
+  (let ((text (evaluate-javascript-sync
+               "clipboard.readText()"
+               :global)))
+    (unless (equal text *system-clipboard-last-read*)
+      (setq *system-clipboard-last-read* text)
       (containers:insert-item
        *clipboard-ring*
        (make-clipboard-item
-        :styles (styles (current-buffer))
-        :nodes items))
-      (user-error "Nothing to copy")))
+        :nodes (list text))))))
 
 (define-command cut-element ()
   "Cut element under focus and save into clipboard.
@@ -599,6 +624,7 @@ If selection is active, cut selected contents instead."
 (define-command paste ()
   "Paste the first item in clipboard."
   (setq *clipboard-ring-index* 0)
+  (read-system-clipboard-maybe)
   (let ((item (containers:item-at *clipboard-ring* *clipboard-ring-index*)))
     (setf (advance-p (selection-marker (current-buffer))) nil)
     (setf (pos (selection-marker (current-buffer))) (pos (focus)))
@@ -614,12 +640,14 @@ If selection is active, cut selected contents instead."
         (delete-range
          (range (pos (selection-marker (current-buffer)))
                 (pos (focus)))))
-      (read-from-minibuffer
-       "Paste from clipboard: "
-       :modes 'clipboard-minibuffer-mode
-       :completion-buffer
-       (make-completion-buffer
-        '(clipboard-list-mode completion-buffer-mode))))
+      (progn
+        (read-system-clipboard-maybe)
+        (read-from-minibuffer
+         "Paste from clipboard: "
+         :modes 'clipboard-minibuffer-mode
+         :completion-buffer
+         (make-completion-buffer
+          '(clipboard-list-mode completion-buffer-mode)))))
   (let ((item (containers:item-at *clipboard-ring* *clipboard-ring-index*)))
     (apply #'insert-nodes (focus)
            (mapcar #'clone-node (clipboard-item-nodes item)))))

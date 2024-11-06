@@ -1,5 +1,5 @@
 const electron = require('electron');
-const {app,WebContentsView,BaseWindow,protocol} = electron;
+const {app,WebContentsView,BaseWindow,protocol,clipboard} = electron;
 const WebSocket = require('ws');
 const dialog = require('electron').dialog;
 
