@@ -576,9 +576,14 @@ WIDTH and HEIGHT are numbers in pixels."
   (signal 'not-supported :buffer buffer :operation operation))
 
 (defmacro with-demoted-errors (prompt &body body)
-  `(handler-case
-       (progn ,@body)
-     (error (c) (message "~a:~%~a" ,prompt c))))
+  `(block nil
+     (handler-bind
+         ((error
+            (lambda (c)
+              (unless *debug-on-error*
+                (message "~a:~%~a" ,prompt c)
+                (return)))))
+         ,@body)))
 
 ;;; Read-only state
 

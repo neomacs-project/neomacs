@@ -78,7 +78,7 @@ Should be a list of the form (WIDTH HEIGHT)")
      main
      (dom `(:div :class "content completion-menu"
                  :style
-                 ,(format nil "position: absolute; width: ~apx; height: ~apx;"
+                 ,(format nil "position: absolute; width: ~apx; height: ~apx; display: none;"
                           (car *completion-menu-size*)
                           (cadr *completion-menu-size*))
                  :buffer ,(id (completion-buffer buffer)))))
@@ -127,7 +127,7 @@ X and Y are numbers in pixels."
                 (assoc-value buffer-bounds :height)))
               (completion-buffer
                (ignore-errors (completion-buffer buffer)))
-              #+nil (min-width
+              (min-width
                (evaluate-javascript-sync
                 "document.body.scrollWidth"
                 completion-buffer)))
@@ -140,8 +140,10 @@ X and Y are numbers in pixels."
                           (ps:lisp (format nil "~apx" x))
                           (ps:chain node style top)
                           (ps:lisp (format nil "~apx" y))
-                          #+nil (ps:chain node style min-width)
-                          #+nil (ps:lisp (format nil "~apx" min-width)))))
+                          (ps:chain node style min-width)
+                          (ps:lisp (format nil "~apx" min-width))
+                          (ps:chain node style display)
+                          "block")))
                 (current-buffer))))))))))
 
 (defun maybe-hide-completions ()
