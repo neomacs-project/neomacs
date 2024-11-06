@@ -537,8 +537,9 @@ WIDTH and HEIGHT are numbers in pixels."
 
 (defun render-focus (pos)
   (setq pos (resolve-marker pos))
-  (clear-focus (host pos))
-  (render-focus-aux (host pos) pos))
+  (when-let (host (host pos))
+    (clear-focus host)
+    (render-focus-aux host pos)))
 
 (defgeneric render-focus-aux (buffer pos)
   (:method ((buffer buffer) pos)
