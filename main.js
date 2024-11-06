@@ -38,7 +38,11 @@ Ceramic.syncEval = function(id, fn) {
         RemoteJS.send(JSON.stringify({
             id: id,
             result: result
-        }))})};
+        }))},function(err){
+            RemoteJS.send(JSON.stringify({
+                id: id,
+                result: null
+            }))})};
 
 Ceramic.startCrashReporter = function (options) {
     electron.crashReporter.start(options);
