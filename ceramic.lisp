@@ -1,9 +1,5 @@
 (in-package #:neomacs)
 
-(defun %quote-js (js-code)
-  "Replace each backlash with 2, unless a \" follows it."
-  (ppcre:regex-replace-all "\\\\(?!\")" js-code "\\\\\\\\"))
-
 (defvar *force-sync-evaluate* nil)
 
 (sera:-> evaluate-javascript (string (or buffer (eql :global))) null)
