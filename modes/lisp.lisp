@@ -828,7 +828,9 @@ sb-introspect:definition-source)'."
         (for cur first pos then (pos-up cur))
         (while cur)
         (when last
-          (push (sexp-child-number last) form-path))
+          (push (or (sexp-child-number last)
+                    (return-from compute-autodoc))
+                form-path))
         (for operator-node = (first-child cur))
         (for symbol = (when (symbol-node-p operator-node)
                         (compute-symbol operator-node)))
