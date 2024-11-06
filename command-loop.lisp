@@ -245,3 +245,37 @@ function `command-loop' to take effect."
 
 (define-keys global
   "C-g" 'keyboard-quit)
+
+;;; Helper threads
+
+(defvar *helper-mailboxes*
+  (make-hash-table :weakness :key))
+
+(defun helper-thread-loop ()
+  (iter (for data =
+             (sb-concurrency:receive-message
+              (gethash (bt:current-thread) *helper-mailboxes*)))
+    (with-demoted-errors
+        (format nil "Error in helper ~a:" (bt:current-thread))
+      (funcall data))))
+
+;; TODO: Make `ensure-helper-thread' itself thread-safe? Is this
+;; needed? If it is only ever called from command loop then it's not
+;; needed
+(defun ensure-helper-thread (symbol)
+  (let ((thread (symbol-value symbol)))
+    (unless (and thread (bt:thread-alive-p thread))
+      (setq thread
+            (bt:make-thread
+             'helper-thread-loop
+             :name (string-downcase (symbol-name symbol))))
+      (setf (symbol-value symbol) thread
+            (gethash thread *helper-mailboxes*)
+            (sb-concurrency:make-mailbox)))
+    symbol))
+
+(defun run-in-helper (symbol thunk)
+  (ensure-helper-thread symbol)
+  (sb-concurrency:send-message
+   (gethash (symbol-value symbol) *helper-mailboxes*)
+   thunk))
