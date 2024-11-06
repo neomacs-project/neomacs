@@ -18,6 +18,8 @@
 (defmethod selectable-p-aux ((buffer html-doc-mode) pos)
   (and (not (and (member (node-after pos) '(#\Space #\Newline #\Tab))
                  (member (node-before pos) '(nil #\Space #\Newline #\Tab))))
+       (not (and (tag-name-p (node-containing pos) "body")
+                 (tag-name-p (node-before pos) "p")))
        (call-next-method)))
 
 (defmethod revert-buffer-aux ((buffer html-doc-mode))
@@ -36,14 +38,11 @@
       (setf (pos (focus buffer))
             (pos-down (document-root buffer))))))
 
-(defmethod self-insert-aux
-    ((buffer html-doc-mode) marker string)
-  (let ((node (node-containing marker)))
-    (cond ((member (tag-name node) '("body") :test 'equal)
-           (let ((node (make-element "p" :children (list string))))
-             (insert-nodes marker node)
-             (setf (pos marker) (end-pos node))))
-          (t (call-next-method)))))
+(defmethod insert-text-aux
+    ((buffer html-doc-mode) text-node parent)
+  (cond ((member (tag-name parent) '("body") :test 'equal)
+         (list (make-element "p" :children (list (text text-node)))))
+        (t (call-next-method))))
 
 (defmethod on-focus-move :around ((buffer html-doc-mode) old new)
   (declare (ignore old))

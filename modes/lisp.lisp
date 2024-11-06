@@ -235,16 +235,6 @@
   "space" 'open-space
   ";" 'open-comment)
 
-(defmethod self-insert-aux ((buffer sexp-editing-mode) marker string)
-  (cond ((atom-node-p (node-containing marker))
-         (insert-nodes marker string))
-        ((class-p (node-before marker) "comment")
-         (insert-nodes (end-pos (node-before marker)) string))
-        (t
-         (let ((node (make-atom-node "symbol" string)))
-           (insert-nodes marker node)
-           (setf (pos marker) (end-pos node))))))
-
 (defmethod insert-text-aux
     ((buffer sexp-editing-mode) text-node parent)
   (let ((nodes

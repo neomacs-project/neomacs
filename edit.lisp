@@ -481,14 +481,11 @@ Called by `self-insert-command' to get the character for insertion."
     (cond ((= (length desc) 1) (aref desc 0))
           ((equal desc "space") #\Space))))
 
-(defgeneric self-insert-aux (buffer marker string)
-  (:method ((buffer buffer) marker string)
-    (insert-nodes marker string)))
-
 (define-command self-insert-command ()
   "Insert the last typed character into current buffer."
   (undo-auto-amalgamate)
-  (self-insert-aux (current-buffer) (focus) (string (self-insert-char))))
+  (insert-nodes (focus) (string (self-insert-char)))
+  (setf (adjust-marker-direction (current-buffer)) 'backward))
 
 (define-command new-line (&optional (marker (focus)))
   "Insert a new line node (br element) at MARKER."
