@@ -1,15 +1,9 @@
 (in-package #:neomacs)
 
 (define-mode debugger-mode (read-only-mode lisp-mode)
-  ((for-condition
-    :initform (alex:required-argument :condition)
-    :initarg :condition)
-   (restarts
-    :initform (alex:required-argument :restarts)
-    :initarg :restarts)
-   (stack
-    :initform (alex:required-argument :stack)
-    :initarg :stack)))
+  ((environment
+    :initform (alex:required-argument :environment)
+    :initarg :environment)))
 
 (define-keys debugger-mode
   "a" 'debugger-invoke-abort
@@ -23,7 +17,9 @@
    (end-pos (document-root buffer))
    (make-element
     "p" :children
-    (list (princ-to-string (for-condition buffer)))))
+    (list (princ-to-string
+           (dissect:environment-condition
+            (environment buffer))))))
   (insert-nodes (end-pos (document-root buffer))
                 (make-element "p" :children (list "Restarts:")))
   (let ((tbody (make-element "tbody"))
@@ -32,7 +28,8 @@
      (end-pos (document-root buffer))
      (make-element
       "table" :class "restart-table" :children (list tbody)))
-    (iter (for r in (restarts buffer))
+    (iter (for r in (dissect:environment-restarts
+                     (environment buffer)))
       (for i from 0)
       (insert-nodes
        (end-pos tbody)
@@ -50,7 +47,8 @@
      (end-pos (document-root buffer))
      (make-element
       "table" :class "backtrace-table" :children (list tbody)))
-    (iter (for frame in (stack buffer))
+    (iter (for frame in (dissect:environment-stack
+                         (environment buffer)))
       (for i from 0)
       (insert-nodes
        (end-pos tbody)
@@ -74,20 +72,25 @@
          (setf (attribute el 'frame) frame))))))
 
 (defun find-restart-by-name (name)
-  (iter (for r in (restarts (current-buffer)))
+  (iter (for r in (dissect:environment-restarts
+                   (environment (current-buffer))))
     (when (equal (symbol-name (dissect:name r)) name)
       (return r))))
+
+(defun debugger-invoke (restart)
+  (quit-buffer (current-buffer))
+  (dissect:invoke restart))
 
 (define-command debugger-invoke-abort
   :mode debugger-mode ()
   (if-let (r (find-restart-by-name "ABORT"))
-    (dissect:invoke r)
+    (debugger-invoke r)
     (user-error "No restart named abort")))
 
 (define-command debugger-invoke-continue
   :mode debugger-mode ()
   (if-let (r (find-restart-by-name "CONTINUE"))
-    (dissect:invoke r)
+    (debugger-invoke r)
     (user-error "No restart named continue")))
 
 (define-command debugger-invoke-restart
@@ -96,7 +99,7 @@
                    (attribute row 'restart))))
     (unless restart
       (user-error "No restart under focus"))
-    (dissect:invoke restart)))
+    (debugger-invoke restart)))
 
 (define-command debugger-show-source
   :mode debugger-mode ()
@@ -114,23 +117,18 @@
        (sb-di::code-location-form-number location)
        (sb-c::debug-source-plist source)))))
 
-(defun debug-for-condition (c)
+(defun debug-for-environment (env)
   (let ((debugger
           (with-current-buffer
               (make-buffer
                "*debugger*"
                :modes '(debugger-mode)
-               :condition c
-               :restarts (dissect:restarts c)
-               :stack (dissect:stack))
+               :environment env)
             (revert-buffer)
             (current-buffer))))
     (focus-buffer
      (display-buffer-right
-      debugger))
-    (unwind-protect
-         (recursive-edit)
-      (quit-buffer debugger))))
+      debugger))))
 
 (defstyle debugger-mode
     `(("table" :width "100%"

@@ -186,7 +186,9 @@ command loop run the next command.")
                    (error (lambda (c)
                             (if *debug-on-error*
                                 (unless (eql *debug-on-error* 'external)
-                                  (debug-for-condition c))
+                                  (debug-for-environment
+                                   (dissect:capture-environment c))
+                                  (recursive-edit))
                                 (progn
                                   (funcall *error-hook* c)
                                   (message "~a" c)
