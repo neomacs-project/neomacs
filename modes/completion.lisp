@@ -118,19 +118,19 @@ X and Y are numbers in pixels."
                 (ps:ps (ps:chain (js-buffer buffer) (get-bounds)))
                 :global))
               (range (ignore-errors (replace-range buffer)))
-              (coord
-               (compute-floating-buffer-position
-                (get-bounding-client-rect (range-end range))
-                (car *completion-menu-size*)
-                (cadr *completion-menu-size*)
-                (assoc-value buffer-bounds :width)
-                (assoc-value buffer-bounds :height)))
               (completion-buffer
                (ignore-errors (completion-buffer buffer)))
               (min-width
                (evaluate-javascript-sync
                 "document.body.scrollWidth"
-                completion-buffer)))
+                completion-buffer))
+              (coord
+               (compute-floating-buffer-position
+                (get-bounding-client-rect (range-end range))
+                (car *completion-menu-size*)
+                min-width
+                (assoc-value buffer-bounds :width)
+                (assoc-value buffer-bounds :height))))
            (with-current-buffer (frame-root buffer)
              (bind (((x y) coord))
                (evaluate-javascript
