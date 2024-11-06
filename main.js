@@ -34,7 +34,10 @@ Ceramic.startWebSockets = function(address, port) {
 };
 
 Ceramic.syncEval = function(id, fn) {
-    Promise.resolve(fn()).then(function(result){
+    Promise.race([Promise.resolve(fn()),
+                  new Promise((resolve,reject)=>{
+                      setTimeout(()=>{reject('timeout')},200)})]
+                ).then(function(result){
         RemoteJS.send(JSON.stringify({
             id: id,
             result: result

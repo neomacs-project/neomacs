@@ -127,7 +127,7 @@ X and Y are numbers in pixels."
                 (assoc-value buffer-bounds :height)))
               (completion-buffer
                (ignore-errors (completion-buffer buffer)))
-              (min-width
+              #+nil (min-width
                (evaluate-javascript-sync
                 "document.body.scrollWidth"
                 completion-buffer)))
@@ -140,8 +140,8 @@ X and Y are numbers in pixels."
                           (ps:lisp (format nil "~apx" x))
                           (ps:chain node style top)
                           (ps:lisp (format nil "~apx" y))
-                          (ps:chain node style min-width)
-                          (ps:lisp (format nil "~apx" min-width)))))
+                          #+nil (ps:chain node style min-width)
+                          #+nil (ps:lisp (format nil "~apx" min-width)))))
                 (current-buffer))))))))))
 
 (defun maybe-hide-completions ()
