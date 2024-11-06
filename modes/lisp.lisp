@@ -833,11 +833,12 @@ sb-introspect:definition-source)'."
         (for symbol = (when (symbol-node-p operator-node)
                         (compute-symbol operator-node)))
         (when (fboundp symbol)
-          (when-let (l (sb-introspect:function-lambda-list
-                        symbol))
-            (setq arglist l operator symbol
-                  form (node-to-sexp cur nil))
-            (return))))
+          (multiple-value-bind (l unavailable)
+              (sb-introspect:function-lambda-list symbol)
+            (unless unavailable
+              (setq arglist l operator symbol
+                    form (node-to-sexp cur nil))
+              (return)))))
       (when operator
         (let ((arglist (swank::decode-arglist arglist)))
           (append
