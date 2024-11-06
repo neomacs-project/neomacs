@@ -102,49 +102,44 @@ X and Y are numbers in pixels."
          (+ y h)
          (- y height)))))
 
-(defun update-completion-menu-position ()
-  (when (typep (current-buffer) 'active-completion-mode)
-    (let ((buffer (current-buffer)))
-      (run-in-helper
-       '*window-layout-helper*
-       (lambda ()
-         (when-let*
-             ((menu (car
-                     (get-elements-by-class-name
-                      (window-decoration buffer)
-                      "completion-menu")))
-              (buffer-bounds
-               (evaluate-javascript-sync
-                (ps:ps (ps:chain (js-buffer buffer) (get-bounds)))
-                :global))
-              (range (ignore-errors (replace-range buffer)))
-              (completion-buffer
-               (ignore-errors (completion-buffer buffer)))
-              (min-width
-               (evaluate-javascript-sync
-                "document.body.scrollWidth"
-                completion-buffer))
-              (coord
-               (compute-floating-buffer-position
-                (get-bounding-client-rect (range-end range))
-                (car *completion-menu-size*)
-                min-width
-                (assoc-value buffer-bounds :width)
-                (assoc-value buffer-bounds :height))))
-           (with-current-buffer (frame-root buffer)
-             (bind (((x y) coord))
-               (evaluate-javascript
-                (ps:ps
-                  (let ((node (js-node-1 menu)))
-                    (setf (ps:chain node style left)
-                          (ps:lisp (format nil "~apx" x))
-                          (ps:chain node style top)
-                          (ps:lisp (format nil "~apx" y))
-                          (ps:chain node style min-width)
-                          (ps:lisp (format nil "~apx" min-width))
-                          (ps:chain node style display)
-                          "block")))
-                (current-buffer))))))))))
+(defun update-completion-menu-position (buffer)
+  (when-let*
+      ((menu (car
+              (get-elements-by-class-name
+               (window-decoration buffer)
+               "completion-menu")))
+       (buffer-bounds
+        (evaluate-javascript-sync
+         (ps:ps (ps:chain (js-buffer buffer) (get-bounds)))
+         :global))
+       (range (ignore-errors (replace-range buffer)))
+       (completion-buffer
+        (ignore-errors (completion-buffer buffer)))
+       (min-width
+        (evaluate-javascript-sync
+         "document.body.scrollWidth"
+         completion-buffer))
+       (coord
+        (compute-floating-buffer-position
+         (get-bounding-client-rect (range-end range))
+         min-width
+         (cadr *completion-menu-size*)
+         (assoc-value buffer-bounds :width)
+         (assoc-value buffer-bounds :height))))
+    (with-current-buffer (frame-root buffer)
+      (bind (((x y) coord))
+        (evaluate-javascript
+         (ps:ps
+           (let ((node (js-node-1 menu)))
+             (setf (ps:chain node style left)
+                   (ps:lisp (format nil "~apx" x))
+                   (ps:chain node style top)
+                   (ps:lisp (format nil "~apx" y))
+                   (ps:chain node style min-width)
+                   (ps:lisp (format nil "~apx" min-width))
+                   (ps:chain node style display)
+                   "block")))
+         (current-buffer))))))
 
 (defun maybe-hide-completions ()
   (let ((buffer (current-buffer)))
@@ -157,7 +152,10 @@ X and Y are numbers in pixels."
 
 (defmethod on-post-command progn ((buffer active-completion-mode))
   (maybe-hide-completions)
-  (update-completion-menu-position))
+  (run-in-helper
+   '*window-layout-helper*
+   'update-completion-menu-position
+   buffer))
 
 (defmethod disable-aux ((mode (eql 'active-completion-mode))
                         previous-instance)
@@ -191,7 +189,10 @@ X and Y are numbers in pixels."
       (when (>= (length (text-content node))
                 (minimum-prefix buffer))
         (show-completions (focus buffer) t)
-        (update-completion-menu-position)))))
+        (run-in-helper
+         '*window-layout-helper*
+         'update-completion-menu-position
+         buffer)))))
 
 ;;; Style
 

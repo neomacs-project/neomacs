@@ -414,37 +414,38 @@ If nil, disable message logging. If t, log messages but don't truncate
     (buffer client-property decoration-property
      slot size)
   (check-displayed buffer)
-  (run-in-helper
-   '*window-layout-helper*
-   (lambda ()
-     (let ((size
-             (or size
-                 (evaluate-javascript-sync
-                  (format
-                   nil "document.documentElement.~a"
-                   client-property)
-                  buffer))))
-       ;; Avoid set size if possible to reduce flickering
-       (unless (eql (slot-value buffer slot) size)
-         (with-current-buffer (frame-root buffer)
-           (evaluate-javascript-sync
-            (ps:ps
-              (setf
-               (ps:getprop
-                (ps:chain (js-node-1 (window-decoration buffer))
-                          style)
-                (ps:lisp decoration-property))
-               (ps:lisp (format nil "~apx" size)))
-              nil)
-            (frame-root buffer)))
-         (setf (slot-value buffer slot) size))))))
+  (let ((size
+          (or size
+              (evaluate-javascript-sync
+               (format
+                nil "document.documentElement.~a"
+                client-property)
+               buffer))))
+    ;; Avoid set size if possible to reduce flickering
+    (unless (eql (slot-value buffer slot) size)
+      (with-current-buffer (frame-root buffer)
+        (evaluate-javascript-sync
+         (ps:ps
+           (setf
+            (ps:getprop
+             (ps:chain (js-node-1 (window-decoration buffer))
+                       style)
+             (ps:lisp decoration-property))
+            (ps:lisp (format nil "~apx" size)))
+           nil)
+         (frame-root buffer)))
+      (setf (slot-value buffer slot) size))))
 
 (defun fit-buffer-height (buffer &optional height)
-  (fit-buffer-size buffer "scrollHeight" "min-height"
-                   'window-min-height height))
+  (run-in-helper
+   '*window-layout-helper*
+   'fit-buffer-size buffer "scrollHeight" "min-height"
+   'window-min-height height))
 
 (defun fit-buffer-width (buffer &optional width)
-  (fit-buffer-size buffer "scrollWidth" "min-width"
+  (run-in-helper
+   '*window-layout-helper*
+   'fit-buffer-size buffer "scrollWidth" "min-width"
                    'window-min-width width))
 
 (defun message (control-string &rest format-arguments)

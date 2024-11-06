@@ -257,12 +257,18 @@ function `command-loop' to take effect."
   (make-hash-table :weakness :key))
 
 (defun helper-thread-loop ()
-  (iter (for data =
-             (sb-concurrency:receive-message
-              (gethash (bt:current-thread) *helper-mailboxes*)))
-    (with-demoted-errors
-        (format nil "Error in helper ~a" (bt:current-thread))
-      (funcall data))))
+  (iter (with mailbox = (gethash (bt:current-thread) *helper-mailboxes*))
+    (for message = (sb-concurrency:receive-message mailbox))
+    (let ((all-messages
+            (delete-duplicates
+             (cons message
+                   (sb-concurrency:receive-pending-messages
+                    mailbox))
+             :test 'equal :from-end t)))
+      (iter (for message in all-messages)
+        (with-demoted-errors
+            (format nil "Error in helper ~a" (bt:current-thread))
+          (apply (car message) (cdr message)))))))
 
 ;; TODO: Make `ensure-helper-thread' itself thread-safe? Is this
 ;; needed? If it is only ever called from command loop then it's not
@@ -279,8 +285,8 @@ function `command-loop' to take effect."
             (sb-concurrency:make-mailbox)))
     symbol))
 
-(defun run-in-helper (symbol thunk)
+(defun run-in-helper (symbol function &rest args)
   (ensure-helper-thread symbol)
   (sb-concurrency:send-message
    (gethash (symbol-value symbol) *helper-mailboxes*)
-   thunk))
+   (cons function args)))
