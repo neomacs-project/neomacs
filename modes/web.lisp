@@ -1,16 +1,30 @@
 (in-package #:neomacs)
 
+(defun look-like-url-p (string)
+  (ignore-errors
+   (let ((parsed (quri:uri string)))
+     (if (quri:uri-scheme parsed)
+         string
+         (let ((prepended (str:concat "https://" string)))
+           (setq parsed (quri:uri prepended))
+           (when (or (quri:ip-addr-p (quri:uri-host parsed))
+                     (ignore-errors
+                      (cl-tld:get-tld (quri:uri-domain parsed))))
+             prepended))))))
+
+(defvar *search-prefix* "https://duckduckgo.com/html/?q=")
+
 (define-command find-url
-    (&optional (url
+    (&optional (url-or-query
                 (read-from-minibuffer
                  "Find URL: ")))
-  (let ((parsed (quri:uri url)))
-    (if (quri:uri-scheme parsed)
-        (setq url parsed)
-        (setq url (quri:uri (str:concat "https://duckduckgo.com/?q=" url)))))
+
   (switch-to-buffer
-   (make-buffer "Web" :modes 'web-mode :url (quri:render-uri url)
-                :styles nil)))
+   (make-buffer
+    "Web" :modes 'web-mode
+    :url (or (look-like-url-p url-or-query)
+             (str:concat *search-prefix* url-or-query))
+    :styles nil)))
 
 (define-mode web-mode (read-only-mode)
   ((scroll-multiplier :default 16 :type (integer 1))
