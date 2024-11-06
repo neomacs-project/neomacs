@@ -394,7 +394,7 @@ operation."
 
 ;;; Parenscript utils
 
-(defun get-bounding-client-rect (pos)
+(defun get-bounding-client-rect (pos &optional cb)
   "Get the bounding client rect of the node after or containing POS.
 
 If POS is a `text-pos', the node is the one character after POS;
@@ -405,7 +405,7 @@ WIDTH and HEIGHT are numbers in pixels."
   (let ((pos (resolve-marker pos)))
     (ematch pos
       ((text-pos node offset)
-       (evaluate-javascript-sync
+       (evaluate-javascript-async
         (ps:ps
           (let ((range (ps:new -range))
                 (node (js-node-1 node)))
@@ -414,14 +414,16 @@ WIDTH and HEIGHT are numbers in pixels."
             (let ((r (ps:chain range (get-bounding-client-rect))))
               (list (ps:chain r x) (ps:chain r y)
                     (ps:chain r width) (ps:chain r height)))))
-        (host node)))
+        (host node)
+        cb))
       ((or (end-pos node) node)
-       (evaluate-javascript-sync
+       (evaluate-javascript-async
         (ps:ps
           (let ((r (ps:chain (js-node-1 node) (get-bounding-client-rect))))
             (list (ps:chain r x) (ps:chain r y)
                   (ps:chain r width) (ps:chain r height))))
-        (host node))))))
+        (host node)
+        cb)))))
 
 (ps:defpsmacro pos-bounding-rect (marker-or-pos)
   (let ((pos (resolve-marker marker-or-pos)))
