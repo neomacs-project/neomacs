@@ -256,7 +256,7 @@ function `command-loop' to take effect."
              (sb-concurrency:receive-message
               (gethash (bt:current-thread) *helper-mailboxes*)))
     (with-demoted-errors
-        (format nil "Error in helper ~a:" (bt:current-thread))
+        (format nil "Error in helper ~a" (bt:current-thread))
       (funcall data))))
 
 ;; TODO: Make `ensure-helper-thread' itself thread-safe? Is this
