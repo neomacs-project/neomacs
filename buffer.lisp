@@ -56,7 +56,9 @@
    (window-decoration :initform nil)
    (frame-root :initform nil)
    (window-min-height :initform nil)
-   (window-min-width :initform nil))
+   (window-min-width :initform nil)
+   (amalgamate-js-p :initform nil)
+   (amalgamate-js-stream :initform (make-string-output-stream)))
   (:default-initargs :url "about:blank"))
 
 (defmethod id :around ((buffer buffer))
@@ -362,6 +364,16 @@ operation."
            url (id buffer)
            url (id buffer))
    :global))
+
+(defmacro with-amalgamate-js (buffer &body body)
+  `(unwind-protect
+        (progn
+          (setf (amalgamate-js-p ,buffer) t)
+          ,@body)
+     (setf (amalgamate-js-p ,buffer) nil)
+     (send-js-for-buffer
+      (get-output-stream-string (amalgamate-js-stream ,buffer))
+      ,buffer)))
 
 (defun get-buffer-create (name &rest args)
   (bt:with-recursive-lock-held (*buffer-table-lock*)

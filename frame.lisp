@@ -23,10 +23,11 @@
       ;; Therefore, we surround it with `with-delay-frame-update-views',
       ;; which record view addition/removal and compute the delta, only
       ;; adding/removing them once each when the block finishes.
-      (with-delay-frame-update-views
-        (let ((new (window-decoration-aux buffer)))
-          (replace-node (window-decoration buffer) new)
-          (setf (window-decoration buffer) new))))))
+      (with-amalgamate-js frame-root
+        (with-delay-frame-update-views
+         (let ((new (window-decoration-aux buffer)))
+           (replace-node (window-decoration buffer) new)
+           (setf (window-decoration buffer) new)))))))
 
 (define-mode echo-area-mode () ()
   (:documentation "Mode for echo area buffer."))

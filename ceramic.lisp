@@ -2,6 +2,12 @@
 
 (defvar *force-sync-evaluate* nil)
 
+(defun send-js-for-buffer (code buffer)
+  (cera.d:js
+   cera.d:*driver*
+   (ps:ps (ps:chain (js-buffer buffer) web-contents
+                    (execute-java-script (ps:lisp code) t)))))
+
 (sera:-> evaluate-javascript (string (or buffer (eql :global))) null)
 (defun evaluate-javascript (code buffer)
   "Evaluate JavaScript CODE asynchronously.
@@ -12,10 +18,11 @@ BUFFER is :global. Returns NIL."
       (evaluate-javascript-sync code buffer)
       (etypecase buffer
         (buffer
-         (cera.d:js
-            cera.d:*driver*
-            (ps:ps (ps:chain (js-buffer buffer) web-contents
-                             (execute-java-script (ps:lisp code) t)))))
+         (if (amalgamate-js-p buffer)
+             (progn
+               (write-string code (amalgamate-js-stream buffer))
+               (terpri (amalgamate-js-stream buffer)))
+             (send-js-for-buffer code buffer)))
         ((eql :global)
          (cera.d:js cera.d:*driver* code))))
   nil)
