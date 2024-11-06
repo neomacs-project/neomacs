@@ -566,7 +566,7 @@ Called by `self-insert-command' to get the character for insertion."
        (make-clipboard-item
         :styles (styles (current-buffer))
         :nodes items))
-      (error "Nothing to copy")))
+      (user-error "Nothing to copy")))
 
 (define-command cut-element ()
   "Cut element under focus and save into clipboard.
