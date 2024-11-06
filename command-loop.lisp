@@ -122,7 +122,7 @@ command loop run the next command.")
              (when (focused-buffer)
                (evaluate-javascript
                 (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
-                nil)))
+                :global)))
            (let ((key (make-key :ctrl (assoc-value event :control)
                                 :meta (assoc-value event :alt)
                                 :super (assoc-value event :meta)
