@@ -38,6 +38,7 @@ non-nil HANDLER-P, which would return and signal a `quit' condition."))
     (while *post-command-buffers*)))
 
 (defun call-with-current-buffer (buffer thunk)
+  (check-type buffer buffer)
   (cond ((not *locked-buffers*)
          (let ((*locked-buffers* (list buffer))
                (*post-command-buffers* (list buffer))
