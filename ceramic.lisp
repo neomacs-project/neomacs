@@ -53,11 +53,12 @@ BUFFER is NIL."
                   (lambda () (eval (ps:lisp code))))))))))
     (with-slots (threads responses cera.d::js-lock)
         cera.d:*driver*
-      (unless (gethash (bt:current-thread) threads)
-        (setf (gethash (bt:current-thread) threads)
-              (sb-concurrency:make-mailbox)))
-      (let ((mailbox (gethash (bt:current-thread) threads)))
-        (setf (gethash message-id responses) mailbox)
+      (let ((mailbox
+              (bt:with-lock-held (cera.d::js-lock)
+                (setf (gethash message-id responses)
+                      (or (gethash (bt:current-thread) threads)
+                          (setf (gethash (bt:current-thread) threads)
+                                (sb-concurrency:make-mailbox)))))))
         (cera.d:js cera.d:*driver* full-js)
         (sb-concurrency:receive-message mailbox)))))
 
