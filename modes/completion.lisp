@@ -61,9 +61,7 @@ form (text annotation)."))
       (return-from show-completions))
     (enable 'active-completion-mode)
     (setf (completions (completion-buffer (current-buffer)))
-          (if (> (length completions) 20)
-              (subseq completions 0 20)
-              completions)
+          completions
           (replace-range (current-buffer)) replace-range)
     nil))
 
@@ -110,36 +108,33 @@ X and Y are numbers in pixels."
                   (get-elements-by-class-name
                    (window-decoration (current-buffer))
                    "completion-menu")))
-           (buffer (current-buffer)))
-      (evaluate-javascript-async
-       (ps:ps (ps:chain (js-buffer buffer) (get-bounds)))
-       nil
-       (lambda (buffer-bounds)
-         (get-bounding-client-rect
-          (range-end (replace-range buffer))
-          (lambda (rect)
-            (bind (((x y)
-                    (compute-floating-buffer-position
-                     rect
-                     (car *completion-menu-size*)
-                     (cadr *completion-menu-size*)
-                     (assoc-value buffer-bounds :width)
-                     (assoc-value buffer-bounds :height))))
-              (evaluate-javascript-async
-               "document.body.scrollWidth"
-               (completion-buffer buffer)
-               (lambda (min-width)
-                 (with-current-buffer (frame-root (current-buffer))
-                   (evaluate-javascript
-                    (ps:ps
-                      (let ((node (js-node-1 menu)))
-                        (setf (ps:chain node style left)
-                              (ps:lisp (format nil "~apx" x))
-                              (ps:chain node style top)
-                              (ps:lisp (format nil "~apx" y))
-                              (ps:chain node style min-width)
-                              (ps:lisp (format nil "~apx" min-width)))))
-                    (current-buffer)))))))))))))
+           (buffer-bounds
+            (evaluate-javascript-sync
+             (ps:ps (ps:chain (js-buffer (current-buffer)) (get-bounds)))
+             nil))
+           ((x y)
+            (compute-floating-buffer-position
+             (get-bounding-client-rect
+              (range-end (replace-range (current-buffer))))
+             (car *completion-menu-size*)
+             (cadr *completion-menu-size*)
+             (assoc-value buffer-bounds :width)
+             (assoc-value buffer-bounds :height)))
+           (min-width
+            (evaluate-javascript-sync
+             "document.body.scrollWidth"
+             (completion-buffer (current-buffer)))))
+      (with-current-buffer (frame-root (current-buffer))
+        (evaluate-javascript
+         (ps:ps
+           (let ((node (js-node-1 menu)))
+             (setf (ps:chain node style left)
+                   (ps:lisp (format nil "~apx" x))
+                   (ps:chain node style top)
+                   (ps:lisp (format nil "~apx" y))
+                   (ps:chain node style min-width)
+                   (ps:lisp (format nil "~apx" min-width)))))
+         (current-buffer))))))
 
 (defun maybe-hide-completions ()
   (let ((buffer (current-buffer)))

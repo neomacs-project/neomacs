@@ -37,34 +37,7 @@ BUFFER is NIL."
        cera.d:*driver*
        (ps:ps (return (eval (ps:lisp code)))))))
 
-(defun evaluate-javascript-async (code buffer cb)
-  (if cb
-      (let ((message-id (uuid:format-as-urn nil (uuid:make-v4-uuid))))
-        (with-slots (callbacks cera.d::js-lock) cera.d:*driver*
-          (bt:with-lock-held (cera.d::js-lock)
-            (setf (gethash message-id callbacks) cb))
-          (if buffer
-              (cera.d:js
-               cera.d:*driver*
-               (ps:ps (ps:chain -ceramic
-                                (sync-eval
-                                 (ps:lisp message-id)
-                                 (lambda ()
-                                   (ps:chain (js-buffer buffer) web-contents
-                                             (execute-java-script (ps:lisp code) t)))))))
-              (cera.d:js
-               cera.d:*driver*
-               (ps:ps (ps:chain -ceramic
-                                (sync-eval
-                                 (ps:lisp message-id)
-                                 (lambda ()
-                                   (eval (ps:lisp code))))))))))
-
-      (evaluate-javascript-sync code buffer)))
-
-(defclass driver (ceramic.driver:driver)
-  ((callbacks
-    :initform (make-hash-table :test 'equal))))
+(defclass driver (ceramic.driver:driver) ())
 
 (setq cera.d:*driver* (make-instance 'driver)
       trivial-ws:+default-timeout+ 1000000
@@ -74,23 +47,12 @@ BUFFER is NIL."
 (defmethod ceramic.driver::on-message ((driver driver) message)
   (declare (type string message))
   (let ((data (cl-json:decode-json-from-string message)))
-    (with-slots (cera.d::responses cera.d::js-lock
-                 cera.d::js-cond callbacks)
-        driver
-      (if-let (id (assoc-value data :id))
-          (when-let
-              (cb (bt:with-lock-held (cera.d::js-lock)
-                    (lret ((cb (gethash id callbacks)))
-                      (if cb (remhash id callbacks)
-                          (progn
-                            (setf (gethash id cera.d::responses)
-                                  (assoc-value data :result))
-                            (bt:condition-notify cera.d::js-cond))))))
-            (handler-case
-                (funcall cb (assoc-value data :result))
-              (error (c)
-                (message "Error running callback ~a in JS communication thread: ~a"
-                         cb c))))
+    (with-slots (cera.d::responses cera.d::js-lock cera.d::js-cond) driver
+      (if (assoc-value data :id)
+          (bt:with-lock-held (cera.d::js-lock)
+            (setf (gethash (assoc-value data :id) cera.d::responses)
+                  (assoc-value data :result))
+            (bt:condition-notify cera.d::js-cond))
           (sb-concurrency:send-message *event-queue* data)))))
 
 (define-command kill-neomacs ()
