@@ -116,7 +116,7 @@ X and Y are numbers in pixels."
               (buffer-bounds
                (evaluate-javascript-sync
                 (ps:ps (ps:chain (js-buffer buffer) (get-bounds)))
-                nil))
+                :global))
               (range (ignore-errors (replace-range buffer)))
               (coord
                (compute-floating-buffer-position

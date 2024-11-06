@@ -179,7 +179,7 @@ Used to detect modification from other processes before saving."))
      (ps:ps
        (setf (ps:getprop -contents (ps:lisp internal-url))
              (ps:lisp (serialize (document-root buffer) nil))))
-     nil)
+     :global)
     (load-url buffer internal-url))
   (setf (modified buffer) nil
         (modtime buffer)

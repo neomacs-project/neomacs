@@ -459,7 +459,9 @@ NODE become the last child of NEW-NODE."
   (delete-nodes (pos-down (document-root (current-buffer))) nil))
 
 (defgeneric revert-buffer-aux (buffer)
-  (:documentation "Regenerate the content of BUFFER."))
+  (:documentation "Regenerate the content of BUFFER.")
+  (:method ((buffer buffer))
+    (not-supported buffer 'revert-buffer)))
 
 (define-command revert-buffer ()
   "Regenerate the content of current buffer.

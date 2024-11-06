@@ -64,7 +64,7 @@
     (when-let (buffer (window-buffer window-node))
       (evaluate-javascript
        (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
-       nil))))
+       :global))))
 
 (ps:defpsmacro js-frame (buffer)
   `(ps:getprop (ps:chain -ceramic frames) (ps:lisp (id ,buffer))))
@@ -113,7 +113,7 @@
        (ps:chain frame (set-menu nil))
        (ps:chain frame (on "resize" resize))
        (ps:chain frame (on "maximize" resize))))
-   nil))
+   :global))
 
 (defun cleanup-buffer-display (buffer)
   "Make sure BUFFER is not displayed in any frame.
@@ -133,12 +133,12 @@ fixed in future Electron, our logic may be simplified."
         (evaluate-javascript
          (ps:ps (ps:chain (js-frame frame-root) content-view
                           (remove-child-view (js-buffer buffer))))
-         nil))))
+         :global))))
 
 (defmethod on-delete-buffer progn ((buffer frame-root-mode))
   (evaluate-javascript
    (ps:ps (ps:chain -ceramic (close-frame (ps:lisp (id (current-buffer))))))
-   nil)
+   :global)
   (delete-buffer (echo-area buffer)))
 
 (defmethod selectable-p-aux ((buffer frame-root-mode) pos)
@@ -204,7 +204,7 @@ fixed in future Electron, our logic may be simplified."
      (ps:ps (ps:chain (js-frame (current-buffer)) content-view
                       (add-child-view (ps:getprop (ps:chain -ceramic buffers)
                                                   (ps:lisp id)))))
-     nil)
+     :global)
     (setf (frame-root buffer) (current-buffer))))
 
 (defun remove-view (id)
@@ -213,7 +213,7 @@ fixed in future Electron, our logic may be simplified."
      (ps:ps (ps:chain (js-frame (current-buffer)) content-view
                       (remove-child-view (ps:getprop (ps:chain -ceramic buffers)
                                                      (ps:lisp id)))))
-     nil)
+     :global)
     (setf (window-decoration buffer) nil
           (frame-root buffer) nil)))
 
@@ -373,7 +373,7 @@ BUFFER must be already displayed."
   "Ask FRAME-ROOT to update its windows."
   (evaluate-javascript
    (ps:ps (ps:chain (js-frame frame-root) (emit "resize")))
-   nil))
+   :global))
 
 (defvar *current-frame-root* nil)
 
@@ -475,7 +475,7 @@ If nil, disable message logging. If t, log messages but don't truncate
 (define-command open-dev-tools ()
   (evaluate-javascript
    (ps:ps (ps:chain (js-buffer (current-buffer)) web-contents (open-dev-tools)))
-   nil))
+   :global))
 
 (defstyle frame-root-mode
     `((".vertical"

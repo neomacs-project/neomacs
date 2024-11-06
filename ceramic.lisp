@@ -6,21 +6,26 @@
 
 (defvar *force-sync-evaluate* nil)
 
+(sera:-> evaluate-javascript (string (or buffer (eql :global))) null)
 (defun evaluate-javascript (code buffer)
   "Evaluate JavaScript CODE asynchronously.
 
 Evaluate CODE in BUFFER's webContents, or main Electron process if
-BUFFER is NIL. Returns NIL."
+BUFFER is :global. Returns NIL."
   (if *force-sync-evaluate*
       (evaluate-javascript-sync code buffer)
-      (if buffer
-          (cera.d:js
-           cera.d:*driver*
-           (ps:ps (ps:chain (js-buffer buffer) web-contents
-                            (execute-java-script (ps:lisp code) t))))
-          (cera.d:js cera.d:*driver* code)))
+      (etypecase buffer
+        (buffer
+         (cera.d:js
+            cera.d:*driver*
+            (ps:ps (ps:chain (js-buffer buffer) web-contents
+                             (execute-java-script (ps:lisp code) t)))))
+        ((eql :global)
+         (cera.d:js cera.d:*driver* code))))
   nil)
 
+
+(sera:-> evaluate-javascript-sync (string (or buffer (eql :global))) t)
 (defun evaluate-javascript-sync (code buffer)
   "Evaluate JavaScript CODE synchronously and return the result.
 
@@ -29,21 +34,23 @@ BUFFER is NIL."
   (let* ((message-id
            (uuid:format-as-urn nil (uuid:make-v4-uuid)))
          (full-js
-           (if buffer
-               (ps:ps
-                 (ps:chain
-                  -ceramic
-                  (sync-eval
-                   (ps:lisp message-id)
-                   (lambda ()
-                     (ps:chain (js-buffer buffer) web-contents
-                               (execute-java-script (ps:lisp code) t))))))
-               (ps:ps
-                 (ps:chain
-                  -ceramic
-                  (sync-eval
-                   (ps:lisp message-id)
-                   (lambda () (eval (ps:lisp code)))))))))
+           (etypecase buffer
+             (buffer
+              (ps:ps
+                (ps:chain
+                 -ceramic
+                 (sync-eval
+                  (ps:lisp message-id)
+                  (lambda ()
+                    (ps:chain (js-buffer buffer) web-contents
+                              (execute-java-script (ps:lisp code) t)))))))
+             ((eql :global)
+              (ps:ps
+                (ps:chain
+                 -ceramic
+                 (sync-eval
+                  (ps:lisp message-id)
+                  (lambda () (eval (ps:lisp code))))))))))
     (with-slots (threads responses cera.d::js-lock)
         cera.d:*driver*
       (unless (gethash (bt:current-thread) threads)

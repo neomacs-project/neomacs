@@ -127,7 +127,7 @@
            (when (ps:chain h (can-go-back))
              (ps:chain h (go-back))
              t)))
-       nil)
+       :global)
     (error "Can not go backward.")))
 
 (define-command web-go-forward
@@ -140,7 +140,7 @@
            (when (ps:chain h (can-go-forward))
              (ps:chain h (go-forward))
              t)))
-       nil)
+       :global)
     (error "Can not go forward.")))
 
 (defun key-sym-to-electron (sym shift)
@@ -186,7 +186,7 @@
           (send-input-event
            (ps:create type "keyUp"
                       key-code code)))))
-     nil)))
+     :global)))
 
 (define-command web-forward-key
   :mode web-mode ()

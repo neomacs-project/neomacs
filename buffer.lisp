@@ -136,6 +136,10 @@ for which MODE-NAME is being disabled."))
   (print-unreadable-object (buffer stream)
     (format stream "BUFFER ~s {~a}" (name buffer) (id buffer))))
 
+(defnclo update-style (buffer style) (cell)
+  (declare (ignore cell))
+  (update-style buffer style))
+
 (defmethod initialize-instance :after ((buffer buffer) &key name disambiguate)
   (unless name (alex:required-argument :name))
   (bt:with-recursive-lock-held (*buffer-table-lock*)
@@ -159,9 +163,7 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
       (alex:appendf (styles buffer) (list 'common)))
     (dolist (style (styles buffer))
       (add-observer (css-cell style)
-                    (nclo update-style (cell)
-                      (declare (ignore cell))
-                      (update-style buffer style))))))
+                    (make-update-style buffer style)))))
 
 (defgeneric on-post-command (buffer)
   (:method-combination progn)
@@ -216,7 +218,7 @@ changed."
     (when (eql buffer (focused-buffer))
       (evaluate-javascript
        (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
-       nil))))
+       :global))))
 
 (defgeneric on-buffer-loaded (buffer url err)
   (:method-combination progn)
@@ -359,7 +361,7 @@ operation."
            (id buffer) url
            url (id buffer)
            url (id buffer))
-   nil))
+   :global))
 
 (defun get-buffer-create (name &rest args)
   (bt:with-recursive-lock-held (*buffer-table-lock*)
@@ -650,9 +652,7 @@ If it is, should signal a condition of type `read-only-error'."))
   (dolist (style (stable-set-difference new-val (slot-value buffer 'styles)))
     (update-style buffer style)
     (add-observer (css-cell style)
-                  (nclo update-style (cell)
-                    (declare (ignore cell))
-                    (update-style buffer style))))
+                  (make-update-style buffer style)))
   (dolist (style (set-difference (slot-value buffer 'styles) new-val))
     (remove-style buffer style)
     (remove-observer (css-cell style) buffer
