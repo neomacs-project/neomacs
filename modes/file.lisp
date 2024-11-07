@@ -109,12 +109,15 @@
                (lastcar (pathname-directory path)))
            :file-path path))
     (set-auto-mode)
-    (when (or (not (modtime (current-buffer)))
-              (not (eql (modtime (current-buffer))
-                        (osicat-posix:stat-mtime
-                         (osicat-posix:stat path))))
-              (modified (current-buffer)))
-      (revert-buffer))
+    (handler-case
+        (when (or (not (modtime (current-buffer)))
+                  (not (eql (modtime (current-buffer))
+                            (osicat-posix:stat-mtime
+                             (osicat-posix:stat path))))
+                  (modified (current-buffer)))
+          (revert-buffer))
+      (osicat-posix:enoent ()
+        (message "~a does not exist!" path)))
     (current-buffer)))
 
 (define-command find-file
@@ -203,10 +206,12 @@ Used to detect modification from other processes before saving."))
 (defmethod save-buffer-aux :around ((buffer file-mode))
   (if (modified buffer)
       (progn
-        (when (and (modtime buffer)
-                   (not (eql (modtime buffer)
-                             (osicat-posix:stat-mtime
-                              (osicat-posix:stat (file-path buffer))))))
+        (when (handler-case
+                  (and (modtime buffer)
+                       (not (eql (modtime buffer)
+                                 (osicat-posix:stat-mtime
+                                  (osicat-posix:stat (file-path buffer))))))
+                (osicat-posix:enoent ()))
           (unless (read-yes-or-no
                    (format nil "~a has changed since visited. Save anyway? "
                            (name buffer)))

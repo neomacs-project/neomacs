@@ -453,6 +453,21 @@ JSON should have the format like what `+get-body-json-code+' produces:
          *dom-output*)
         (save-buffer)))))
 
+(define-command manual ()
+  "View Neomacs manual."
+  (let ((toc-path
+          (asdf:system-relative-pathname
+           "neomacs" "doc/build/toc.html")))
+    (unless (uiop:file-exists-p toc-path)
+      (if (read-yes-or-no "Manual seems not built yet, build now? ")
+          (build-manual)
+          (user-error "Manual not built")))
+    (switch-to-buffer
+     (get-buffer-create
+      "*manual*" :modes 'web-mode
+      :url (str:concat
+            "file://" (uiop:native-namestring toc-path))))))
+
 (defstyle html-doc-mode
     `(("p:empty::after" :content "_")
       ("li p" :margin 0)
