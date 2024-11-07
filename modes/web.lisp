@@ -196,6 +196,9 @@
        buffer)
       (setf (url buffer) url))))
 
+(defmethod revert-buffer-aux ((buffer web-mode))
+  (load-url buffer (url buffer)))
+
 (defun key-sym-to-electron (sym shift)
   (if-let (translation (gethash (cons sym shift) *event-to-char*))
     (values (string translation) nil)
@@ -244,6 +247,26 @@
 (define-command web-forward-key
   :mode web-mode ()
   (web-send-key (lastcar *this-command-keys*)))
+
+;;; Web histroy
+
+(define-mode web-history-list-mode (list-mode) ())
+
+(defmethod generate-rows ((buffer web-history-list-mode))
+  (iter (for entry in *web-history-list*)
+    (insert-nodes (focus)
+                  (dom `(:tr (:td ,(or (title entry) "-"))
+                             (:td ,(url entry))
+                             (:td ,(local-time:format-timestring
+                                    nil (access-time entry)
+                                    :format local-time:+asctime-format+)))))))
+
+(define-command list-web-history ()
+  (with-current-buffer
+      (switch-to-buffer
+       (get-buffer-create "*web-history*"
+                          :modes '(web-history-list-mode)))
+    (revert-buffer)))
 
 ;;; Mode hooks
 
