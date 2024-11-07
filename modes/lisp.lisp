@@ -312,8 +312,7 @@ found are replaced with a dummy symbol."
            (process (node)
              (let ((sexp
                      (cond ((list-node-p node)
-                            (let ((children
-                                    (remove-if-not #'sexp-node-p (child-nodes node))))
+                            (let ((children (sexp-children node)))
                               (if (dot-p (car (last children 2)))
                                   (nconc
                                    (mapcar #'process (butlast children 2))
