@@ -54,4 +54,5 @@
                :local-time
                :sb-concurrency
                :dissect
-               :trivial-custom-debugger))
+               :trivial-custom-debugger
+               :cl-tld))
