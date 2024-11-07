@@ -238,10 +238,10 @@ changed."
       (setf (load-status buffer) (if err :failed :loaded)))
     (call-next-method))
   (:documentation
-   "Invoked when BUFFER finishes loading.
+   "Run when BUFFER finishes loading URL.
 
 This is invoked both when load succeeded or failed. When load
-succeeded, err is nil."))
+succeeded, ERR is nil."))
 
 (defgeneric on-buffer-title-updated (buffer title)
   (:method-combination progn)
@@ -253,7 +253,9 @@ succeeded, err is nil."))
 
 (defgeneric on-delete-buffer (buffer)
   (:method-combination progn)
-  (:method progn ((buffer buffer))))
+  (:method progn ((buffer buffer)))
+  (:documentation
+   "Run when BUFFER is about to be deleted."))
 
 (defgeneric on-node-setup (buffer node)
   (:method-combination progn)

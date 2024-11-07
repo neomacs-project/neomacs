@@ -27,4 +27,5 @@
       (defun ,name ,lambda-list ,@body)
       ,@ (iter (for m in modes)
            (collect `(pushnew ',name (commands ',m))))
+      (setf (get ',name 'modes) ',modes)
       ',name)))

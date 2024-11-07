@@ -217,6 +217,14 @@ JSON should have the format like what `+get-body-json-code+' produces:
   (let ((*package* package))
     (format nil "(~{~a~^ ~})" arglist)))
 
+(defun shorten-arglist (arglist)
+  (let ((parsed (swank::decode-arglist arglist)))
+    (dolist (a (swank::arglist.optional-args parsed))
+      (setf (swank::optional-arg.default-arg a) nil))
+    (dolist (a (swank::arglist.keyword-args parsed))
+      (setf (swank::keyword-arg.default-arg a) nil))
+    (swank::encode-arglist parsed)))
+
 (defun render-doc-string-paragraph (p)
   (let ((last-end 0))
     (append
@@ -246,30 +254,52 @@ JSON should have the format like what `+get-body-json-code+' produces:
           "dd" :children
           (render-doc-string-paragraph p)))))))
 
+(defun function-short-description (function)
+  (cond ((macro-function function)
+         (append-text *dom-output* "Macro"))
+        ((typep (symbol-function function)
+                'generic-function)
+         (let ((*print-case* :capitalize))
+           (append-text
+            *dom-output*
+            (format nil "~a generic function"
+                    (slot-value (sb-mop:generic-function-method-combination (symbol-function function))
+                                'sb-pcl::type-name)))))
+        ((get function 'modes)
+         (append-text *dom-output* "Command")
+         (dolist (m (get function 'modes))
+           (unless (eql m 'global)
+             (append-text
+              *dom-output*
+              (format nil " in ~a" m)))
+           (when-let (bindings (collect-command-keybindings
+                                function (keymap m)))
+             (append-text *dom-output* " (")
+             (append-child *dom-output*
+                           (make-element
+                            "code" :children
+                            (list (sera:mapconcat
+                                   #'key-description
+                                   bindings ", "))))
+             (append-text *dom-output* ")"))))
+        (t (append-text *dom-output* "Function")))
+  (when (fboundp (list 'setf function))
+    (append-text *dom-output* ", setf-able"))
+  (append-text *dom-output* ": "))
+
 (defun fundoc (function)
   (let ((*print-case* :downcase))
     (let ((*dom-output*
             (append-child *dom-output* (make-element "dt"))))
-      (append-text
-       *dom-output*
-       (format nil "~a~:[~;, setf-able~]: "
-               (cond ((macro-function function)
-                      "Macro")
-                     ((typep (symbol-function function)
-                             'generic-function)
-                      (let ((*print-case* :capitalize))
-                        (format nil "~a generic function"
-                                (slot-value (sb-mop:generic-function-method-combination (symbol-function function))
-                                            'sb-pcl::type-name))))
-                     (t "Function"))
-               (fboundp (list 'setf function))))
+      (function-short-description function)
       (append-child *dom-output*
                     (make-element "code" :children (list (prin1-to-string function))))
       (append-text *dom-output* " ")
       (append-child *dom-output*
                     (make-element "code" :children
-                                  (list (print-arglist (swank-backend:arglist function)
-                                                       (symbol-package function))))))
+                                  (list (print-arglist
+                                         (shorten-arglist (swank-backend:arglist function))
+                                         (symbol-package function))))))
     (render-doc-string (documentation function 'function))))
 
 (defun vardoc (var)

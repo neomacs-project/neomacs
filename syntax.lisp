@@ -78,7 +78,7 @@
 (defun append-text (parent string)
   (if (text-node-p (last-child parent))
       (setf (text (last-child parent))
-            (append (text (last-child parent)) string))
+            (str:concat (text (last-child parent)) string))
       (append-child parent (make-instance 'text-node :text string))))
 
 (defnclo read-delimited (delimiter) (stream c)
