@@ -239,6 +239,7 @@ Used to detect modification from other processes before saving."))
           (normalize-undo-entry (undo-entry buffer)))))
 
 (define-command save-buffer ()
+  "Save current buffer if modified."
   (save-buffer-aux (current-buffer)))
 
 (define-command save-all ()
