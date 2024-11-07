@@ -21,8 +21,10 @@
 
 (defmacro define-command (name &rest args)
   (bind (((:values options args) (split-args args))
-         ((lambda-list . body) args))
+         ((lambda-list . body) args)
+         (modes (uiop:ensure-list (getf options :mode 'global))))
     `(progn
       (defun ,name ,lambda-list ,@body)
-      (pushnew ',name (commands ',(getf options :mode 'global)))
+      ,@ (iter (for m in modes)
+           (collect `(pushnew ',name (commands ',m))))
       ',name)))

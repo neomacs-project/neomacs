@@ -294,6 +294,57 @@
                     (text-content (next-sibling
                                    (first-child selection)))))))
 
+;;; Find in page
+
+(define-mode minibuffer-web-search-mode (minibuffer-mode)
+  ((for-buffer :initform (alex:required-argument :buffer)
+               :initarg :buffer)))
+
+(define-keys web-mode
+  'search-forward 'web-search-forward
+  'search-backward 'web-search-backward)
+
+(define-keys minibuffer-web-search-mode
+  'search-forward 'web-search-forward
+  'search-backward 'web-search-backward)
+
+(defun start-web-search ()
+  (unwind-protect
+       (read-from-minibuffer
+        "Search: " :modes 'minibuffer-web-search-mode
+                   :buffer (current-buffer))
+    (evaluate-javascript
+     (ps:ps
+       (ps:chain (js-buffer (current-buffer))
+                 web-contents (stop-find-in-page "clearSelection")))
+     :global)))
+
+(define-command web-search-forward
+  :mode (web-mode minibuffer-web-search-mode) ()
+  (if (typep (current-buffer) 'minibuffer-web-search-mode)
+      (let ((query (minibuffer-input (current-buffer))))
+        (when (plusp (length query))
+          (evaluate-javascript
+           (ps:ps
+             (ps:chain (js-buffer (for-buffer (current-buffer)))
+                       web-contents (find-in-page (ps:lisp query))))
+           :global)))
+      (start-web-search)))
+
+(define-command web-search-backward
+  :mode (web-mode minibuffer-web-search-mode) ()
+  (if (typep (current-buffer) 'minibuffer-web-search-mode)
+      (let ((query (minibuffer-input (current-buffer))))
+        (when (plusp (length query))
+          (evaluate-javascript
+           (ps:ps
+             (ps:chain (js-buffer (for-buffer (current-buffer)))
+                       web-contents
+                       (find-in-page (ps:lisp query)
+                                     (ps:create forward ps:false))))
+           :global)))
+      (start-web-search)))
+
 ;;; Mode hooks
 
 (pushnew 'undo-mode (hooks 'web-mode))

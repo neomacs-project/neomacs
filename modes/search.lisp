@@ -11,7 +11,8 @@
 (defun search-next-node (node query)
   (iter
     (when (text-node-p node)
-      (when-let (offset (search query (text node)))
+      (when-let (offset (search (string-upcase query)
+                                (string-upcase (text node))))
         (return (text-pos node offset))))
     (setq node (next-node node))
     (while node)))
@@ -20,7 +21,8 @@
   (iter
     (setq node (previous-node node))
     (when (text-node-p node)
-      (when-let (offset (search query (text node)))
+      (when-let (offset (search (string-upcase query)
+                                (string-upcase (text node))))
         (return (text-pos node offset))))
     (while node)))
 
