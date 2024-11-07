@@ -17,7 +17,8 @@
 (define-command find-url
     (&optional (url-or-query
                 (completing-read
-                 "Find URL: " 'web-history-list-mode)))
+                 "Find URL: " 'web-history-list-mode
+                 :require-match nil)))
 
   (switch-to-buffer
    (make-buffer
