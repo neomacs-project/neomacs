@@ -13,8 +13,9 @@
 (defun occur-p (query element)
   "Test if ELEMENT matches QUERY in BUFFER.
 
-Returns a list with items of the form (text-node start end), where
-[start,end) is the matched range in text-node."
+Returns either t (when highlight information is unavailable), or a
+list with items of the form (text-node start end), where [start,end)
+is the matched range in text-node."
   (occur-p-aux (current-buffer) query element))
 
 (defmethod (setf occur-query) :around (new-val (buffer occur-mode))
@@ -33,21 +34,22 @@ Returns a list with items of the form (text-node start end), where
     (if-let (matches (occur-p (occur-query buffer) c))
         (progn
           (remove-class c "invisible")
-          (evaluate-javascript
-           (ps:ps
-             (let ((highlight-range
-                     (lambda (node start end)
-                       (let ((range (ps:new (-range))))
-                         (ps:chain range (set-start node start))
-                         (ps:chain range (set-end node end))
-                         (ps:chain -c-s-s highlights
-                                   (get "occur")
-                                   (add range))))))
-               (ps:lisp
-                `(progn
-                   ,@(iter (for (text-node start end) in matches)
-                       (collect `(highlight-range (js-node ,text-node) ,start ,end)))))))
-           buffer))
+          (when (listp matches)
+            (evaluate-javascript
+             (ps:ps
+               (let ((highlight-range
+                       (lambda (node start end)
+                         (let ((range (ps:new (-range))))
+                           (ps:chain range (set-start node start))
+                           (ps:chain range (set-end node end))
+                           (ps:chain -c-s-s highlights
+                                     (get "occur")
+                                     (add range))))))
+                 (ps:lisp
+                  `(progn
+                     ,@(iter (for (text-node start end) in matches)
+                         (collect `(highlight-range (js-node ,text-node) ,start ,end)))))))
+             buffer)))
         (add-class c "invisible"))))
 
 (define-command occur ()

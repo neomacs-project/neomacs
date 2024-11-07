@@ -140,7 +140,7 @@ when this row is selected.")))
 
 (defmethod occur-p-aux :around ((buffer completion-buffer-mode)
                                 (query t) element)
-  (or (class-p element "dummy-row") (call-next-method)))
+  (if (class-p element "dummy-row") t (call-next-method)))
 
 (defstyle completion-buffer-mode `(("dummy-row" :display "none")))
 
