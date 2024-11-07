@@ -241,6 +241,19 @@ Used to detect modification from other processes before saving."))
 (define-command save-buffer ()
   (save-buffer-aux (current-buffer)))
 
+(define-command save-all ()
+  "Save all modified buffer."
+  (let ((saved-count 0))
+    (dolist (buffer (alex:hash-table-values *buffer-table*))
+      (when (and (typep buffer 'file-mode)
+                 (modified buffer))
+        (with-demoted-errors
+            (format nil "Error saving ~a: " buffer)
+          (save-buffer-aux buffer)
+          (incf saved-count))))
+    (message "~a buffer~p saved" saved-count saved-count)))
+
 (define-keys global
   "C-x C-f" 'find-file
-  "C-x C-s" 'save-buffer)
+  "C-x C-s" 'save-buffer
+  "C-x s" 'save-all)
