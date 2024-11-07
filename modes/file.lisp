@@ -96,29 +96,33 @@
   (when-let (dir (uiop:directory-exists-p path))
     (setq path dir))
   (ensure-directories-exist path)
-  (with-current-buffer
-      (or (find-file-buffer path)
-          (make-buffer
-           (if (uiop:directory-pathname-p path)
-               (lastcar (pathname-directory path))
-               (file-namestring path))
-           :modes 'file-mode
-           :disambiguate
-           (if (uiop:directory-pathname-p path)
-               (car (last (pathname-directory path) 2))
-               (lastcar (pathname-directory path)))
-           :file-path path))
-    (set-auto-mode)
-    (handler-case
-        (when (or (not (modtime (current-buffer)))
-                  (not (eql (modtime (current-buffer))
-                            (osicat-posix:stat-mtime
-                             (osicat-posix:stat path))))
-                  (modified (current-buffer)))
-          (revert-buffer))
-      (osicat-posix:enoent ()
-        (message "~a does not exist!" path)))
-    (current-buffer)))
+  (let ((*inhibit-record-undo* *inhibit-record-undo*))
+    (with-current-buffer
+        (or (find-file-buffer path)
+            (progn
+              ;; Don't record undo history when first loading the file
+              (setq *inhibit-record-undo* t)
+              (make-buffer
+               (if (uiop:directory-pathname-p path)
+                   (lastcar (pathname-directory path))
+                   (file-namestring path))
+               :modes 'file-mode
+               :disambiguate
+               (if (uiop:directory-pathname-p path)
+                   (car (last (pathname-directory path) 2))
+                   (lastcar (pathname-directory path)))
+               :file-path path)))
+      (set-auto-mode)
+      (handler-case
+          (when (or (not (modtime (current-buffer)))
+                    (not (eql (modtime (current-buffer))
+                              (osicat-posix:stat-mtime
+                               (osicat-posix:stat path))))
+                    (modified (current-buffer)))
+            (revert-buffer))
+        (osicat-posix:enoent ()
+          (message "~a does not exist!" path)))
+      (current-buffer))))
 
 (define-command find-file
     (&optional (path
