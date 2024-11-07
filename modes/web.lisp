@@ -26,13 +26,29 @@
              (str:concat *search-prefix* url-or-query))
     :styles nil)))
 
+(defvar *web-history-list* nil)
+
+(define-class history-entry ()
+  ((title :initform nil)
+   (url :initform (alex:required-argument :url) :initarg :url)
+   (access-time :initform (local-time:now))))
+
+(defmethod initialize-instance :after ((self history-entry) &key)
+  (push self *web-history-list*))
+
 (define-mode web-mode (read-only-mode)
   ((scroll-multiplier :default 16 :type (integer 1))
    (hints-selector :default "a, button, input, textarea, details, select"
                    :type string)
-   (history-blocklist :default '("https://duckduckgo.com/l/"))))
+   (history-blocklist :default '("https://duckduckgo.com/l/"))
+   (history-entry)))
 
 (defmethod render-focus-aux ((buffer web-mode) (pos t)))
+
+(defmethod enable-aux ((mode-name (eql 'web-mode)))
+  (setf (history-entry (current-buffer))
+        (make-instance 'history-entry
+                       :url (url (current-buffer)))))
 
 (define-keys global
   "C-x C-l" 'find-url)
@@ -69,9 +85,7 @@
   "escape" 'web-forward-key
   'backward-delete
   (make-web-send-key-command
-   (car (parse-keyspec "backspace")))
-  "C-M-f" 'redo
-  "C-M-b" 'undo)
+   (car (parse-keyspec "backspace"))))
 
 (define-command web-next-line
   :mode web-mode ()
@@ -130,6 +144,7 @@
    (current-buffer)))
 
 (defmethod on-buffer-title-updated progn ((buffer web-mode) title)
+  (setf (title (history-entry buffer)) title)
   (rename-buffer title))
 
 (defmethod on-buffer-did-start-navigation progn
@@ -138,6 +153,8 @@
                        (history-blocklist buffer))
               (equal (url buffer) url))
     (let ((old-url (url buffer)))
+      (setf (history-entry buffer)
+            (make-instance 'history-entry :url url))
       (record-undo
        (nclo undo-navigate ()
          (load-url buffer old-url))
