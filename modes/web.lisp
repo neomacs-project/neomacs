@@ -347,7 +347,9 @@
       (start-web-search)))
 
 (defmethod on-post-command progn ((buffer minibuffer-web-search-mode))
-  (unless (member *this-command* '(web-search-forward web-search-backward))
+  (unless (member *this-command*
+                  '(web-search-forward web-search-backward
+                    exit-recursive-edit exit-minibuffer))
     (let ((query (minibuffer-input buffer)))
       (when (>= (length query) (minimum-search-prefix buffer))
         (update-web-search query t)))))
