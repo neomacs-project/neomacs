@@ -275,9 +275,11 @@
   (let ((title-node (first-child (first-child element)))
         (url-node (first-child (next-sibling
                                 (first-child element)))))
-    (or (when-let (start (search query (text title-node)))
+    (or (when-let (start (search (string-upcase query)
+                                 (string-upcase (text title-node))))
           (list (list title-node start (+ start (length query)))))
-        (when-let (start (search query (text url-node)))
+        (when-let (start (search (string-upcase query)
+                                 (string-upcase (text url-node))))
           (list (list url-node start (+ start (length query))))))))
 
 (define-mode minibuffer-find-link-mode

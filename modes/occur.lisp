@@ -7,7 +7,8 @@
 
 (defmethod occur-p-aux ((buffer list-mode) query element)
   (let ((text-node (first-child (first-child element))))
-    (when-let (start (search query (text text-node)))
+    (when-let (start (search (string-upcase query)
+                             (string-upcase (text text-node))))
       (list (list text-node start (+ start (length query)))))))
 
 (defun occur-p (query element)
