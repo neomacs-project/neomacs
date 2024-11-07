@@ -793,7 +793,8 @@ sb-introspect:definition-source)'."
            (name (nth-value 1 (parse-prefix text)))
            (swank::*buffer-package* package)
            (completions (car (swank:fuzzy-completions
-                              name package))))
+                              name package
+                              :limit (completion-limit buffer)))))
       (values
        (range (text-pos (first-child node) (- (length text) (length name)))
               (pos-down-last node))
