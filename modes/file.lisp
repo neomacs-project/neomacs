@@ -128,6 +128,7 @@
                   :header-p nil
                   :require-match nil)
                  :file-path (file-path (current-buffer)))))
+  "Edit file at PATH."
   (switch-to-buffer (find-file-no-select path)))
 
 (define-mode file-mode ()

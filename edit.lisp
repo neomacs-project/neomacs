@@ -609,7 +609,9 @@ If selection is active, cut selected contents instead."
         (clipboard-insert (extract-nodes pos (pos-right pos))))))
 
 (define-command copy-element ()
-  "Copy element under focus into clipboard."
+  "Copy element under focus into clipboard.
+
+If selection is active, copy selected contents instead."
   (if (selection-active (current-buffer))
       (progn
         (clipboard-insert

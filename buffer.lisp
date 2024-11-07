@@ -283,7 +283,9 @@ This runs only when NODE is an element (i.e. not a text node)."))
 
 (defgeneric on-focus-move (buffer saved new)
   (:method-combination progn)
-  (:method progn ((buffer buffer) (saved t) (new t))))
+  (:method progn ((buffer buffer) (saved t) (new t)))
+  (:documentation
+   "Run when BUFFER's focus is moved from SAVED to NEW."))
 
 (defgeneric window-decoration-aux (buffer)
   (:method ((buffer buffer))
@@ -361,7 +363,8 @@ when URL finishes loading. We use this instead of Electron's
 information, and getting url with `webContents.getURL()' isn't
 reliable because it may get the URL of a later issued unfinished load
 operation."
-  (setf (url buffer) url)
+  (setf (url buffer) url
+        (load-status buffer) :loading)
   (evaluate-javascript
    (format nil "Ceramic.buffers[~S].webContents.loadURL(~S).then(()=>
         {RemoteJS.send(JSON.stringify({inputEvent: {type: 'load', url: ~S}, buffer: ~S}));},
@@ -569,7 +572,9 @@ WIDTH and HEIGHT are numbers in pixels."
            (render-br-focus pos)
            (render-element-focus pos)))
       ((end-pos node) (render-element-focus-tail node))
-      ((text-pos node offset) (render-text-focus node offset (1+ offset))))))
+      ((text-pos node offset) (render-text-focus node offset (1+ offset)))))
+  (:documentation
+   "Render focus at POS for BUFFER"))
 
 ;;; User error
 

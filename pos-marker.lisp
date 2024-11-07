@@ -20,7 +20,7 @@
   (host (text-pos-node pos)))
 
 (defun resolve-marker (marker-or-pos)
-  (if (marker-p marker-or-pos)
+  (if (typep marker-or-pos 'marker)
       (pos marker-or-pos)
       marker-or-pos))
 
@@ -278,11 +278,6 @@ If DESTRUCTIVE is non-nil, POS might be mutated."
 
 (defmethod initialize-instance :after ((m marker) &key)
   (push m (markers (host (slot-value m 'pos)))))
-
-(declaim (inline marker-p))
-
-(defun marker-p (object)
-  (typep object 'marker))
 
 (defun advance-p (marker)
   "Returns t if MARKER advances, nil otherwise.

@@ -380,8 +380,9 @@ JSON should have the format like what `+get-body-json-code+' produces:
       (values title (nreverse subtitles)))))
 
 (defun build-manual ()
-  (let ((sections '("dom" "positions" "markers" "motion"
-                    "edit" "undo" "ranges" "mode" "command-loop"
+  (let ((sections '("intro" "dom" "positions" "markers" "buffers"
+                    "motion" "command-loop"
+                    "edit" "undo" "ranges" "mode"
                     "window-management")))
     (with-current-buffer
         (find-file-no-select
