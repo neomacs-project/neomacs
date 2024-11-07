@@ -298,7 +298,8 @@
 
 (define-mode minibuffer-web-search-mode (minibuffer-mode)
   ((for-buffer :initform (alex:required-argument :buffer)
-               :initarg :buffer)))
+               :initarg :buffer)
+   (minimum-search-prefix :default 3 :type (integer 1))))
 
 (define-keys web-mode
   'search-forward 'web-search-forward
@@ -319,16 +320,22 @@
                  web-contents (stop-find-in-page "clearSelection")))
      :global)))
 
+(defun update-web-search (query forward)
+  (evaluate-javascript
+   (ps:ps
+     (ps:chain (js-buffer (for-buffer (current-buffer)))
+               web-contents
+               (find-in-page
+                (ps:lisp query)
+                (ps:create forward (ps:lisp (if forward t 'ps:false))))))
+   :global))
+
 (define-command web-search-forward
   :mode (web-mode minibuffer-web-search-mode) ()
   (if (typep (current-buffer) 'minibuffer-web-search-mode)
       (let ((query (minibuffer-input (current-buffer))))
         (when (plusp (length query))
-          (evaluate-javascript
-           (ps:ps
-             (ps:chain (js-buffer (for-buffer (current-buffer)))
-                       web-contents (find-in-page (ps:lisp query))))
-           :global)))
+          (update-web-search query t)))
       (start-web-search)))
 
 (define-command web-search-backward
@@ -336,14 +343,14 @@
   (if (typep (current-buffer) 'minibuffer-web-search-mode)
       (let ((query (minibuffer-input (current-buffer))))
         (when (plusp (length query))
-          (evaluate-javascript
-           (ps:ps
-             (ps:chain (js-buffer (for-buffer (current-buffer)))
-                       web-contents
-                       (find-in-page (ps:lisp query)
-                                     (ps:create forward ps:false))))
-           :global)))
+          (update-web-search query nil)))
       (start-web-search)))
+
+(defmethod on-post-command progn ((buffer minibuffer-web-search-mode))
+  (unless (member *this-command* '(web-search-forward web-search-backward))
+    (let ((query (minibuffer-input buffer)))
+      (when (>= (length query) (minimum-search-prefix buffer))
+        (update-web-search query t)))))
 
 ;;; Mode hooks
 
