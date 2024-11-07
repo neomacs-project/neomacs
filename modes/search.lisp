@@ -24,13 +24,6 @@
         (return (text-pos node offset))))
     (while node)))
 
-(defun clear-focus-search-result ()
-  (evaluate-javascript
-   (ps:ps
-     (let ((highlight (ps:chain -c-s-s highlights (get "neomacs-search"))))
-       (when highlight (ps:chain highlight (clear)))))
-   (current-buffer)))
-
 (defmethod on-post-command progn ((buffer minibuffer-search-mode))
   (unless (member *this-command* '(search-forward search-backward))
     (let ((query (minibuffer-input buffer)))
