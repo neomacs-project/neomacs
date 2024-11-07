@@ -65,6 +65,14 @@
 
 (defmacro define-mode
     (name super-modes slots &rest options)
+  "Define a mode with NAME.
+
+Like `define-class' besides supporting extra OPTIONS:
+
+(:toggler TOGGLER-P): If TOGGLER-P is t, generate a toggler command
+with NAME.
+
+(:lighter LIGHTER): Set the mode's lighter to LIGHTER."
   `(define-class ,name ,super-modes ,slots
      (:metaclass mode)
      ,@options))
