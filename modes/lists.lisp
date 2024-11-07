@@ -166,10 +166,24 @@ This should always be a directory pathname (with NIL name and type fields).")
                   (if (equal prefixed-unit "") "" (or space ""))
                   prefixed-unit)))))
 
+(defun format-readable-timestring (timestamp)
+  (let ((decoded (multiple-value-list
+                  (local-time:decode-timestamp timestamp)))
+        (decoded-now (multiple-value-list
+                      (local-time:decode-timestamp
+                       (local-time:now)))))
+    (cond ((equal (nthcdr 4 decoded)
+                  (nthcdr 4 decoded-now))
+           (local-time:format-timestring
+            nil timestamp
+            :format
+            '("Today " (:hour 2) #\: (:min 2) #\: (:sec 2))))
+          (t (local-time:format-timestring
+              nil timestamp
+              :format local-time:+asctime-format+)))))
+
 (defun file-date-readable (unix-time)
-  (local-time:format-timestring
-   nil (local-time:unix-to-timestamp unix-time)
-   :format local-time:+asctime-format+))
+  (format-readable-timestring (local-time:unix-to-timestamp unix-time)))
 
 (defmethod generate-rows ((buffer file-list-mode))
   (iter (for path in (uiop:subdirectories (file-path buffer)))

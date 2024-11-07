@@ -257,9 +257,8 @@
     (insert-nodes (focus)
                   (dom `(:tr (:td ,(or (title entry) "-"))
                              (:td ,(url entry))
-                             (:td ,(local-time:format-timestring
-                                    nil (access-time entry)
-                                    :format local-time:+asctime-format+)))))))
+                             (:td ,(format-readable-timestring
+                                    (access-time entry))))))))
 
 (define-command list-web-history ()
   (switch-to-buffer
