@@ -179,7 +179,8 @@ Return t if it hides completion, nil if it does nothing."
 ;;; Auto completion
 
 (define-mode auto-completion-mode ()
-  ((allowed-commands
+  ((minimum-prefix :default 3)
+   (allowed-commands
     :default '(self-insert-command)
     :type (list-of symbol)))
   (:documentation
@@ -189,7 +190,9 @@ Return t if it hides completion, nil if it does nothing."
 (defmethod on-post-command progn ((buffer auto-completion-mode))
   (when (member *this-command* (allowed-commands buffer))
     (when-let (node (node-containing (focus buffer)))
-      (when (show-completions (focus buffer) t)
+      (when (and (>= (length (text-content node))
+                     (minimum-prefix buffer))
+                 (show-completions (focus buffer) t))
         (run-in-helper
          '*window-layout-helper*
          'update-completion-menu-position

@@ -791,16 +791,15 @@ sb-introspect:definition-source)'."
     (let* ((package (current-package pos))
            (text (text-content node))
            (name (nth-value 1 (parse-prefix text)))
-           (swank::*buffer-package* package))
-      (unless (< (length name) (completion-minimum-prefix buffer))
-        (let ((completions (car (swank:fuzzy-completions
-                                 name package
-                                 :limit (completion-limit buffer)))))
-          (values
-           (range (text-pos (first-child node) (- (length text) (length name)))
-                  (pos-down-last node))
-           (iter (for c in completions)
-             (collect (list (car c) (remove #\- (lastcar c)))))))))))
+           (swank::*buffer-package* package)
+           (completions (car (swank:fuzzy-completions
+                              name package
+                              :limit (completion-limit buffer)))))
+      (values
+       (range (text-pos (first-child node) (- (length text) (length name)))
+              (pos-down-last node))
+       (iter (for c in completions)
+         (collect (list (car c) (remove #\- (lastcar c)))))))))
 
 ;;; Autodoc
 
