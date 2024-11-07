@@ -163,9 +163,9 @@ command loop run the next command.")
              (on-buffer-title-updated
               buffer (assoc-value event :title))))
           ((equal type "keyUp"))
-          ((equal type "will-navigate")
+          ((equal type "did-start-navigation")
            (with-current-buffer buffer
-             (on-buffer-will-navigate
+             (on-buffer-did-start-navigation
               buffer (assoc-value event :url))))
           ((eq type 'debug-request)
            (debug-for-environment

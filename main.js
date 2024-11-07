@@ -80,8 +80,8 @@ Ceramic.createBuffer = function(id, url, options) {
         RemoteJS.send(JSON.stringify({inputEvent: {type: "dom-ready"}, buffer: id}));});
     buf.webContents.on('page-title-updated', (event, title, explicitSet) => {
         RemoteJS.send(JSON.stringify({inputEvent: {type: "title-updated", title: title}, buffer: id}))});
-    buf.webContents.on('will-navigate',(details) =>{
-        RemoteJS.send(JSON.stringify({inputEvent: {type: "will-navigate", url: details.url}, buffer: id}));});
+    buf.webContents.on('did-start-navigation',(details) =>{
+        RemoteJS.send(JSON.stringify({inputEvent: {type: "did-start-navigation", url: details.url}, buffer: id}));});
     buf.webContents.loadURL(url).then(()=>
         {RemoteJS.send(JSON.stringify({inputEvent: {type: "load", url: url}, buffer: id}));},
         (err)=>{RemoteJS.send(JSON.stringify({inputEvent: {type: "fail-load", url: url, err: err}, buffer: id}));});

@@ -29,7 +29,8 @@
 (define-mode web-mode (read-only-mode)
   ((scroll-multiplier :default 16 :type (integer 1))
    (hints-selector :default "a, button, input, textarea, details, select"
-                   :type string)))
+                   :type string)
+   (history-blocklist :default '("https://duckduckgo.com/l/"))))
 
 (defmethod render-focus-aux ((buffer web-mode) (pos t)))
 
@@ -131,16 +132,19 @@
 (defmethod on-buffer-title-updated progn ((buffer web-mode) title)
   (rename-buffer title))
 
-(defmethod on-buffer-will-navigate progn
+(defmethod on-buffer-did-start-navigation progn
     ((buffer web-mode) url)
-  (remove-undo-boundary buffer)
-  (let ((old-url (url buffer)))
-    (record-undo
-     (nclo undo-navigate ()
-       (load-url buffer old-url))
-     (nclo redo-navigate ()
-       (load-url buffer url))
-     buffer)))
+  (unless (or (find-if (alex:rcurry #'sera:string-prefix-p url)
+                       (history-blocklist buffer))
+              (equal (url buffer) url))
+    (let ((old-url (url buffer)))
+      (record-undo
+       (nclo undo-navigate ()
+         (load-url buffer old-url))
+       (nclo redo-navigate ()
+         (load-url buffer url))
+       buffer)
+      (setf (url buffer) url))))
 
 (defun key-sym-to-electron (sym shift)
   (if-let (translation (gethash (cons sym shift) *event-to-char*))
