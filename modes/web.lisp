@@ -16,9 +16,12 @@
 
 (define-command find-url
     (&optional (url-or-query
-                (completing-read
-                 "Find URL: " 'web-history-list-mode
-                 :require-match nil)))
+                (read-from-minibuffer
+                 "Find URL: " :modes 'minibuffer-find-link-mode
+                 :completion-buffer
+                 (make-completion-buffer
+                  '(web-history-list-mode completion-buffer-mode)
+                  :require-match nil))))
 
   (switch-to-buffer
    (make-buffer
@@ -276,6 +279,20 @@
           (list (list title-node start (+ start (length query)))))
         (when-let (start (search query (text url-node)))
           (list (list url-node start (+ start (length query))))))))
+
+(define-mode minibuffer-find-link-mode
+    (minibuffer-completion-mode) ())
+
+(defmethod complete-minibuffer-aux
+    ((buffer minibuffer-find-link-mode))
+  (let ((input (only-elt (get-elements-by-class-name
+                          (document-root buffer) "input")))
+        (selection (node-after (focus (completion-buffer buffer)))))
+    (unless (class-p selection "dummy-row")
+      (delete-nodes (pos-down input) nil)
+      (insert-nodes (pos-down input)
+                    (text-content (next-sibling
+                                   (first-child selection)))))))
 
 ;;; Mode hooks
 
