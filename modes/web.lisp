@@ -269,12 +269,13 @@
 
 (defmethod occur-p-aux ((buffer web-history-list-mode)
                         query element)
-  (let* ((title-element (first-child element))
-         (url-element (next-sibling title-element)))
-    (or (when-let (start (search query (text-content title-element)))
-          (list (first-child title-element) start (+ start (length query))))
-        (when-let (start (search query (text-content url-element)))
-          (list (first-child url-element) start (+ start (length query)))))))
+  (let ((title-node (first-child (first-child element)))
+        (url-node (first-child (next-sibling
+                                (first-child element)))))
+    (or (when-let (start (search query (text title-node)))
+          (list (list title-node start (+ start (length query)))))
+        (when-let (start (search query (text url-node)))
+          (list (list url-node start (+ start (length query))))))))
 
 ;;; Mode hooks
 

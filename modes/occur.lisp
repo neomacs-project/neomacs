@@ -6,13 +6,15 @@
   (:documentation "Extension point for `occur-p'."))
 
 (defmethod occur-p-aux ((buffer list-mode) query element)
-  (when-let (start (search query (text-content (first-child element))))
-    (list (first-child (first-child element)) start (+ start (length query)))))
+  (let ((text-node (first-child (first-child element))))
+    (when-let (start (search query (text text-node)))
+      (list (list text-node start (+ start (length query)))))))
 
 (defun occur-p (query element)
-  "Test if ELEMENT matches QUERY in BUFFER. Returns a list of the form
-(text-node start-1 end-1 start-2 end-2...), where [start-n,end-n) are
-matched ranges."
+  "Test if ELEMENT matches QUERY in BUFFER.
+
+Returns a list with items of the form (text-node start end), where
+[start,end) is the matched range in text-node."
   (occur-p-aux (current-buffer) query element))
 
 (defmethod (setf occur-query) :around (new-val (buffer occur-mode))
@@ -33,19 +35,18 @@ matched ranges."
           (remove-class c "invisible")
           (evaluate-javascript
            (ps:ps
-             (let* ((text-node (js-node-1 (car matches)))
-                    (highlight-range
-                      (lambda (start end)
-                        (let ((range (ps:new (-range))))
-                          (ps:chain range (set-start text-node start))
-                          (ps:chain range (set-end text-node end))
-                          (ps:chain -c-s-s highlights
-                                    (get "occur")
-                                    (add range))))))
+             (let ((highlight-range
+                     (lambda (node start end)
+                       (let ((range (ps:new (-range))))
+                         (ps:chain range (set-start node start))
+                         (ps:chain range (set-end node end))
+                         (ps:chain -c-s-s highlights
+                                   (get "occur")
+                                   (add range))))))
                (ps:lisp
                 `(progn
-                   ,@(iter (for (start end) on (cdr matches) by #'cddr)
-                       (collect `(highlight-range ,start ,end)))))))
+                   ,@(iter (for (text-node start end) in matches)
+                       (collect `(highlight-range (js-node ,text-node) ,start ,end)))))))
            buffer))
         (add-class c "invisible"))))
 
