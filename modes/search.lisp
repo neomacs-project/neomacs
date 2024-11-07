@@ -85,7 +85,7 @@
                   (pos (selection-marker (current-buffer))) end
                   (selection-active (current-buffer)) t))
                t)
-             (message "No previous candidate")))))
+             (message "No next candidate")))))
       (start-search)))
 
 (define-command search-backward ()
@@ -107,5 +107,5 @@
                   (pos (selection-marker (current-buffer))) end
                   (selection-active (current-buffer)) t))
                t)
-             (message "No next candidate")))))
+             (message "No previous candidate")))))
       (start-search)))
