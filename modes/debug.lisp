@@ -122,14 +122,12 @@
 
 (defun debug-for-environment (env mailbox)
   (let ((debugger
-          (with-current-buffer
-              (make-buffer
-               "*debugger*"
-               :modes '(debugger-mode)
-               :environment env
-               :mailbox mailbox)
-            (revert-buffer)
-            (current-buffer))))
+          (make-buffer
+           "*debugger*"
+           :modes '(debugger-mode)
+           :environment env
+           :mailbox mailbox
+           :revert t)))
     (focus-buffer
      (display-buffer-right
       debugger))))

@@ -759,12 +759,9 @@ sb-introspect:definition-source)'."
                 (visit-definition (cadr (car definitions)))
                 (focus-buffer
                  (display-buffer-right
-                  (with-current-buffer
-                      (make-buffer
-                       "*xref*" :modes '(xref-list-mode)
-                       :symbol symbol)
-                    (revert-buffer)
-                    (current-buffer)))))))))))
+                  (make-buffer
+                   "*xref*" :modes '(xref-list-mode)
+                            :symbol symbol :revert t))))))))))
 
 ;;; Auto-completion
 

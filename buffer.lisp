@@ -142,7 +142,7 @@ for which MODE-NAME is being disabled."))
   (declare (ignore cell))
   (update-style buffer style))
 
-(defmethod initialize-instance :after ((buffer buffer) &key name disambiguate)
+(defmethod initialize-instance :after ((buffer buffer) &key name disambiguate revert)
   (unless name (alex:required-argument :name))
   (bt:with-recursive-lock-held (*buffer-table-lock*)
     (setf (name buffer) (generate-buffer-name name disambiguate)
@@ -165,7 +165,9 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
       (alex:appendf (styles buffer) (list 'common)))
     (dolist (style (styles buffer))
       (add-observer (css-cell style)
-                    (make-update-style buffer style)))))
+                    (make-update-style buffer style)))
+    (when revert
+      (revert-buffer))))
 
 (defgeneric on-post-command (buffer)
   (:method-combination progn)

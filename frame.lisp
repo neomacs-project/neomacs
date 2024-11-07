@@ -288,7 +288,9 @@ fixed in future Electron, our logic may be simplified."
         buffer)))
 
 (defun make-scratch ()
-  (lret ((buffer (make-buffer "*scratch*" :modes '(lisp-mode file-mode) :file-path (asdf:system-relative-pathname :neomacs #p"scratch.lisp"))))
+  (lret ((buffer (make-buffer
+                  "*scratch*" :modes '(lisp-mode file-mode)
+                  :file-path (asdf:system-relative-pathname :neomacs #p"scratch.lisp"))))
     (with-current-buffer buffer
       (revert-buffer)
       (disable 'file-mode))))

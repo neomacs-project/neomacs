@@ -262,11 +262,10 @@
                                     :format local-time:+asctime-format+)))))))
 
 (define-command list-web-history ()
-  (with-current-buffer
-      (switch-to-buffer
-       (get-buffer-create "*web-history*"
-                          :modes '(web-history-list-mode)))
-    (revert-buffer)))
+  (switch-to-buffer
+   (get-buffer-create "*web-history*"
+                      :modes '(web-history-list-mode)
+                      :revert t)))
 
 ;;; Mode hooks
 

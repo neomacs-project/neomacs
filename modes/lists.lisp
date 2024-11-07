@@ -97,19 +97,17 @@
                                         (list modes)))))))))
 
 (define-command list-commands ()
-  (with-current-buffer
-      (switch-to-buffer
-       (get-buffer-create
-        "*commands*"
-        :modes '(command-list-mode)
-        :include-modes *modes*))
-    (revert-buffer)))
+  (switch-to-buffer
+   (get-buffer-create
+    "*commands*"
+    :modes '(command-list-mode)
+    :include-modes *modes*
+    :revert t)))
 
 (define-command list-buffers ()
-  (with-current-buffer
-      (switch-to-buffer
-       (get-buffer-create "*buffers*" :modes '(buffer-list-mode)))
-    (revert-buffer)))
+  (switch-to-buffer
+   (get-buffer-create "*buffers*" :modes '(buffer-list-mode)
+                      :revert t)))
 
 (defun focused-row ()
   (pos-up-ensure (focus) (alex:rcurry #'tag-name-p "tr")))
