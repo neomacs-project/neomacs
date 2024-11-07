@@ -16,8 +16,8 @@
 
 (define-command find-url
     (&optional (url-or-query
-                (read-from-minibuffer
-                 "Find URL: ")))
+                (completing-read
+                 "Find URL: " 'web-history-list-mode)))
 
   (switch-to-buffer
    (make-buffer
@@ -266,6 +266,15 @@
    (get-buffer-create "*web-history*"
                       :modes '(web-history-list-mode)
                       :revert t)))
+
+(defmethod occur-p-aux ((buffer web-history-list-mode)
+                        query element)
+  (let* ((title-element (first-child element))
+         (url-element (next-sibling title-element)))
+    (or (when-let (start (search query (text-content title-element)))
+          (list (first-child title-element) start (+ start (length query))))
+        (when-let (start (search query (text-content url-element)))
+          (list (first-child url-element) start (+ start (length query)))))))
 
 ;;; Mode hooks
 

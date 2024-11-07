@@ -3,20 +3,16 @@
 (define-mode occur-mode () ((occur-query)))
 
 (defgeneric occur-p-aux (buffer query element)
-  (:documentation "Extension point for `occur-p'.
-
-Test if ELEMENT matches QUERY in BUFFER. Returns a list similar to
-`ppcre:all-matches', i.e. a list of (start-1 end-1 start-2 end-2...),
-where [start-n,end-n) are matched ranges."))
+  (:documentation "Extension point for `occur-p'."))
 
 (defmethod occur-p-aux ((buffer list-mode) query element)
   (when-let (start (search query (text-content (first-child element))))
-    (list start (+ start (length query)))))
+    (list (first-child (first-child element)) start (+ start (length query)))))
 
 (defun occur-p (query element)
-  "Test if ELEMENT matches QUERY in current buffer. Returns a list
-similar to `ppcre:all-matches', i.e. a list of (start-1 end-1 start-2
-end-2...), where [start-n,end-n) are matched ranges."
+  "Test if ELEMENT matches QUERY in BUFFER. Returns a list of the form
+(text-node start-1 end-1 start-2 end-2...), where [start-n,end-n) are
+matched ranges."
   (occur-p-aux (current-buffer) query element))
 
 (defmethod (setf occur-query) :around (new-val (buffer occur-mode))
@@ -37,7 +33,7 @@ end-2...), where [start-n,end-n) are matched ranges."
           (remove-class c "invisible")
           (evaluate-javascript
            (ps:ps
-             (let* ((text-node (js-node-1 (first-child (first-child c))))
+             (let* ((text-node (js-node-1 (car matches)))
                     (highlight-range
                       (lambda (start end)
                         (let ((range (ps:new (-range))))
@@ -48,7 +44,7 @@ end-2...), where [start-n,end-n) are matched ranges."
                                     (add range))))))
                (ps:lisp
                 `(progn
-                   ,@(iter (for (start end) on matches by #'cddr)
+                   ,@(iter (for (start end) on (cdr matches) by #'cddr)
                        (collect `(highlight-range ,start ,end)))))))
            buffer))
         (add-class c "invisible"))))
