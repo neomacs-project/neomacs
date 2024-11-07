@@ -28,13 +28,46 @@
 
 (defvar *web-history-list* nil)
 
+(defvar *web-history-path* (uiop:xdg-data-home "neomacs" "web-history"))
+
 (define-class history-entry ()
-  ((title :initform nil)
+  ((title :initform nil :initarg :title)
    (url :initform (alex:required-argument :url) :initarg :url)
    (access-time :initform (local-time:now))))
 
-(defmethod initialize-instance :after ((self history-entry) &key)
-  (push self *web-history-list*))
+(defmethod initialize-instance :after ((self history-entry) &key access-time)
+  (push self *web-history-list*)
+  (when access-time
+    (setf (access-time self)
+          (local-time:parse-timestring access-time))))
+
+(defun load-web-history ()
+  (message "Loading web history...")
+  (setq *web-history-list* nil)
+  (with-open-file (s *web-history-path*
+                     :direction :input
+                     :if-does-not-exist :create)
+    (handler-case
+        (loop
+          (apply #'make-instance 'history-entry (read s)))
+      (end-of-file () nil)))
+  (message "Loaded web history."))
+
+(defun save-web-history ()
+  (ensure-directories-exist *web-history-path*)
+  (with-open-file (s *web-history-path*
+                     :direction :output
+                     :if-exists :supersede
+                     :if-does-not-exist :create)
+    (with-standard-io-syntax
+      (dolist (h (reverse *web-history-list*))
+        (write (list :url (url h)
+                     :title (title h)
+                     :access-time
+                     (local-time:format-timestring
+                      nil (access-time h)))
+               :stream s)
+        (terpri s)))))
 
 (define-mode web-mode (read-only-mode)
   ((scroll-multiplier :default 16 :type (integer 1))

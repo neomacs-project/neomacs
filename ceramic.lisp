@@ -66,6 +66,7 @@ BUFFER is NIL."
 
 (define-command kill-neomacs ()
   "Exit Neomacs."
+  (save-web-history)
   ;; Mark all buffer as non-alive to suppress post-command operations
   (clrhash *buffer-table*)
   (sb-concurrency:send-message *event-queue* 'quit)

@@ -472,7 +472,8 @@ If nil, disable message logging. If t, log messages but don't truncate
                            (mapcar #'clone-node message))))))
             (fit-buffer-height (current-buffer) 0)))
       (when control-string
-        (apply #'format *error-output* control-string format-arguments))))
+        (apply #'format *error-output* control-string format-arguments)
+        (terpri))))
 
 (define-command open-dev-tools ()
   (evaluate-javascript
