@@ -312,6 +312,25 @@ This includes `element's and `text-node's. Returns NODE."
            node)
   node)
 
+(defun next-node (node)
+  "Next DOM node in pre-order traversal."
+  (or (and (element-p node) (first-child node))
+      (iter
+        (when-let (next (next-sibling node))
+          (return next))
+        (setq node (parent node))
+        (while node))))
+
+(defun previous-node (node)
+  "Previous DOM node in pre-order traversal."
+  (if-let (prev (previous-sibling node))
+    (loop
+      (if-let (child (and (element-p prev)
+                          (last-child prev)))
+        (setq prev child)
+        (return prev)))
+    (parent node)))
+
 (defun text-content (node)
   (map-dom
    (lambda (node results)

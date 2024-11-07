@@ -153,9 +153,9 @@ If DESTRUCTIVE is non-nil, POS might be mutated."
 
 If DESTRUCTIVE is non-nil, POS might be mutated."
   (setq pos (resolve-marker pos))
-  (or (if-let (left (pos-left pos :destructive destructive))
-        (or (pos-down-last left) left)
-        (pos-up pos))))
+  (if-let (left (pos-left pos :destructive destructive))
+    (or (pos-down-last left) left)
+    (pos-up pos)))
 
 (declaim (inline iterate-pos-until))
 

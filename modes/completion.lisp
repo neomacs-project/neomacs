@@ -188,7 +188,8 @@ Return t if it hides completion, nil if it does nothing."
   (:toggler t))
 
 (defmethod on-post-command progn ((buffer auto-completion-mode))
-  (when (member *this-command* (allowed-commands buffer))
+  (when (and (member *this-command* (allowed-commands buffer))
+             (eq buffer (focused-buffer)))
     (when-let (node (node-containing (focus buffer)))
       (when (and (>= (length (text-content node))
                      (minimum-prefix buffer))

@@ -27,6 +27,7 @@
                (:file "syntax")
                (:file "modes/lists")
                (:file "modes/occur")
+               (:file "modes/search")
                (:file "modes/file")
                (:file "modes/auto-save")
                (:file "modes/text")
