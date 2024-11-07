@@ -272,15 +272,9 @@
 
 (defmethod occur-p-aux ((buffer web-history-list-mode)
                         query element)
-  (let ((title-node (first-child (first-child element)))
-        (url-node (first-child (next-sibling
-                                (first-child element)))))
-    (or (when-let (start (search (string-upcase query)
-                                 (string-upcase (text title-node))))
-          (list (list title-node start (+ start (length query)))))
-        (when-let (start (search (string-upcase query)
-                                 (string-upcase (text url-node))))
-          (list (list url-node start (+ start (length query))))))))
+  (search-in-elements
+   query (list (first-child element)
+               (next-sibling (first-child element)))))
 
 (define-mode minibuffer-find-link-mode
     (minibuffer-completion-mode) ())

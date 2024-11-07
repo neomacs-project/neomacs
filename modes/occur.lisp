@@ -5,11 +5,23 @@
 (defgeneric occur-p-aux (buffer query element)
   (:documentation "Extension point for `occur-p'."))
 
+(defun search-in-elements (query elements)
+  (labels ((search-one (query)
+             (block nil
+               (dolist (element elements)
+                 (do-dom (lambda (n)
+                           (when (text-node-p n)
+                             (when-let (beg (search (string-upcase query)
+                                                    (string-upcase (text n))))
+                               (return (list (list n beg (+ beg (length query))))))))
+                   element)))))
+    (iter (for word in (str:split #\space query))
+      (if-let (result (search-one word))
+        (appending result)
+        (return)))))
+
 (defmethod occur-p-aux ((buffer list-mode) query element)
-  (let ((text-node (first-child (first-child element))))
-    (when-let (start (search (string-upcase query)
-                             (string-upcase (text text-node))))
-      (list (list text-node start (+ start (length query)))))))
+  (search-in-elements query (list (first-child element))))
 
 (defun occur-p (query element)
   "Test if ELEMENT matches QUERY in BUFFER.
