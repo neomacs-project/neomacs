@@ -245,6 +245,13 @@ succeeded, err is nil."))
   (:method-combination progn)
   (:method progn ((buffer buffer) (title t))))
 
+(defgeneric on-buffer-will-navigate (buffer url)
+  (:method-combination progn)
+  (:method progn ((buffer buffer) (url t)))
+  (:method :around ((buffer buffer) url)
+    (call-next-method)
+    (setf (url buffer) url)))
+
 (defgeneric on-delete-buffer (buffer)
   (:method-combination progn)
   (:method progn ((buffer buffer))))

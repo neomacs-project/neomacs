@@ -69,8 +69,8 @@
   'backward-delete
   (make-web-send-key-command
    (car (parse-keyspec "backspace")))
-  "C-M-f" 'web-go-forward
-  "C-M-b" 'web-go-backward)
+  "C-M-f" 'redo
+  "C-M-b" 'undo)
 
 (define-command web-next-line
   :mode web-mode ()
@@ -131,31 +131,16 @@
 (defmethod on-buffer-title-updated progn ((buffer web-mode) title)
   (rename-buffer title))
 
-(define-command web-go-backward
-  :mode web-mode ()
-  (unless
-      (evaluate-javascript-sync
-       (ps:ps
-         (let ((h (ps:chain (js-buffer (current-buffer))
-                            web-contents navigation-history)))
-           (when (ps:chain h (can-go-back))
-             (ps:chain h (go-back))
-             t)))
-       :global)
-    (error "Can not go backward.")))
-
-(define-command web-go-forward
-  :mode web-mode ()
-  (unless
-      (evaluate-javascript-sync
-       (ps:ps
-         (let ((h (ps:chain (js-buffer (current-buffer))
-                            web-contents navigation-history)))
-           (when (ps:chain h (can-go-forward))
-             (ps:chain h (go-forward))
-             t)))
-       :global)
-    (error "Can not go forward.")))
+(defmethod on-buffer-will-navigate progn
+    ((buffer web-mode) url)
+  (remove-undo-boundary buffer)
+  (let ((old-url (url buffer)))
+    (record-undo
+     (nclo undo-navigate ()
+       (load-url buffer old-url))
+     (nclo redo-navigate ()
+       (load-url buffer url))
+     buffer)))
 
 (defun key-sym-to-electron (sym shift)
   (if-let (translation (gethash (cons sym shift) *event-to-char*))
@@ -205,3 +190,7 @@
 (define-command web-forward-key
   :mode web-mode ()
   (web-send-key (lastcar *this-command-keys*)))
+
+;;; Mode hooks
+
+(pushnew 'undo-mode (hooks 'web-mode))
