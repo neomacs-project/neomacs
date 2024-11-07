@@ -48,6 +48,7 @@
 (defun load-web-history ()
   (message "Loading web history...")
   (setq *web-history-list* nil)
+  (ensure-directories-exist *web-history-path*)
   (with-open-file (s *web-history-path*
                      :direction :input
                      :if-does-not-exist :create)
