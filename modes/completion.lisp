@@ -63,7 +63,7 @@ form (text annotation)."))
     (setf (completions (completion-buffer (current-buffer)))
           completions
           (replace-range (current-buffer)) replace-range)
-    nil))
+    t))
 
 (defvar *completion-menu-size* (list 200 300)
   "Size of completion menu.
@@ -142,20 +142,24 @@ X and Y are numbers in pixels."
          (current-buffer))))))
 
 (defun maybe-hide-completions ()
+  "Hide completions if focus move out of `replace-range'.
+
+Return t if it hides completion, nil if it does nothing."
   (let ((buffer (current-buffer)))
     (unless (inside-range-inclusive-p
              (focus) (replace-range buffer))
-      (hide-completions))))
+      (hide-completions)
+      t)))
 
 (define-command hide-completions ()
   (disable 'active-completion-mode))
 
 (defmethod on-post-command progn ((buffer active-completion-mode))
-  (maybe-hide-completions)
-  (run-in-helper
-   '*window-layout-helper*
-   'update-completion-menu-position
-   buffer))
+  (unless (maybe-hide-completions)
+    (run-in-helper
+     '*window-layout-helper*
+     'update-completion-menu-position
+     buffer)))
 
 (defmethod disable-aux ((mode (eql 'active-completion-mode))
                         previous-instance)
@@ -175,8 +179,7 @@ X and Y are numbers in pixels."
 ;;; Auto completion
 
 (define-mode auto-completion-mode ()
-  ((minimum-prefix :default 3)
-   (allowed-commands
+  ((allowed-commands
     :default '(self-insert-command)
     :type (list-of symbol)))
   (:documentation
@@ -186,9 +189,7 @@ X and Y are numbers in pixels."
 (defmethod on-post-command progn ((buffer auto-completion-mode))
   (when (member *this-command* (allowed-commands buffer))
     (when-let (node (node-containing (focus buffer)))
-      (when (>= (length (text-content node))
-                (minimum-prefix buffer))
-        (show-completions (focus buffer) t)
+      (when (show-completions (focus buffer) t)
         (run-in-helper
          '*window-layout-helper*
          'update-completion-menu-position
