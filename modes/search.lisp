@@ -24,6 +24,22 @@
         (return (text-pos node offset))))
     (while node)))
 
+(defun clear-focus-search-result ()
+  (evaluate-javascript
+   (ps:ps
+     (let ((highlight (ps:chain -c-s-s highlights (get "neomacs-search"))))
+       (when highlight (ps:chain highlight (clear)))))
+   (current-buffer)))
+
+(defun focus-search-result (text-pos length)
+  (setf (pos (focus)) text-pos)
+  (clear-focus-search-result)
+  (render-text-focus
+   (text-pos-node text-pos)
+   (text-pos-offset text-pos)
+   (+ (text-pos-offset text-pos) length)
+   "neomacs-search"))
+
 (defmethod on-post-command progn ((buffer minibuffer-search-mode))
   (unless (member *this-command* '(search-forward search-backward))
     (let ((query (minibuffer-input buffer)))
@@ -32,16 +48,18 @@
           (or (when-let (next (search-next-node
                                (ensure-node (pos (focus)))
                                query))
-                (setf (pos (focus)) next)
+                (focus-search-result next (length query))
                 t)
               (message "No candidate")))))))
 
 (defun start-search ()
   (with-marker (m (focus))
     (handler-case
-        (read-from-minibuffer
-         "Search: " :modes 'minibuffer-search-mode
-         :buffer (current-buffer))
+        (unwind-protect
+             (read-from-minibuffer
+              "Search: " :modes 'minibuffer-search-mode
+                         :buffer (current-buffer))
+          (clear-focus-search-result))
       (quit () (setf (pos (focus)) (pos m))))))
 
 (defun next-up-node (node)
@@ -65,7 +83,7 @@
              (when-let*
                  ((cur (ensure-node (pos (focus))))
                   (next (search-next-node (next-up-node cur) query)))
-               (setf (pos (focus)) next)
+               (focus-search-result next (length query))
                t)
              (message "No previous candidate")))))
       (start-search)))
@@ -80,7 +98,7 @@
              (when-let*
                  ((cur (ensure-node (pos (focus))))
                   (prev (search-previous-node cur query)))
-               (setf (pos (focus)) prev)
+               (focus-search-result prev (length query))
                t)
              (message "No next candidate")))))
       (start-search)))
