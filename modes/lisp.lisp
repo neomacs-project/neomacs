@@ -898,6 +898,12 @@ sb-introspect:definition-source)'."
 
 ;;; Parser
 
+(defun read-symbol (stream c)
+  (unread-char c stream)
+  (append-child
+   *dom-output*
+   (make-atom-node "symbol" (read-constituent stream 'read-symbol '(#\\)))))
+
 (defun read-string (stream c)
   (declare (ignore c))
   (append-child
@@ -925,7 +931,7 @@ sb-introspect:definition-source)'."
 
 (defvar *lisp-syntax-table*
   (lret ((table (make-syntax-table)))
-    (set-syntax-range table 33 127 'symbol)
+    (set-syntax-range table 33 127 'read-symbol)
     (setf (get-syntax-table #\( table) (make-read-delimited #\)))
     (setf (get-syntax-table #\) table) nil)
     (setf (get-syntax-table #\  table) 'read-ignore)
@@ -933,7 +939,6 @@ sb-introspect:definition-source)'."
     (setf (get-syntax-table #\Page table) 'read-newline)
     (setf (get-syntax-table #\Tab table) 'read-ignore)
     (setf (get-syntax-table #\" table) 'read-string)
-    (setf (get-syntax-table #\\ table) 'single-escape)
     (setf (get-syntax-table #\; table) 'read-line-comment)))
 
 (defmethod read-dom-aux ((buffer lisp-mode) stream)
