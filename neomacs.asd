@@ -56,4 +56,6 @@
                :sb-concurrency
                :dissect
                :trivial-custom-debugger
-               :cl-tld))
+               :cl-tld
+               :swank
+               :swank/exts))
