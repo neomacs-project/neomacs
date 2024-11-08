@@ -79,14 +79,9 @@
    (hints-selector :default "a, button, input, textarea, details, select"
                    :type string)
    (history-blocklist :default '("https://duckduckgo.com/l/"))
-   (history-entry)))
+   (history-entry :initform nil)))
 
 (defmethod render-focus-aux ((buffer web-mode) (pos t)))
-
-(defmethod enable-aux ((mode-name (eql 'web-mode)))
-  (setf (history-entry (current-buffer))
-        (make-instance 'history-entry
-                       :url (url (current-buffer)))))
 
 (define-keys global
   "C-x C-l" 'find-url)
@@ -183,7 +178,8 @@
    (current-buffer)))
 
 (defmethod on-buffer-title-updated progn ((buffer web-mode) title)
-  (setf (title (history-entry buffer)) title)
+  (when-let (entry (history-entry buffer))
+    (setf (title entry) title))
   (rename-buffer title))
 
 (defmethod on-buffer-did-start-navigation progn
@@ -192,8 +188,10 @@
                        (history-blocklist buffer))
               (equal (url buffer) url))
     (let ((old-url (url buffer)))
-      (setf (history-entry buffer)
-            (make-instance 'history-entry :url url))
+      (unless (or (sera:string-prefix-p "file" url)
+                  (sera:string-prefix-p "about:" url))
+        (setf (history-entry buffer)
+              (make-instance 'history-entry :url url)))
       (record-undo
        (nclo undo-navigate ()
          (load-url buffer old-url))
