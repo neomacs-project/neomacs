@@ -17,7 +17,7 @@
   (setf (gethash char table) new-val))
 
 (defun set-syntax-range (table beg end symbol)
-  "Bind characters betwen char-code BEG and END in TABLE to SYMBOL."
+  "Bind characters between char-code BEG and END in TABLE to SYMBOL."
   (setq beg (if (characterp beg) (char-code beg) beg))
   (setq end (if (characterp end) (char-code end) end))
   (iter (for i from beg to end)
