@@ -13,7 +13,7 @@
     on-buffer-dom-ready on-buffer-did-start-navigation
     on-post-command on-pre-command with-post-command
     on-node-setup insert-text-aux on-node-cleanup
-    enable-aux disable-aux
+    enable disable toggle enable-aux disable-aux
     window-decoration frame-root
     window-decoration-aux update-window-decoration-field
     load-url with-amalgamate-js
@@ -92,9 +92,13 @@ Can be either `forward' or `backward'.")
   (format nil "~A" (call-next-method)))
 
 (defun enable (mode-name)
+  "Enable the mode named by MODE-NAME in current buffer."
   (dynamic-mixins:ensure-mix (current-buffer) mode-name))
 
 (defun disable (mode-name)
+  "Disable the mode named by MODE-NAME in current buffer.
+
+This also disables any modes that has MODE-NAME as super-mode."
   (when-let
       (delete-modes
        (iter (for m in (modes (current-buffer)))
@@ -105,6 +109,11 @@ Can be either `forward' or `backward'.")
            delete-modes)))
 
 (defun toggle (mode-name)
+  "Toggle the mode named by MODE-NAME in current buffer.
+
+This disables MODE-NAME either if it is enabled directly or via
+dependency (in which case all dependents are also disabled), and
+enables it otherwise."
   (if (typep (current-buffer) mode-name)
       (progn (disable mode-name) nil)
       (progn (enable mode-name) t)))
