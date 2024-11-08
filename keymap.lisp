@@ -1,5 +1,12 @@
 (in-package #:neomacs)
 
+(sera:eval-always
+  '(key key-p
+    key-ctrl key-meta key-super key-super key-shift key-sym
+    parse-keyspec key-description
+    lookup-keybind find-keybind collect-command-keybindings
+    set-key define-keys))
+
 ;; Initially adapted from lem
 
 (defstruct (key (:constructor %make-key))
@@ -188,9 +195,6 @@ Example: (define-keys global
              ctrl meta super hypher shift sym))
     ((list* keys) (sera:mapconcat #'key-description keys " "))))
 
-(defun keys-description (keys &optional stream)
-  (sera:mapconcat #'key-description keys " " :stream stream))
-
 (defun traverse-keymap (keymap fun)
   (labels ((f (table prefix)
              (maphash (lambda (k v)
@@ -247,7 +251,7 @@ Example: (define-keys global
 
 (defvar *global-keymap* (make-keymap))
 
-(defmethod keymap ((name (eql :global)))
+(defmethod keymap ((name (eql 'global)))
   *global-keymap*)
 
 (define-keys global

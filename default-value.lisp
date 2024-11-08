@@ -1,5 +1,10 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(default
+      default-mixin
+      define-class))
+
 (defmacro default (slot) `(get ,slot 'default))
 
 (defclass default-mixin () ())

@@ -1,5 +1,11 @@
 (in-package :neomacs)
 
+(sera:export-always
+    '(insert-nodes delete-nodes move-nodes extract-nodes
+      splice-node join-nodes raise-node split-node
+      wrap-node delete-node replace-node
+      *clipboard-ring* *clipboard-ring-index*))
+
 ;;; DOM Edit
 
 (defun assign-neomacs-id (node)

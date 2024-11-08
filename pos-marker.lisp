@@ -1,5 +1,20 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(end-pos end-pos-p end-pos-node
+      text-pos text-pos-p text-pos-node text-pos-offset
+      node-after node-before node-containing
+      pos-left pos-right pos-next pos-prev
+      pos-up pos-down pos-down-last
+      pos-left-until pos-right-until pos-next-until pos-prev-until
+      pos-up-until
+      pos-left-ensure pos-right-ensure pos-next-ensure pos-prev-ensure
+      pos-up-ensure
+      npos-left npos-right npos-next npos-prev
+      npos-left-until npos-right-until npos-next-until npos-prev-until
+      npos-left-ensure npos-right-ensure npos-next-ensure npos-prev-ensure
+      marker with-marker pos advance-p))
+
 ;;; Positions
 
 (eval-always

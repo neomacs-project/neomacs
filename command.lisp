@@ -1,5 +1,8 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(define-command))
+
 (defvar *commands* nil)
 
 (defmethod commands ((name (eql 'global)))
@@ -24,8 +27,9 @@
          ((lambda-list . body) args)
          (modes (uiop:ensure-list (getf options :mode 'global))))
     `(progn
-      (defun ,name ,lambda-list ,@body)
-      ,@ (iter (for m in modes)
-           (collect `(pushnew ',name (commands ',m))))
-      (setf (get ',name 'modes) ',modes)
-      ',name)))
+       (sera:export-always ',name)
+       (defun ,name ,lambda-list ,@body)
+       ,@ (iter (for m in modes)
+            (collect `(pushnew ',name (commands ',m))))
+       (setf (get ',name 'modes) ',modes)
+       ',name)))

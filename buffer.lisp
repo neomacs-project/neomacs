@@ -1,5 +1,28 @@
 (in-package #:neomacs)
 
+(sera:eval-always
+  '(buffer id name url generate-buffer-name
+    load-status word-boundary-list
+    get-buffer buffer-alive-p
+    make-buffer get-buffer-create rename-buffer
+    modes keymaps
+    focus on-focus-move adjust-marker-direction
+    document-root restriction scroll-lines
+    clear-focus render-focus render-focus-aux
+    selection-marker selection-active
+    on-buffer-loaded on-delete-buffer on-buffer-title-updated
+    on-buffer-dom-ready on-buffer-did-start-navigation
+    on-post-command on-pre-command with-post-command
+    on-node-setup insert-text-aux on-node-cleanup
+    enable-aux disable-aux
+    window-decoration frame-root
+    window-decoration-aux update-window-decoration-field
+    load-url with-amalgamate-js
+    user-error not-supported with-demoted-errors
+    read-only-error element-read-only-error
+    *inhibit-read-only* check-read-only
+    styles content-scripts define-content-script))
+
 ;;; Neomacs buffer
 
 (defvar *buffer-table* (make-hash-table)

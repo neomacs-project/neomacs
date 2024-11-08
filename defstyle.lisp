@@ -1,5 +1,8 @@
 (in-package :neomacs)
 
+(sera:eval-always
+  '(defstyle))
+
 (defun get-style (symbol)
   (let ((style (get symbol 'style '%unbound)))
     (if (eql style '%unbound)

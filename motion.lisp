@@ -1,5 +1,11 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(selectable-p-aux selectable-p
+      word-character-p word-start-p word-end-p
+      block-element-p block-element-p-aux
+      line-start-p line-end-p))
+
 (defgeneric selectable-p-aux (buffer pos)
   (:method ((buffer buffer) (pos t))
     (not (new-line-node-p (node-containing pos))))

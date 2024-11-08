@@ -1,5 +1,8 @@
 (in-package #:neomacs)
 
+(sera:eval-always
+  '(mode define-mode))
+
 (defvar *modes* nil)
 
 (defclass mode (standard-class)
@@ -73,6 +76,8 @@ Like `define-class' besides supporting extra OPTIONS:
 with NAME.
 
 (:lighter LIGHTER): Set the mode's lighter to LIGHTER."
-  `(define-class ,name ,super-modes ,slots
-     (:metaclass mode)
-     ,@options))
+  `(progn
+     (sera:export-always ',name)
+     (define-class ,name ,super-modes ,slots
+      (:metaclass mode)
+      ,@options)))

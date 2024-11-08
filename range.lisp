@@ -1,5 +1,11 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(range range-p range-collapsed-p
+      before-p inside-range-p inside-range-inclusive-p
+      extract-range delete-range
+      set-selection))
+
 (defun ancestors (pos)
   "Return list of ancestor position of POS.
 POS itself appears at the beginning, Root appears at the end."

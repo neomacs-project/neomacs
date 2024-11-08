@@ -1,5 +1,13 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(top-level exit-recursive-edit quit
+      call-with-current-buffer with-current-buffer
+      *last-command* *this-command* *this-command-keys*
+      recursive-edit start-command-loop
+      *debug-on-error* *quit-hook* *error-hook*
+      play-loud-audio do-nothing))
+
 (define-condition top-level () ()
   (:report "Return to top-level command loop"))
 
@@ -141,10 +149,10 @@ command loop run the next command.")
                (if-let (cmd (lookup-keybind *this-command-keys* (keymaps buffer)))
                  (if (prefix-command-p cmd)
                      (let ((*message-log-max* nil))
-                       (message "~a-" (keys-description *this-command-keys*)))
+                       (message "~a-" (key-description *this-command-keys*)))
                      (run-command cmd))
                  (progn
-                   (message "~a is undefined" (keys-description *this-command-keys*))
+                   (message "~a is undefined" (key-description *this-command-keys*))
                    (setq *this-command-keys* nil))))))
           ((equal type "load")
            (with-current-buffer buffer

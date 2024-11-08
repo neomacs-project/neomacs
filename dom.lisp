@@ -1,5 +1,19 @@
 (in-package :neomacs)
 
+(sera:export-always
+    '(node parent next-sibling previous-sibling host
+      text-node text
+      element first-child last-child tag-name
+      attributes invisible-p
+      element-p text-node-p tag-name-p
+      clone-node child-nodes children text-content
+      get-elements-by-class-name
+      do-dom do-elements next-node previous-node
+      attribute set-attribute-function
+      add-class remove-class class-p
+      insert-before append-child append-children
+      remove-node dom))
+
 (eval-always
   (defmodel node ()
       ((parent :cell nil)

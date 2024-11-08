@@ -1,5 +1,10 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(focused-buffer current-frame-root
+      replacement-buffer
+      *message-log-max* get-message-buffer message))
+
 (defun make-window-decoration (buffer)
   (check-displayable buffer)
   (setf (window-decoration buffer)
@@ -452,7 +457,14 @@ If nil, disable message logging. If t, log messages but don't truncate
                    'window-min-width width))
 
 (defun message (control-string &rest format-arguments)
-  "Log a message in `*Messages*' buffer."
+  "Echo and log a message in `*Messages*' buffer.
+
+If CONTROL-STRING is a string, format it with FORMAT-ARGUMENTS and
+echo it.
+
+CONTROL-STRING can also be a list of DOM nodes (`element's or
+`text-node's), which are displayed and logged. FORMAT-ARGUMENTS must
+be nil in this case."
   (if *current-frame-root*
       (with-current-buffer (echo-area *current-frame-root*)
         (erase-buffer)
