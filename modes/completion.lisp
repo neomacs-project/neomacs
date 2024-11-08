@@ -1,5 +1,9 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(compute-completion
+      completions replace-range completion-buffer))
+
 (define-mode completion-list-mode (list-mode)
   ((completions :initform nil :initarg :completions)))
 

@@ -59,6 +59,7 @@
   `(progn
      (setf (cell-ref (get ',name 'style)) ,spec)
      (setf (documentation ',name 'style) ,doc)
+     (sera:export-always ',name)
      ',name))
 
 (defun css-cell (symbol)

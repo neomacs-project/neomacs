@@ -1,5 +1,9 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(generate-rows focused-item
+      file-size-readable format-readable-timestring))
+
 (define-mode list-mode (read-only-mode) ())
 
 (define-keys list-mode

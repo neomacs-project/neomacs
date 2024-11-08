@@ -1,5 +1,8 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(occur-query occur-p-aux occur-p search-in-elements))
+
 (define-mode occur-mode () ((occur-query)))
 
 (defgeneric occur-p-aux (buffer query element)

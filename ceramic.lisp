@@ -1,5 +1,8 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(evaluate-javascript evaluate-javascript-sync))
+
 (defun quote-js (js-code)
   "Replace each backslash with 2 (unless a \" follows it) and escape backquotes."
   (ppcre:regex-replace-all "`"

@@ -1,13 +1,12 @@
 (in-package #:neomacs)
 
 (sera:eval-always
-  '(buffer id name url generate-buffer-name
-    load-status word-boundary-list
-    get-buffer buffer-alive-p
+  '(buffer id name url load-status
+    generate-buffer-name get-buffer buffer-alive-p
     make-buffer get-buffer-create rename-buffer
     modes keymaps
     focus on-focus-move adjust-marker-direction
-    document-root restriction scroll-lines
+    document-root restriction
     clear-focus render-focus render-focus-aux
     selection-marker selection-active
     on-buffer-loaded on-delete-buffer on-buffer-title-updated
@@ -21,7 +20,7 @@
     user-error not-supported with-demoted-errors
     read-only-error element-read-only-error
     *inhibit-read-only* check-read-only
-    styles content-scripts define-content-script))
+    define-content-script))
 
 ;;; Neomacs buffer
 

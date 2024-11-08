@@ -1,5 +1,10 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(*dom-output* read-dom-aux read-dom read-from-file
+      read-dispatch append-text make-read-delimited
+      write-dom-aux))
+
 ;;; Syntax table
 
 (defun get-syntax-table (char table)

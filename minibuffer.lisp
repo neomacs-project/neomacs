@@ -1,5 +1,10 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(minibuffer-input-element minibuffer-input update-completion-buffer
+      prompt read-from-minibuffer completing-read make-completion-buffer
+      complete-minibuffer-aux))
+
 (define-mode minibuffer-mode ()
   ((prompt :initarg :prompt)
    (completed :initform nil)))

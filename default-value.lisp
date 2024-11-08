@@ -20,7 +20,7 @@
 - All slots are defined with accessor methods of the same name.
 
 - SLOTS accept :default parameter, which is used to initialize its
-  default value."
+  default value. The slot symbols are also exported."
   (let (defaults)
     `(progn
        (defclass ,name ,super-classes
@@ -30,6 +30,8 @@
                       (unless (eq default-form '%unbound)
                         (push `(setf (default ',(car slot-def))
                                      ,default-form)
+                              defaults)
+                        (push `(sera:export-always ',(car slot-def))
                               defaults)
                         (remf (cdr slot-def) :default)))
                     (unless (getf (cdr slot-def) :accessor)

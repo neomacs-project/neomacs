@@ -9,7 +9,7 @@
       clone-node child-nodes children text-content
       get-elements-by-class-name
       do-dom do-elements next-node previous-node
-      attribute set-attribute-function
+      attribute set-attribute-function *record-attribute-undo*
       add-class remove-class class-p
       insert-before append-child append-children
       remove-node dom))

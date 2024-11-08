@@ -1,5 +1,11 @@
 (in-package :neomacs)
 
+(sera:export-always
+    '(undo-entry amalgamate-limit amalgamate-count
+      undo-boundary remove-undo-boundary undo-auto-amalgamate
+      undo redo record-undo *inhibit-record-undo*
+      parent child-entries undo-thunks redo-thunks))
+
 (define-mode undo-mode ()
   ((undo-entry :initform (make-instance 'undo-root) :type undo-entry)
    (amalgamate-limit
