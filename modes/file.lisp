@@ -1,5 +1,7 @@
 (in-package #:neomacs)
 
+;;; Find-file minibuffer
+
 (define-mode minibuffer-find-file-mode
     (minibuffer-completion-mode)
   ((file-path :initarg :file-path)))
@@ -70,15 +72,67 @@
     `((".path-component::before"
        :content "/")))
 
+;;; Find-file
+
+(defvar *file-type-hooks* '(("lisp" lisp-mode)
+                            ("html" html-doc-mode))
+  "Automatically enable modes for file with specific types.
+
+Items should be of the form (FILE-TYPE MODE-NAME).")
+
 (defun set-auto-mode ()
-  (let ((type (pathname-type (file-path (current-buffer)))))
-    (cond ((uiop:directory-pathname-p (file-path (current-buffer)))
-           (enable 'file-list-mode))
-          ((equal type "lisp")
-           (enable 'lisp-mode))
-          ((equal type "html")
-           (enable 'html-doc-mode))
-          (t (enable 'text-mode)))))
+  (or
+   ;; Not ready to enable for now
+   #+nil (process-file-options (file-path (current-buffer)))
+   (let ((type (pathname-type (file-path (current-buffer)))))
+     (sera:cond-let
+         match
+       ((uiop:directory-pathname-p (file-path (current-buffer)))
+        (enable 'file-list-mode))
+       ((assoc type *file-type-hooks* :test 'equal)
+        (enable (cadr match)))
+       (t (enable 'text-mode))))))
+
+(defvar *file-options-limit* 1024)
+
+(defun read-first-line (path)
+  (handler-case
+      (with-open-file (s path :direction :input)
+        (iter (for i below *file-options-limit*)
+          (for c = (read-char s nil nil))
+          (until (or (not c) (eql c #\Newline)))
+          (collect c result-type string)))
+    (stream-error ())
+    (osicat-posix:posix-error ())))
+
+(defun process-file-options (path)
+  "Process file options for PATH.
+
+Returns t if some mode is found and enabled, nil otherwise. Returns
+nil if file doesn't exist or failed to parse file options."
+  (let (found-mode-p)
+    (when-let* ((first-line (read-first-line path))
+                (found (search "-*-" first-line)))
+      (let* ((start (+ found 3))
+             (end (search "-*-" first-line :start2 start)))
+        (unless end
+          (message "No closing \"-*-\".  Aborting file options.")
+          (return-from process-file-options))
+        (iter (for option in (str:split
+                              ";" (subseq first-line start end)))
+          (for colon = (position #\: option))
+          (unless colon (next-iteration))
+          (for name = (string-upcase (str:trim (subseq option 0 colon))))
+          (for value = (str:trim (subseq option (1+ colon))))
+          (cond ((equal name "MODE")
+                 (when-let
+                     (mode (find (str:concat (string-upcase value)
+                                             "-MODE")
+                                 *modes* :key #'symbol-name
+                                 :test 'equal))
+                   (enable mode)
+                   (setq found-mode-p t)))))))
+    found-mode-p))
 
 (defun find-file-buffer (path)
   "Find a buffer already opening PATH, if any."
@@ -120,8 +174,8 @@
                                (osicat-posix:stat path))))
                     (modified (current-buffer)))
             (revert-buffer))
-        (osicat-posix:enoent ()
-          (message "~a does not exist!" path)))
+        (osicat-posix:posix-error (c)
+          (message "Failed to read ~a: ~a" path c)))
       (current-buffer))))
 
 (define-command find-file
