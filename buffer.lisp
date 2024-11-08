@@ -376,6 +376,19 @@ function does nothing."
   (delete-buffer (current-buffer)))
 
 (defun make-buffer (name &rest args)
+  "Create a buffer with NAME.
+
+ARGS is passed as initialization arguments besides some extra keyword
+arguments:
+
+:modes MODES: Enable MODES in the new buffer. MODES can either be a
+list or a single symbol naming some modes.
+
+:disambiguate SUFFIX: When provided, try appending `<SUFFIX>' to NAME
+in case of name collision before trying `<number>'.
+
+:revert REVERT-P: If REVERT-P is t, call `revert-buffer' on the new
+buffer."
   (let ((modes (uiop:ensure-list (getf args :modes))))
     (remf args :modes)
     (apply #'make-instance
@@ -414,11 +427,16 @@ operation."
       ,buffer)))
 
 (defun get-buffer-create (name &rest args)
+  "Returning a buffer with NAME if found, or create one.
+
+When creating a new buffer, NAME and ARGS has the same meaning as in
+`make-buffer'."
   (bt:with-recursive-lock-held (*buffer-table-lock*)
     (or (gethash name *buffer-name-table*)
         (apply #'make-buffer name args))))
 
 (defun get-buffer (name)
+  "Find and return a buffer with NAME, return nil if not found."
   (gethash name *buffer-name-table*))
 
 (defun rename-buffer (name)
