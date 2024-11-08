@@ -1,7 +1,7 @@
 (in-package #:neomacs)
 
 (sera:export-always
-    '(selectable-p-aux selectable-p
+    '(selectable-p-aux selectable-p ensure-selectable
       word-character-p word-start-p word-end-p
       block-element-p block-element-p-aux
       line-start-p line-end-p))

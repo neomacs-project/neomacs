@@ -59,7 +59,12 @@
    (focus-marker)
    (selection-marker)
    (selection-active :initform nil :type boolean)
-   (adjust-marker-direction :initform 'forward)
+   (adjust-marker-direction
+    :initform 'forward :type (or (eql forward) (eql backward))
+    :documentation
+    "Preferred direction when `ensure-selectable' at the end of commands.
+
+Can be either `forward' or `backward'.")
    (markers :type list)
    (document-root)
    (restriction)

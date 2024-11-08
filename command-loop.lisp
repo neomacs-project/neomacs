@@ -106,10 +106,14 @@ command loop run the next command.")
   (declare (ignore args)))
 
 (defvar *quit-hook* 'play-loud-audio
-  "Invoked when a quit condition reaches command loop.")
+  "Invoked when a quit condition reaches command loop.
+
+`user-error's are considered quits and also trigger this hook.")
 
 (defvar *error-hook* 'play-loud-audio
-  "Invoked when an error condition reaches command loop.")
+  "Invoked when an error condition reaches command loop.
+
+`user-error's are considered quits and does not trigger this hook.")
 
 (define-command toggle-debug-on-error ()
   (setq *debug-on-error* (not *debug-on-error*))
@@ -202,7 +206,7 @@ command loop run the next command.")
                            (next-iteration)))
                    (user-error
                      (lambda (c)
-                       (funcall *error-hook* c)
+                       (funcall *quit-hook* c)
                        (message "~a" c)
                        (next-iteration)))
                    (error (lambda (c)
