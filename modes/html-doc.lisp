@@ -413,7 +413,7 @@ JSON should have the format like what `+get-body-json-code+' produces:
   (let ((sections '("intro" "dom" "positions" "markers" "buffers"
                     "motion" "command-loop"
                     "edit" "undo" "ranges" "mode"
-                    "window-management")))
+                    "window-management" "syntax")))
     (with-current-buffer
         (find-file-no-select
          (asdf:system-relative-pathname
