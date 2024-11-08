@@ -38,9 +38,9 @@
   "Bind COMMAND to a KEYSPEC in a KEYMAP.
 
 If KEYSPEC argument is a `string', valid prefixes are:
-H (Hyper), S (Super), M (Meta), C (Ctrl), Shift
+H (Hyper), s (Super), M (Meta), C (Ctrl), S (Shift)
 
-Example: (set-key *global-keymap* \"C-'\" 'list-modes)"
+Example: (set-key *global-keymap* \"C-x b\" 'switch-to-buffer)"
   (check-type keyspec (or symbol string))
   (check-type command (or symbol function keymap))
   (typecase keyspec
@@ -53,6 +53,13 @@ Example: (set-key *global-keymap* \"C-'\" 'list-modes)"
   (values))
 
 (defmacro define-keys (mode-name &body bindings)
+  "Define key BINDINGS for MODE-NAME.
+
+If MODE-NAME is `global', define global key bindings instead.
+
+Example: (define-keys global
+    \"C-x b\" 'switch-to-buffer
+    \"C-x k\" 'delete-buffer)"
   `(progn
      ,@ (iter (for (k v) on bindings by #'cddr)
           (collect `(set-key (keymap ',mode-name) ,k ,v)))))
@@ -240,7 +247,7 @@ Example: (set-key *global-keymap* \"C-'\" 'list-modes)"
 
 (defvar *global-keymap* (make-keymap))
 
-(defmethod keymap ((name (eql 'global)))
+(defmethod keymap ((name (eql :global)))
   *global-keymap*)
 
 (define-keys global
