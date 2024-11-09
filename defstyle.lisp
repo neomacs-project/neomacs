@@ -10,7 +10,7 @@
         (cell-ref style))))
 
 (defun substitute-inherits (form)
-  "Expand :inherit keys in style spec FORM."
+  "Expand :inherit options in style spec FORM."
   (labels ((process (form)
              (typecase form
                (cons
