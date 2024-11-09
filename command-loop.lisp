@@ -55,8 +55,10 @@ non-nil HANDLER-P, which would return and signal a `quit' condition."))
                (*current-buffer* buffer))
            (bt:acquire-lock (lock buffer))
            (setf (adjust-marker-direction buffer) 'forward)
-           (on-pre-command buffer)
-           (unwind-protect (funcall thunk)
+           (unwind-protect
+                (progn
+                  (on-pre-command buffer)
+                  (funcall thunk))
              (unwind-protect (cleanup-locked-buffers)
                (dolist (buffer *locked-buffers*)
                  (bt:release-lock (lock buffer)))))))
