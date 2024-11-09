@@ -208,7 +208,7 @@ when this row is selected.")))
          args))
 
 (defun find-command (name modes)
-  (iter (for mode in (append modes '(global)))
+  (iter (for mode in (append modes '(:global)))
     (when-let
         (cmd (find name (commands mode)
                    :key (alex:compose #'string-downcase #'symbol-name)
