@@ -89,7 +89,8 @@
       label-length)))
 
 (define-mode active-web-hint-mode ()
-  ((label-length) (label-keys :initform "")))
+  ((label-length) (label-keys :initform ""))
+  (:documentation "Transient mode when selecting web hints."))
 
 (define-keys active-web-hint-mode
   'keyboard-quit 'remove-hints)
@@ -102,7 +103,9 @@
 (define-keys web-mode
   "M-g" 'add-hints)
 
-(defun add-hints ()
+(define-command add-hints
+  :mode web-mode ()
+  "Select visible interactive elements using hints."
   (pushnew 'web-hints (content-scripts (current-buffer)))
   (let ((length (evaluate-javascript-sync
                  (ps:ps (hint-elements (ps:lisp (cell-ref (css-cell 'web-hints)))))
