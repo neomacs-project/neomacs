@@ -55,9 +55,16 @@
 (defmethod (setf documentation) (new-val symbol (type (eql 'style)))
   (setf (get symbol 'style-doc) new-val))
 
+(defvar *styles* nil)
+
+(defun initialize-style (name spec)
+  (pushnew name *styles*)
+  (setf (cell-ref (get name 'style)) spec
+        (get name 'standard-style) (copy-tree spec)))
+
 (defmacro defstyle (name spec &optional doc)
   `(progn
-     (setf (cell-ref (get ',name 'style)) ,spec)
+     (initialize-style ',name ,spec)
      (setf (documentation ',name 'style) ,doc)
      (sera:export-always ',name)
      ',name))
