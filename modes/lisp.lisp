@@ -804,7 +804,8 @@ sb-introspect:definition-source)'."
 
 (define-mode autodoc-mode () ()
   (:documentation
-   "Show documentation of form around focus."))
+   "Show documentation of form around focus.")
+  (:toggler t))
 
 (defun format-swank-highlighted-arglist (string)
   (let ((match (ppcre:all-matches "===>.*<===" string)))
