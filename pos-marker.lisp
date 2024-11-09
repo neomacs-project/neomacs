@@ -333,9 +333,9 @@ This place is setf-able."
       ((%after-pos before) (pos-right before)))))
 
 (defun focus-marker-p (marker)
-  "Test if MARKER is the focus marker of some `neomacs-mode' instance.
+  "Test if MARKER is the focus marker of some buffer.
 
-Return that instance or nil otherwise."
+Return that buffer or nil otherwise."
   (let ((host (host marker)))
     (when (eq marker (focus-marker host))
       host)))
