@@ -605,7 +605,7 @@ Highlights compiler notes."
   "Evaluate the last expression and echo the result."
   (let* ((*package* (current-package marker))
          (result (eval (node-to-sexp (last-expression (pos marker))))))
-    (message "=> ~a" result)))
+    (message "=> ~S" result)))
 
 (define-command eval-print-last-expression :mode lisp-mode
   (&optional (marker (focus)))
