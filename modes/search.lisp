@@ -9,11 +9,13 @@
   "C-r" 'search-backward)
 
 (defun search-text (query text &key (start 0) (from-end nil) (end nil))
+  "Search for QUERY inside TEXT."
   (when (< start (length text))
     (search (string-upcase query) (string-upcase text)
             :start2 start :end2 end :from-end from-end)))
 
 (defun search-next-node (node query)
+  "Search for next occurrence of QUERY, start from beginning of NODE."
   (iter
     (when (text-node-p node)
       (when-let (offset (search-text query (text node)))
@@ -22,6 +24,7 @@
     (while node)))
 
 (defun search-previous-node (node query)
+  "Search for previous occurrence of QUERY, start from beginning of NODE."
   (iter
     (setq node (previous-node node))
     (when (text-node-p node)
@@ -30,6 +33,9 @@
     (while node)))
 
 (defun search-next-pos (pos query &optional must-move)
+  "Search for next occurence of QUERY, start from POS.
+
+If MUST-MOVE is true, always return a different POS."
   (ematch pos
     ((element) (search-next-node pos query))
     ((text-pos node offset)
@@ -40,6 +46,7 @@
     ((end-pos node) (search-next-node node query))))
 
 (defun search-previous-pos (pos query)
+  "Search for previous occurence of QUERY, start from POS."
   (ematch pos
     ((element) (search-previous-node pos query))
     ((text-pos node offset)
@@ -80,13 +87,8 @@
    (or (and (element-p node) (last-child node))
        node)))
 
-(defun ensure-node (pos)
-  (ematch pos
-    ((element) pos)
-    ((text-pos node) node)
-    ((end-pos node) (next-up-node node))))
-
 (define-command search-forward ()
+  "Search forward for text occurrence."
   (if (typep (current-buffer) 'minibuffer-search-mode)
       (let* ((buffer (current-buffer))
              (query (minibuffer-input buffer)))
@@ -107,6 +109,7 @@
       (start-search)))
 
 (define-command search-backward ()
+  "Search backward for text occurrence."
   (if (typep (current-buffer) 'minibuffer-search-mode)
       (let* ((buffer (current-buffer))
              (query (minibuffer-input buffer)))
