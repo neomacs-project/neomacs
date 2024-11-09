@@ -176,7 +176,6 @@ THINGS can be DOM nodes or strings, which are converted to text nodes."
         (error "~a does not point inside an active document." pos))
       (check-read-only host pos)
       (let ((nodes
-              ;; TODO: do more cleanup, like merging adjacent text nodes
               (iter (for n in things)
                 (when (stringp n)
                   (if (> (length n) 0)
@@ -186,14 +185,25 @@ THINGS can be DOM nodes or strings, which are converted to text nodes."
                   ((text-node-p n)
                    (appending (insert-text-aux host n (node-containing pos))))
                   (n (collect n))))))
-        (record-undo
-         (nclo undo-node-setup ()
-           (mapc (alex:curry #'do-dom #'node-cleanup) nodes))
-         (nclo redo-node-setup ()
-           (mapc (alex:curry #'do-dom (alex:rcurry #'node-setup host)) nodes))
-         host)
-        (insert-nodes-1 pos (mapc (alex:curry #'do-dom (alex:rcurry #'node-setup host))
-                                  nodes))))))
+        ;; Normalize text nodes, merge adjacent ones and remove empty ones.
+        (setq nodes
+              (iter (with last = nil)
+                (for n in nodes)
+                (if (and (text-node-p n)
+                         (text-node-p last))
+                    (setf (text last)
+                          (str:concat (text last) (text n)))
+                    (collect n))
+                (setq last n)))
+        (when nodes
+          (record-undo
+           (nclo undo-node-setup ()
+             (mapc (alex:curry #'do-dom #'node-cleanup) nodes))
+           (nclo redo-node-setup ()
+             (mapc (alex:curry #'do-dom (alex:rcurry #'node-setup host)) nodes))
+           host)
+          (insert-nodes-1 pos (mapc (alex:curry #'do-dom (alex:rcurry #'node-setup host))
+                                    nodes)))))))
 
 (defun count-nodes-between (beg end)
   (iter (for node first beg then (next-sibling node))
