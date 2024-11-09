@@ -10,6 +10,7 @@
         (cell-ref style))))
 
 (defun substitute-inherits (form)
+  "Expand :inherit keys in style spec FORM."
   (labels ((process (form)
              (typecase form
                (cons
@@ -31,6 +32,7 @@
     (process form)))
 
 (defun hoist-special-blocks (forms)
+  "Expand blocks started with (:append ...) in style spec FORM."
   (labels ((process (form)
              (bind (((selector . body) form)
                     results)
@@ -55,21 +57,26 @@
 (defmethod (setf documentation) (new-val symbol (type (eql 'style)))
   (setf (get symbol 'style-doc) new-val))
 
-(defvar *styles* nil)
+(defvar *styles* nil "List of all known styles.")
 
-(defun initialize-style (name spec)
-  (pushnew name *styles*)
-  (setf (cell-ref (get name 'style)) spec
-        (get name 'standard-style) (copy-tree spec)))
+(defun initialize-style (symbol spec)
+  (pushnew symbol *styles*)
+  (setf (cell-ref (get symbol 'style)) spec
+        (get symbol 'standard-style) (copy-tree spec)))
 
-(defmacro defstyle (name spec &optional doc)
+(defmacro defstyle (symbol spec &optional doc)
+  "Define a style named by SYMBOL."
   `(progn
-     (initialize-style ',name ,spec)
-     (setf (documentation ',name 'style) ,doc)
-     (sera:export-always ',name)
-     ',name))
+     (initialize-style ',symbol ,spec)
+     (setf (documentation ',symbol 'style) ,doc)
+     (sera:export-always ',symbol)
+     ',symbol))
 
 (defun css-cell (symbol)
+  "Return cell that stores the compiled CSS of the style named by SYMBOL.
+
+Can be `cell-ref'ed to get the up-to-date CSS string for the style
+named by SYMBOL."
   (or (get symbol 'css)
       (setf (get symbol 'css)
             (cell (apply #'styled-css (get-style symbol))))))
