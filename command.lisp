@@ -41,7 +41,7 @@ command."
   (bind (((:values options args) (split-args args))
          ((lambda-list . body) args)
          (modes (uiop:ensure-list (getf options :mode :global)))
-         (interactive (getf options :interactive '(lambda () nil))))
+         (interactive (getf options :interactive)))
     `(progn
        (sera:export-always ',name)
        (defun ,name ,lambda-list ,@body)
@@ -58,7 +58,9 @@ If SYMBOL-OR-FUNCTION is a symbol, this provides argument according to
 its `interactive' symbol property (set by :interactive options of
 `define-command')."
   (etypecase symbol-or-function
-    (symbol (apply symbol-or-function
-                   (funcall (get symbol-or-function
-                                 'interactive))))
+    (symbol
+     (if-let (interactive (get symbol-or-function
+                               'interactive))
+       (apply symbol-or-function (funcall interactive))
+       (funcall symbol-or-function)))
     (function (funcall symbol-or-function))))
