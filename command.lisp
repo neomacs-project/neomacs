@@ -1,7 +1,7 @@
 (in-package #:neomacs)
 
 (sera:export-always
-    '(define-command))
+    '(define-command call-interactively))
 
 (defvar *commands* nil "List of known commands.")
 
