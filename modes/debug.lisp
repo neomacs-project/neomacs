@@ -124,7 +124,7 @@
   (let ((debugger
           (make-buffer
            "*debugger*"
-           :modes '(debugger-mode)
+           :mode 'debugger-mode
            :environment env
            :mailbox mailbox
            :revert t)))

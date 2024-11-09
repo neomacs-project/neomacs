@@ -27,7 +27,7 @@
   ((node-table :initform (make-hash-table))
    (undo-buffer :initform
                 (make-buffer "*undo*"
-                             :modes '(undo-history-mode))))
+                             :mode 'undo-history-mode)))
   (:documentation "Transient mode when undo history panel is active."))
 
 (defmethod undo-buffer ((buffer buffer)) nil)

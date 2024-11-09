@@ -478,7 +478,7 @@ Used for resolving source-path to DOM node.")
   `(let ((*form-node-table* (make-hash-table))
          (*compilation-buffer*
            (get-buffer-create "*compilation*"
-                              :modes '(compilation-buffer-mode))))
+                              :mode 'compilation-buffer-mode)))
      (clear-compiler-notes)
      (setf (for-buffer *compilation-buffer*) (current-buffer))
      (with-current-buffer *compilation-buffer*
@@ -762,7 +762,7 @@ sb-introspect:definition-source)'."
                 (focus-buffer
                  (display-buffer-right
                   (make-buffer
-                   "*xref*" :modes '(xref-list-mode)
+                   "*xref*" :mode 'xref-list-mode
                             :symbol symbol :revert t))))))))))
 
 ;;; Auto-completion

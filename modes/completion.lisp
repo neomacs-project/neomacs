@@ -29,7 +29,7 @@
    (completion-buffer
     :initform
     (make-buffer " *completion*"
-                 :modes '(completion-list-mode))))
+                 :mode 'completion-list-mode)))
   (:documentation "Transient mode when completion menu is active."))
 
 (define-keys prog-mode

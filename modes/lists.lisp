@@ -104,13 +104,13 @@
   (switch-to-buffer
    (get-buffer-create
     "*commands*"
-    :modes '(command-list-mode)
+    :mode 'command-list-mode
     :include-modes *modes*
     :revert t)))
 
 (define-command list-buffers ()
   (switch-to-buffer
-   (get-buffer-create "*buffers*" :modes '(buffer-list-mode)
+   (get-buffer-create "*buffers*" :mode 'buffer-list-mode
                       :revert t)))
 
 (defun focused-row ()

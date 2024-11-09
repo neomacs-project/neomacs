@@ -18,7 +18,7 @@
   :interactive
   (lambda ()
     (list (read-from-minibuffer
-           "Find URL: " :modes 'minibuffer-find-link-mode
+           "Find URL: " :mode 'minibuffer-find-link-mode
            :completion-buffer
            (make-completion-buffer
             '(web-history-list-mode completion-buffer-mode)
@@ -26,7 +26,7 @@
   (url-or-query)
   (switch-to-buffer
    (make-buffer
-    "Web" :modes 'web-mode
+    "Web" :mode 'web-mode
     :url (or (look-like-url-p url-or-query)
              (str:concat *search-prefix* url-or-query))
     :styles nil)))
@@ -268,7 +268,7 @@
 (define-command list-web-history ()
   (switch-to-buffer
    (get-buffer-create "*web-history*"
-                      :modes '(web-history-list-mode)
+                      :mode 'web-history-list-mode
                       :revert t)))
 
 (defmethod occur-p-aux ((buffer web-history-list-mode)
@@ -309,7 +309,7 @@
 (defun start-web-search ()
   (unwind-protect
        (read-from-minibuffer
-        "Search: " :modes 'minibuffer-web-search-mode
+        "Search: " :mode 'minibuffer-web-search-mode
                    :buffer (current-buffer))
     (evaluate-javascript
      (ps:ps

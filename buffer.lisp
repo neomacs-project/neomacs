@@ -393,16 +393,16 @@ function does nothing."
 ARGS is passed as initialization arguments besides some extra keyword
 arguments:
 
-:modes MODES: Enable MODES in the new buffer. MODES can either be a
-list or a single symbol naming some modes.
+:mode MODE-OR-MODES: Enable MODE-OR-MODES in the new
+buffer. MODE-OR-MODES can either be a list or a single symbol.
 
 :disambiguate SUFFIX: When provided, try appending `<SUFFIX>' to NAME
 in case of name collision before trying `<number>'.
 
 :revert REVERT-P: If REVERT-P is t, call `revert-buffer' on the new
 buffer."
-  (let ((modes (uiop:ensure-list (getf args :modes))))
-    (remf args :modes)
+  (let ((modes (uiop:ensure-list (getf args :mode))))
+    (remf args :mode)
     (apply #'make-instance
            (apply #'dynamic-mixins:mix
                   (append modes (list 'buffer)))

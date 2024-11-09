@@ -43,7 +43,7 @@
 
 (define-mode frame-root-mode ()
   ((echo-area :initform (make-buffer " *echo-area*"
-                                     :modes 'echo-area-mode
+                                     :mode 'echo-area-mode
                                      :styles nil))
    (buffer-list :initform nil))
   (:documentation "Mode for frame root buffer."))
@@ -175,7 +175,7 @@ fixed in future Electron, our logic may be simplified."
   (lret ((buffer (make-buffer " *frame-root*" :styles nil)))
     (with-current-buffer buffer
       ;; FIXME: If I move (enable 'frame-root-mode) into (make-buffer
-      ;; ... :modes 'frame-root-mode), it stops working.
+      ;; ... :mode 'frame-root-mode), it stops working.
       ;; Figure out why.
       (enable 'frame-root-mode)
       (init-frame-root init-buffer))))
@@ -295,7 +295,7 @@ fixed in future Electron, our logic may be simplified."
 
 (defun make-scratch ()
   (lret ((buffer (make-buffer
-                  "*scratch*" :modes '(lisp-mode file-mode)
+                  "*scratch*" :mode '(lisp-mode file-mode)
                   :file-path (asdf:system-relative-pathname :neomacs #p"scratch.lisp"))))
     (with-current-buffer buffer
       (revert-buffer)
@@ -397,7 +397,7 @@ BUFFER must be already displayed."
    (only-elt (get-elements-by-class-name window-node "main"))))
 
 (defun get-message-buffer ()
-  (get-buffer-create "*Messages*" :modes '(read-only-mode doc-mode)))
+  (get-buffer-create "*Messages*" :mode '(read-only-mode doc-mode)))
 
 (defun truncate-node (node n)
   (iter

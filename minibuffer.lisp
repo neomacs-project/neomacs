@@ -46,8 +46,8 @@
   "Read and return a string from minibuffer with PROMPT.
 
 ARGS are passed to `make-buffer' to create the minibuffer."
-  (unless (getf args :modes)
-    (setf (getf args :modes) 'minibuffer-mode))
+  (unless (getf args :mode)
+    (setf (getf args :mode) 'minibuffer-mode))
   (let ((minibuf
           (apply #'make-buffer "*minibuffer*"
                  :prompt prompt args))
@@ -78,7 +78,7 @@ ARGS are passed to `make-buffer' to create the minibuffer."
 This is a thin wrapper around `read-from-minibuffer' that creates a completion buffer in LIST-MODE."
   (read-from-minibuffer
    prompt
-   :modes 'minibuffer-completion-mode
+   :mode 'minibuffer-completion-mode
    :completion-buffer
    (apply #'make-completion-buffer
           (list list-mode 'completion-buffer-mode)
@@ -204,7 +204,7 @@ when this row is selected.")))
     (end-of-buffer)))
 
 (defun make-completion-buffer (modes &rest args)
-  (apply #'make-buffer " *completion*" :modes modes :revert t
+  (apply #'make-buffer " *completion*" :mode modes :revert t
          args))
 
 (defun find-command (name modes)

@@ -77,7 +77,7 @@ If MUST-MOVE is true, always return a different POS."
     (handler-case
         (unwind-protect
           (read-from-minibuffer
-           "Search: " :modes 'minibuffer-search-mode
+           "Search: " :mode 'minibuffer-search-mode
                       :buffer (current-buffer))
           (setf (selection-active (current-buffer)) nil))
       (quit () (setf (pos (focus)) (pos m))))))

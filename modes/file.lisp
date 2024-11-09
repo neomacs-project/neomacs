@@ -160,7 +160,7 @@ nil if file doesn't exist or failed to parse file options."
                (if (uiop:directory-pathname-p path)
                    (lastcar (pathname-directory path))
                    (file-namestring path))
-               :modes 'file-mode
+               :mode 'file-mode
                :disambiguate
                (if (uiop:directory-pathname-p path)
                    (car (last (pathname-directory path) 2))
@@ -184,7 +184,7 @@ nil if file doesn't exist or failed to parse file options."
     (list
      (read-from-minibuffer
       "Find file: "
-      :modes 'minibuffer-find-file-mode
+      :mode 'minibuffer-find-file-mode
       :completion-buffer
       (make-completion-buffer
        '(file-list-mode completion-buffer-mode)

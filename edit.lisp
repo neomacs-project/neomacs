@@ -653,7 +653,7 @@ If selection is active, copy selected contents instead."
         (read-system-clipboard-maybe)
         (read-from-minibuffer
          "Paste from clipboard: "
-         :modes 'clipboard-minibuffer-mode
+         :mode 'clipboard-minibuffer-mode
          :completion-buffer
          (make-completion-buffer
           '(clipboard-list-mode completion-buffer-mode)))))

@@ -28,9 +28,10 @@
 ARGS has the form `{:option OPTION}* LAMBDA-LIST FORM*'.  This is
 like `(defun LAMBDA-LIST FORM*)' besides supporting extra options:
 
-:mode MODE-OR-MODES: MODE-OR-MODES is a mode name or a list of mode
-name. The command is made avaliable in these modes. If this options is
-not provided, the command is avaliable globally.
+:mode MODE-OR-MODES: The command is made avaliable in
+MODE-OR-MODES. MODE-OR-MODES can either be a list or a single
+symbol. If this options is not provided, the command is avaliable
+globally.
 
 :interactive INTERACTIVE: INTERACTIVE should evaluate to a function
 which takes zero arguments. When called, it should return a list of

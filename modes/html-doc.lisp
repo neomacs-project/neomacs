@@ -457,7 +457,7 @@ JSON should have the format like what `+get-body-json-code+' produces:
           (user-error "Manual not built")))
     (switch-to-buffer
      (get-buffer-create
-      "*manual*" :modes 'web-mode
+      "*manual*" :mode 'web-mode
       :url (str:concat
             "file://" (uiop:native-namestring toc-path))))))
 
