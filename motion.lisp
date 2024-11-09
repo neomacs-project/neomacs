@@ -57,13 +57,13 @@ Test if POS is selectable in BUFFER."))
   "Move to closest selectable preorder successor."
   (setf (pos marker)
         (or (npos-next-until (pos marker) #'selectable-p)
-            (error 'top-of-subtree))))
+            (error 'end-of-subtree))))
 
 (define-command backward-node (&optional (marker (focus)))
   "Move to closest selectable preorder predecessor."
   (setf (pos marker)
         (or (npos-prev-until (pos marker) #'selectable-p)
-            (error 'top-of-subtree))))
+            (error 'beginning-of-subtree))))
 
 (define-command forward-node-cycle (&optional (marker (focus)))
   "Like `forward-node', but may wrap around to beginning of buffer."
@@ -95,13 +95,13 @@ Test if POS is selectable in BUFFER."))
     (iter
       (until (graphic-element-p pos))
       (until (pos-left pos))
-      (setq pos (or (pos-up pos) (error 'top-of-subtree))))
+      (setq pos (or (pos-up pos) (error 'end-of-subtree))))
     (setf (pos marker)
           (or (iterate-pos-until
                (alex:disjoin #'npos-right
                              (alex:compose #'pos-right #'pos-up))
                pos #'graphic-element-p)
-              (error 'top-of-subtree)))))
+              (error 'end-of-subtree)))))
 
 (define-command forward-element-end (&optional (marker (focus)))
   "Move after the end of surrounding element to the right."
@@ -112,13 +112,13 @@ Test if POS is selectable in BUFFER."))
         (return))
       (setq pos (or (npos-right pos)
                     (pos-right (pos-up pos))
-                    (error 'top-of-subtree)))
+                    (error 'end-of-subtree)))
       (when (and (end-pos-p pos)
                  (graphic-element-p (end-pos-node pos)))
         (return)))
     (setf (pos marker)
           (or (npos-next pos)
-              (error 'top-of-subtree))
+              (error 'end-of-subtree))
           (adjust-marker-direction (host marker)) 'backward)))
 
 (define-command backward-element (&optional (marker (focus)))
@@ -127,12 +127,12 @@ Test if POS is selectable in BUFFER."))
     (iter
       (until (graphic-element-p pos))
       (until (pos-left pos))
-      (setq pos (or (pos-up pos) (error 'top-of-subtree))))
+      (setq pos (or (pos-up pos) (error 'beginning-of-subtree))))
     (setf (pos marker)
           (or (iterate-pos-until
                (alex:disjoin #'npos-left #'pos-up)
                pos #'graphic-element-p)
-              (error 'top-of-subtree)))))
+              (error 'beginning-of-subtree)))))
 
 (define-command beginning-of-buffer (&optional (marker (focus)))
   "Move to beginning of buffer."
@@ -171,13 +171,13 @@ otherwise."
   "Move to next word end position."
   (let ((pos (pos marker)))
     (setq pos (npos-next-until pos #'word-end-p))
-    (setf (pos marker) (or pos (error 'top-of-subtree)))))
+    (setf (pos marker) (or pos (error 'end-of-subtree)))))
 
 (define-command backward-word (&optional (marker (focus) non-interactive))
   "Move to previous word start position."
   (let ((pos (pos marker)))
     (setq pos (npos-prev-until pos #'word-start-p))
-    (setf (pos marker) (or pos (error 'top-of-subtree)))
+    (setf (pos marker) (or pos (error 'beginning-of-subtree)))
     (unless non-interactive
       (setf (adjust-marker-direction (current-buffer)) 'backward))))
 
@@ -216,7 +216,7 @@ non-interactive use."
     (iter (until (line-start-p pos))
       (setq pos (or (npos-prev pos) (return)))
       (when (selectable-p pos) (incf n)))
-    (setf (pos marker) (or pos (error 'top-of-subtree)))
+    (setf (pos marker) (or pos (error 'beginning-of-subtree)))
     n))
 
 (define-command end-of-line (&optional (marker (focus) non-interactive))
@@ -224,7 +224,7 @@ non-interactive use."
   (let ((pos (pos marker)))
     (iter (until (line-end-p pos))
       (setq pos (or (npos-next pos) (return))))
-    (setf (pos marker) (or pos (error 'top-of-subtree)))
+    (setf (pos marker) (or pos (error 'end-of-subtree)))
     (unless non-interactive
       (setf (adjust-marker-direction (current-buffer)) 'backward))))
 
@@ -243,7 +243,7 @@ non-interactive use."
           (setq pos up))
         (setq pos (npos-left-until
                    pos (alex:compose #'not #'new-line-node-p)))
-        (setf (pos marker) (or pos (error 'top-of-subtree)))))))
+        (setf (pos marker) (or pos (error 'beginning-of-subtree)))))))
 
 (define-command end-of-defun (&optional (marker (focus)))
   "Move to next toplevel node."
@@ -254,7 +254,7 @@ non-interactive use."
                pos (alex:compose #'not #'new-line-node-p
                                  #'node-after)))
     (setf (adjust-marker-direction (current-buffer)) 'backward
-          (pos marker) (or pos (error 'top-of-subtree)))))
+          (pos marker) (or pos (error 'end-of-subtree)))))
 
 (defun forward-node-same-line (marker n)
   "Move MARKER forward by N selectable positions or till end of line."

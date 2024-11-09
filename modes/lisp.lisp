@@ -366,7 +366,7 @@ before MARKER-OR-POS."
                    (return (string-upcase
                             (str:trim (text-content name)
                                       :char-bag "#:"))))))
-           (top-of-subtree ())))
+           (motion-error ())))
         (find-package "NEOMACS"))))
 
 ;;; Compiler notes
