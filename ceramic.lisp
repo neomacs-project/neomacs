@@ -75,5 +75,5 @@ BUFFER is NIL."
   (sb-concurrency:send-message *event-queue* 'quit)
   (ceramic:quit))
 
-(define-keys global
+(define-keys :global
   "C-x C-c" 'kill-neomacs)

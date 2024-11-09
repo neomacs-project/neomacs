@@ -300,5 +300,5 @@ containing node."
         (pos (selection-marker (current-buffer)))
         (pos (focus))))
 
-(define-keys global
+(define-keys :global
   "C-space" 'set-selection)

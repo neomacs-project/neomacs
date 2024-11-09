@@ -83,7 +83,7 @@
 
 (defmethod render-focus-aux ((buffer web-mode) (pos t)))
 
-(define-keys global
+(define-keys :global
   "C-x C-l" 'find-url)
 
 (defnclo web-send-key-command (key) ()

@@ -36,7 +36,7 @@
      (subseq doc 0 (position #\Newline doc)))))
 
 (defmethod generate-rows ((buffer command-list-mode))
-  (iter (for mode in (append (include-modes buffer) '(global)))
+  (iter (for mode in (append (include-modes buffer) '(:global)))
     (iter (for c in (commands mode))
       (for name = (string-downcase (symbol-name c)))
       (insert-nodes

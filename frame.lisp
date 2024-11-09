@@ -367,7 +367,7 @@ BUFFER must be already displayed."
     (setf (pos (focus)) (window-decoration buffer))
     buffer))
 
-(define-keys global
+(define-keys :global
   "C-x o" 'other-window
   "C-x 0" 'close-buffer-display
   "C-x 1" 'delete-other-windows

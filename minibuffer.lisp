@@ -235,7 +235,7 @@ when this row is selected.")))
       (funcall cmd)
       (message "No such command"))))
 
-(define-keys global
+(define-keys :global
   "M-x" 'execute-command)
 
 (defstyle minibuffer-prompt `(:inherit bold))

@@ -271,7 +271,7 @@ function `command-loop' to take effect."
   "Exit current recursive edit level."
   (error 'exit-recursive-edit))
 
-(define-keys global
+(define-keys :global
   "C-g" 'keyboard-quit)
 
 ;;; Helper threads

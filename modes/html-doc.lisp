@@ -268,7 +268,7 @@ JSON should have the format like what `+get-body-json-code+' produces:
         ((get function 'modes)
          (append-text *dom-output* "Command")
          (dolist (m (get function 'modes))
-           (unless (eql m 'global)
+           (unless (eql m :global)
              (append-text
               *dom-output*
               (format nil " in ~a" m)))

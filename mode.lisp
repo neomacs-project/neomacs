@@ -9,7 +9,7 @@
   ((commands :initform nil :accessor commands)
    (keymap :initform (make-keymap) :accessor keymap)
    (lighter
-    :initform nil :accessor lighter :type string
+    :accessor lighter :type string
     :documentation
     "String displayed in header to indicate this mode is enabled.")
    (hooks

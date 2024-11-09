@@ -4,7 +4,7 @@
   ((for-buffer :initform (alex:required-argument :buffer)
                :initarg :buffer)))
 
-(define-keys global
+(define-keys :global
   "C-s" 'search-forward
   "C-r" 'search-backward)
 

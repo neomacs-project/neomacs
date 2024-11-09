@@ -64,7 +64,7 @@ Example: (set-key *global-keymap* \"C-x b\" 'switch-to-buffer)"
 
 If MODE-NAME is `global', define global key bindings instead.
 
-Example: (define-keys global
+Example: (define-keys :global
     \"C-x b\" 'switch-to-buffer
     \"C-x k\" 'delete-buffer)"
   `(progn
@@ -251,9 +251,9 @@ Example: (define-keys global
 
 (defvar *global-keymap* (make-keymap))
 
-(defmethod keymap ((name (eql 'global)))
+(defmethod keymap ((name (eql :global)))
   *global-keymap*)
 
-(define-keys global
+(define-keys :global
   "s-u" 'revert-buffer
   "s-k" 'delete-this-buffer)

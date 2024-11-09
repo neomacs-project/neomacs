@@ -317,7 +317,7 @@ Used to detect modification from other processes before saving."))
           (incf saved-count))))
     (message "~a buffer~p saved" saved-count saved-count)))
 
-(define-keys global
+(define-keys :global
   "C-x C-f" 'find-file
   "C-x C-s" 'save-buffer
   "C-x s" 'save-all)

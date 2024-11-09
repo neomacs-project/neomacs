@@ -674,7 +674,7 @@ If selection is active, copy selected contents instead."
 
 ;;; Default key bindings
 
-(define-keys global
+(define-keys :global
   "backspace" 'backward-delete
   "space" 'self-insert-command
   "enter" 'new-line

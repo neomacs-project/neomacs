@@ -295,7 +295,7 @@ Try to keep horizontal location approximately the same."
   "Move down `scroll-lines'."
   (next-line (scroll-lines (current-buffer))))
 
-(define-keys global
+(define-keys :global
   "arrow-right" 'forward-node
   "arrow-left" 'backward-node
   "M-arrow-right" 'forward-word
@@ -305,7 +305,7 @@ Try to keep horizontal location approximately the same."
   "end" 'end-of-line
   "home" 'beginning-of-line)
 
-(define-keys global
+(define-keys :global
   "C-f" 'forward-node
   "C-b" 'backward-node
   "M-f" 'forward-word

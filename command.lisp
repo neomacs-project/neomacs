@@ -5,10 +5,10 @@
 
 (defvar *commands* nil)
 
-(defmethod commands ((name (eql 'global)))
+(defmethod commands ((name (eql :global)))
   *commands*)
 
-(defmethod (setf commands) (new-val (name (eql 'global)))
+(defmethod (setf commands) (new-val (name (eql :global)))
   (setf *commands* new-val))
 
 (defun split-args (args)
@@ -25,7 +25,7 @@
 (defmacro define-command (name &rest args)
   (bind (((:values options args) (split-args args))
          ((lambda-list . body) args)
-         (modes (uiop:ensure-list (getf options :mode 'global))))
+         (modes (uiop:ensure-list (getf options :mode :global))))
     `(progn
        (sera:export-always ',name)
        (defun ,name ,lambda-list ,@body)
