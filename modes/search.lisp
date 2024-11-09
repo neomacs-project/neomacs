@@ -8,11 +8,15 @@
   "C-s" 'search-forward
   "C-r" 'search-backward)
 
+(defun search-text (query text &key (start 0) (from-end nil) (end nil))
+  (when (< start (length text))
+    (search (string-upcase query) (string-upcase text)
+            :start2 start :end2 end :from-end from-end)))
+
 (defun search-next-node (node query)
   (iter
     (when (text-node-p node)
-      (when-let (offset (search (string-upcase query)
-                                (string-upcase (text node))))
+      (when-let (offset (search-text query (text node)))
         (return (text-pos node offset))))
     (setq node (next-node node))
     (while node)))
@@ -21,19 +25,35 @@
   (iter
     (setq node (previous-node node))
     (when (text-node-p node)
-      (when-let (offset (search (string-upcase query)
-                                (string-upcase (text node))))
+      (when-let (offset (search-text query (text node) :from-end t))
         (return (text-pos node offset))))
     (while node)))
+
+(defun search-next-pos (pos query &optional must-move)
+  (ematch pos
+    ((element) (search-next-node pos query))
+    ((text-pos node offset)
+     (if-let (beg (search-text query (text node)
+                               :start (+ offset (if must-move (length query) 0))))
+       (text-pos node beg)
+       (search-next-node (next-node node) query)))
+    ((end-pos node) (search-next-node node query))))
+
+(defun search-previous-pos (pos query)
+  (ematch pos
+    ((element) (search-previous-node pos query))
+    ((text-pos node offset)
+     (if-let (beg (search-text query (text node) :from-end t :end offset))
+       (text-pos node beg)
+       (search-previous-node (previous-node node) query)))
+    ((end-pos node) (search-previous-node (next-up-node node) query))))
 
 (defmethod on-post-command progn ((buffer minibuffer-search-mode))
   (unless (member *this-command* '(search-forward search-backward))
     (let ((query (minibuffer-input buffer)))
       (when (plusp (length query))
         (with-current-buffer (for-buffer buffer)
-          (or (when-let (next (search-next-node
-                               (ensure-node (pos (focus)))
-                               query))
+          (or (when-let (next (search-next-pos (pos (focus)) query))
                 (let ((end (text-pos
                             (text-pos-node next)
                             (+ (text-pos-offset next)
@@ -73,9 +93,7 @@
         (when (plusp (length query))
           (with-current-buffer (for-buffer buffer)
             (or
-             (when-let*
-                 ((cur (ensure-node (pos (focus))))
-                  (next (search-next-node (next-up-node cur) query)))
+             (when-let ((next (search-next-pos (pos (focus)) query t)))
                (let ((end (text-pos
                            (text-pos-node next)
                            (+ (text-pos-offset next)
@@ -95,9 +113,7 @@
         (when (plusp (length query))
           (with-current-buffer (for-buffer buffer)
             (or
-             (when-let*
-                 ((cur (ensure-node (pos (focus))))
-                  (prev (search-previous-node cur query)))
+             (when-let ((prev (search-previous-pos (pos (focus)) query)))
                (let ((end (text-pos
                            (text-pos-node prev)
                            (+ (text-pos-offset prev)
