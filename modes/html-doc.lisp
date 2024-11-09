@@ -217,14 +217,6 @@ JSON should have the format like what `+get-body-json-code+' produces:
   (let ((*package* package))
     (format nil "(~{~a~^ ~})" arglist)))
 
-(defun shorten-arglist (arglist)
-  (let ((parsed (swank::decode-arglist arglist)))
-    (dolist (a (swank::arglist.optional-args parsed))
-      (setf (swank::optional-arg.default-arg a) nil))
-    (dolist (a (swank::arglist.keyword-args parsed))
-      (setf (swank::keyword-arg.default-arg a) nil))
-    (swank::encode-arglist parsed)))
-
 (defun render-doc-string-paragraph (p)
   (let ((last-end 0))
     (append
@@ -298,7 +290,7 @@ JSON should have the format like what `+get-body-json-code+' produces:
       (append-child *dom-output*
                     (make-element "code" :children
                                   (list (print-arglist
-                                         (shorten-arglist (swank-backend:arglist function))
+                                         (swank-backend:arglist function)
                                          (symbol-package function))))))
     (render-doc-string (documentation function 'function))))
 

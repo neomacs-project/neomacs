@@ -5,7 +5,8 @@
       call-with-current-buffer with-current-buffer
       *last-command* *this-command* *this-command-keys*
       recursive-edit start-command-loop
-      *debug-on-error* *quit-hook* *error-hook*
+      *debug-on-error* *message-log-max*
+      *quit-hook* *error-hook*
       play-loud-audio do-nothing))
 
 (define-condition top-level () ()
@@ -93,6 +94,12 @@ command loop run the next command.")
 
 (defvar *use-neomacs-debugger* nil)
 
+(defvar *message-log-max* 1000
+  "Maximum number of lines to keep in the `*Messages*' buffer.
+
+If nil, disable message logging. If t, log messages but don't truncate
+`*Messages*' buffer.")
+
 (defun play-loud-audio (c)
   (if (or (typep c 'quit) (typep c 'user-error))
       (evaluate-javascript
@@ -124,7 +131,8 @@ command loop run the next command.")
         *this-command* command)
   (message nil)
   (unwind-protect
-       (call-with-current-buffer (focused-buffer) command)
+       (with-current-buffer (focused-buffer)
+         (call-interactively command))
     (setq *this-command-keys* nil)))
 
 (defun handle-event (buffer event)

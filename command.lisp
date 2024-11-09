@@ -25,11 +25,20 @@
 (defmacro define-command (name &rest args)
   (bind (((:values options args) (split-args args))
          ((lambda-list . body) args)
-         (modes (uiop:ensure-list (getf options :mode :global))))
+         (modes (uiop:ensure-list (getf options :mode :global)))
+         (interactive (getf options :interactive '(lambda () nil))))
     `(progn
        (sera:export-always ',name)
        (defun ,name ,lambda-list ,@body)
        ,@ (iter (for m in modes)
             (collect `(pushnew ',name (commands ',m))))
        (setf (get ',name 'modes) ',modes)
+       (setf (get ',name 'interactive) ,interactive)
        ',name)))
+
+(defun call-interactively (symbol-or-function)
+  (etypecase symbol-or-function
+    (symbol (apply symbol-or-function
+                   (funcall (get symbol-or-function
+                                 'interactive))))
+    (function (funcall symbol-or-function))))

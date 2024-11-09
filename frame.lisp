@@ -3,7 +3,7 @@
 (sera:export-always
     '(focused-buffer current-frame-root
       replacement-buffer
-      *message-log-max* get-message-buffer message))
+      get-message-buffer message))
 
 (defun make-window-decoration (buffer)
   (check-displayable buffer)
@@ -274,13 +274,14 @@ fixed in future Electron, our logic may be simplified."
     (error "~A is not displayed" buffer)))
 
 (define-command switch-to-buffer
-    (&optional
-     (buffer
-      (get-buffer
-       (completing-read
-        "Switch to buffer: " 'buffer-list-mode
-        :exclude-buffers (list (current-buffer)))))
-     (victim (focused-buffer)))
+  :interactive
+  (lambda ()
+    (list
+     (get-buffer
+      (completing-read
+       "Switch to buffer: " 'buffer-list-mode
+       :exclude-buffers (list (current-buffer))))))
+  (buffer &optional (victim (focused-buffer)))
   (if (frame-root buffer)
       (focus-buffer buffer)
       (progn
@@ -394,12 +395,6 @@ BUFFER must be already displayed."
 (defun window-buffer (window-node)
   (content-node-buffer
    (only-elt (get-elements-by-class-name window-node "main"))))
-
-(defvar *message-log-max* 1000
-  "Maximum number of lines to keep in the `*Messages*' buffer.
-
-If nil, disable message logging. If t, log messages but don't truncate
-`*Messages*' buffer.")
 
 (defun get-message-buffer ()
   (get-buffer-create "*Messages*" :modes '(read-only-mode doc-mode)))

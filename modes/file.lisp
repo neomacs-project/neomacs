@@ -179,16 +179,19 @@ nil if file doesn't exist or failed to parse file options."
       (current-buffer))))
 
 (define-command find-file
-    (&optional (path
-                (read-from-minibuffer
-                 "Find file: "
-                 :modes 'minibuffer-find-file-mode
-                 :completion-buffer
-                 (make-completion-buffer
-                  '(file-list-mode completion-buffer-mode)
-                  :header-p nil
-                  :require-match nil)
-                 :file-path (file-path (current-buffer)))))
+  :interactive
+  (lambda ()
+    (list
+     (read-from-minibuffer
+      "Find file: "
+      :modes 'minibuffer-find-file-mode
+      :completion-buffer
+      (make-completion-buffer
+       '(file-list-mode completion-buffer-mode)
+       :header-p nil
+       :require-match nil)
+      :file-path (file-path (current-buffer)))))
+  (path)
   "Edit file at PATH."
   (switch-to-buffer (find-file-no-select path)))
 

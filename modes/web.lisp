@@ -15,14 +15,15 @@
 (defvar *search-prefix* "https://duckduckgo.com/html/?q=")
 
 (define-command find-url
-    (&optional (url-or-query
-                (read-from-minibuffer
-                 "Find URL: " :modes 'minibuffer-find-link-mode
-                 :completion-buffer
-                 (make-completion-buffer
-                  '(web-history-list-mode completion-buffer-mode)
-                  :require-match nil))))
-
+  :interactive
+  (lambda ()
+    (list (read-from-minibuffer
+           "Find URL: " :modes 'minibuffer-find-link-mode
+           :completion-buffer
+           (make-completion-buffer
+            '(web-history-list-mode completion-buffer-mode)
+            :require-match nil))))
+  (url-or-query)
   (switch-to-buffer
    (make-buffer
     "Web" :modes 'web-mode

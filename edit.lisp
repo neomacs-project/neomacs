@@ -566,6 +566,8 @@ Called by `self-insert-command' to get the character for insertion."
 
 (defvar *clipboard-ring-index* 0)
 
+(defvar *system-clipboard-last-read* nil)
+
 (defun clipboard-insert (items)
   (if items
       (progn
@@ -586,8 +588,6 @@ Called by `self-insert-command' to get the character for insertion."
            :global)
           (setq *system-clipboard-last-read* text)))
       (user-error "Nothing to copy")))
-
-(defvar *system-clipboard-last-read* nil)
 
 (defun read-system-clipboard-maybe ()
   (let ((text (evaluate-javascript-sync

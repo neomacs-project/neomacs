@@ -364,9 +364,12 @@ function does nothing."
 #+nil (defgeneric compute-completion (buffer pos))
 
 (define-command delete-buffer
-    (&optional (buffer
-                (get-buffer
-                 (completing-read "Delete buffer: " 'buffer-list-mode))))
+  :interactive
+  (lambda ()
+    (list
+     (get-buffer
+      (completing-read "Delete buffer: " 'buffer-list-mode))))
+  (buffer)
   (cleanup-buffer-display buffer)
   (with-current-buffer buffer
     (on-delete-buffer buffer)

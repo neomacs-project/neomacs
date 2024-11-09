@@ -14,4 +14,4 @@
          (write-string (text node) stream))
         ((new-line-node-p node)
          (terpri stream))
-        (t (warn "Unrecognized DOM node: ~a" c))))
+        (t (warn "Unrecognized DOM node: ~a" node))))
