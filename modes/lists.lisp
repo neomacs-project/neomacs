@@ -190,27 +190,22 @@ This should always be a directory pathname (with NIL name and type fields).")
   (format-readable-timestring (local-time:unix-to-timestamp unix-time)))
 
 (defmethod generate-rows ((buffer file-list-mode))
-  (iter (for path in (uiop:subdirectories (file-path buffer)))
-    (for stat = (osicat-posix:stat path))
+  (iter (for path in (osicat:list-directory (file-path buffer)))
+    (for stat = (ignore-errors (osicat-posix:stat path)))
     (insert-nodes (focus)
                   (dom `(:tr
-                         (:td :class "directory"
-                              ,(lastcar (pathname-directory path)))
-                         (:td)
-                         (:td ,(osicat-posix:getpwuid
-                                (osicat-posix:stat-uid stat)))
-                         (:td ,(file-date-readable
-                                (osicat-posix:stat-mtime stat)))))))
-  (iter (for path in (uiop:directory-files (file-path buffer)))
-    (for stat = (osicat-posix:stat path))
-    (insert-nodes (focus)
-                  (dom `(:tr
-                         (:td ,(file-namestring path))
-                         (:td ,(file-size-readable (osicat-posix:stat-size stat)))
-                         (:td ,(osicat-posix:getpwuid
-                                (osicat-posix:stat-uid stat)))
-                         (:td ,(file-date-readable
-                                (osicat-posix:stat-mtime stat))))))))
+                         ,(if (uiop:directory-pathname-p path)
+                              `(:td :class "directory"
+                                    ,(lastcar (pathname-directory path)))
+                              `(:td ,(file-namestring path)))
+                         ,@ (if stat
+                                `((:td ,@ (unless (uiop:directory-pathname-p path)
+                                            (list (file-size-readable (osicat-posix:stat-size stat)))))
+                                  (:td ,(osicat-posix:getpwuid
+                                         (osicat-posix:stat-uid stat)))
+                                  (:td ,(file-date-readable
+                                         (osicat-posix:stat-mtime stat))))
+                                `((:td) (:td) (:td "<Not Avaliable>"))))))))
 
 (defmethod revert-buffer-aux ((buffer file-list-mode))
   (call-next-method)
