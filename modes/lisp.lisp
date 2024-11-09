@@ -1073,7 +1073,7 @@ sb-introspect:definition-source)'."
                       :display "inline-block"
                       :vertical-align "top"
                       :position "relative"
-                      :white-space "pre-wrap"))
+                      :white-space "pre"))
 (defstyle list-node
     `(((:append "::before")
        :content "("
