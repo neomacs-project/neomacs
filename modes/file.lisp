@@ -233,7 +233,7 @@ Used to detect modification from other processes before saving."))
   ;; DOM manipulation for larger files.
   (append-children
    (document-root buffer)
-   (read-from-file (file-path buffer)))
+   (read-dom-from-file (file-path buffer)))
   (dolist (c (child-nodes (document-root buffer)))
     (do-dom (alex:rcurry #'node-setup buffer) c))
   (let ((internal-url (format nil "neomacs:~a" (id buffer))))

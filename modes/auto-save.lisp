@@ -68,7 +68,7 @@
       (user-error "No auto-save file"))
     (erase-buffer)
     (apply #'insert-nodes (end-pos (document-root buffer))
-           (read-from-file save-path))
+           (read-dom-from-file save-path))
     (setf (restriction buffer) (document-root buffer)
           (pos (focus buffer)) (pos-down (document-root buffer)))))
 

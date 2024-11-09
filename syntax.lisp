@@ -2,7 +2,8 @@
 
 (sera:export-always
     '(get-syntax-table set-syntax-range make-syntax-table
-      *syntax-table* *dom-output* read-dom-aux read-dom read-from-file
+      *syntax-table* *dom-output* read-dom-aux
+      read-dom read-dom-from-file read-dom-from-string
       read-dispatch append-text make-read-delimited read-delimited
       read-constituent read-text read-newline read-ignore
       write-dom-aux))
@@ -82,7 +83,7 @@ If `*dom-output*' is bound, append the results as children of `*dom-output*'. Ot
       (call-with-dom-output
        (lambda () (read-dom-aux (current-buffer) stream)))))
 
-(defun read-from-file (file)
+(defun read-dom-from-file (file)
   "Read and build DOM nodes from FILE using `*syntax-table*'.
 
 Read continues until all FILE content is consumed.
@@ -96,6 +97,19 @@ If `*dom-output*' is bound, append the results as children of `*dom-output*'. Ot
          (handler-case
              (loop (read-dom s t))
            (end-of-file ())))))))
+
+(defun read-dom-from-string (string)
+  "Read and build DOM nodes from STRING using `*syntax-table*'.
+
+Read continues until all STRING content is consumed.
+
+If `*dom-output*' is bound, append the results as children of `*dom-output*'. Otherwise, return the results as a list of DOM nodes."
+  (with-input-from-string (s string)
+    (call-with-dom-output
+     (lambda ()
+       (handler-case
+           (loop (read-dom s t))
+         (end-of-file ()))))))
 
 (defun append-text (parent string)
   "Append STRING as a text node to PARENT.

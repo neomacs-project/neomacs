@@ -237,9 +237,7 @@
 
 (defmethod insert-text-aux
     ((buffer sexp-editing-mode) text-node parent)
-  (let ((nodes
-          (with-input-from-string (s (text text-node))
-            (read-dom s))))
+  (let ((nodes (read-dom-from-string (text text-node))))
     (if (and (single nodes)
              (symbol-node-p (car nodes))
              (symbol-node-p parent))
