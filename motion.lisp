@@ -184,7 +184,7 @@ otherwise."
 (defgeneric block-element-p-aux (buffer element)
   (:method ((buffer buffer) (element element))
     (member (tag-name element)
-            '("tr" "address" "article" "aside" "blockquote" "canvas" "dd" "div" "dl" "dt" "fieldset" "figcaption" "figure" "footer" "form" "h1" "h2" "h3" "h4" "h5" "h6" "header" "hr" "li" "main" "nav" "noscript" "ol" "p" "pre" "section" "table" "tfoot" "ul" "video")
+            '("tr" "address" "article" "aside" "blockquote" "canvas" "dd" "div" "dl" "dt" "fieldset" "figcaption" "figure" "footer" "form" "h1" "h2" "h3" "h4" "h5" "h6" "header" "hr" "li" "main" "nav" "noscript" "ol" "p" "pre" "section" "table" "tfoot" "ul" "video" "body")
             :test 'equal))
   (:documentation
    "Extension point for `block-element-p'.
