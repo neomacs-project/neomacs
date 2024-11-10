@@ -50,11 +50,21 @@
       (disable 'sexp-editing-mode)
       (call-next-method)))
 
+(defun allow-block-element-p (parent)
+  (member (tag-name parent)
+          '("div" "li" "article" "section" "main" "aside" "header" "footer" "nav" "td" "body")
+          :test 'equal))
+
+(defun check-valid-parent (parent child-tag)
+  (unless (allow-block-element-p parent)
+    (user-error "~a element not allowed in ~a" child-tag parent)))
+
 (define-command open-paragraph
   :mode html-doc-mode (&optional (marker (focus)))
   (let* ((pos (resolve-marker marker))
          (new-node (make-element "p"))
          (dst (pos-right (pos-up pos))))
+    (check-valid-parent (node-containing dst) "p")
     (insert-nodes dst new-node)
     (move-nodes pos nil (end-pos new-node))
     (setf (pos marker) (pos-down new-node))))
@@ -93,12 +103,14 @@
     (setf (pos marker) (end-pos node))))
 
 (defun insert-list (marker list-tag item-tag)
-  (unless (tag-name-p (node-containing marker) list-tag)
-    (when (tag-name-p (node-containing marker) "p")
-      (setf (pos marker) (split-node (pos marker))))
-    (let ((node (make-element list-tag)))
-      (insert-nodes marker node)
-      (setf (pos marker) (end-pos node))))
+  (let ((parent (node-containing marker)))
+    (unless (tag-name-p parent list-tag)
+      (when (tag-name-p parent "p")
+        (setf (pos marker) (split-node (pos marker))))
+      (check-valid-parent (node-containing marker) list-tag)
+      (let ((node (make-element list-tag)))
+        (insert-nodes marker node)
+        (setf (pos marker) (end-pos node)))))
   (let ((node (make-element item-tag)))
     (insert-nodes marker node)
     (setf (pos marker) (end-pos node))))
@@ -462,7 +474,7 @@ JSON should have the format like what `+get-body-json-code+' produces:
             "file://" (uiop:native-namestring toc-path))))))
 
 (defstyle html-doc-mode
-    `(("p:empty::after" :content "_")
+    `((":empty::after" :content "_")
       ("li p" :margin 0)
       ("body" :white-space "normal")
       (".comma-expr::before" :content ",")
