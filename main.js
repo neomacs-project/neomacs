@@ -67,6 +67,12 @@ Ceramic.closeFrame = function(id) {
     Ceramic.frames[id] = null;
 };
 
+Ceramic.generateBufferId = function (){
+    for(let i = -1;;i--){
+        const id = i.toString();
+        if(!(id in Ceramic.buffers)) return id;
+    }}
+
 Ceramic.createBuffer = function(id, url, options) {
     const buf = new WebContentsView(options);
     buf.ignoreKeys = [];
@@ -85,6 +91,14 @@ Ceramic.createBuffer = function(id, url, options) {
     buf.webContents.loadURL(url).then(()=>
         {RemoteJS.send(JSON.stringify({inputEvent: {type: "load", url: url}, buffer: id}));},
         (err)=>{RemoteJS.send(JSON.stringify({inputEvent: {type: "fail-load", url: url, err: err}, buffer: id}));});
+    buf.webContents.setWindowOpenHandler((details) => {
+        return {
+            action: 'allow',
+            outlivesOpener: true,
+            createWindow: (options) =>{
+                const newId = Ceramic.generateBufferId();
+                RemoteJS.send(JSON.stringify({inputEvent: {type: "new-buffer", newId: newId, url: details.url}, buffer: id}));
+                return Ceramic.createBuffer(newId, details.url, {});}}});
     Ceramic.buffers[id] = buf;
     return buf;
 };

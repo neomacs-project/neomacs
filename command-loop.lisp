@@ -192,6 +192,12 @@ If nil, disable message logging. If t, log messages but don't truncate
            (with-current-buffer buffer
              (on-buffer-did-start-navigation
               buffer (assoc-value event :url))))
+          ((equal type "new-buffer")
+           (switch-to-buffer
+            (make-buffer "Web" :mode 'web-mode
+                               :id (assoc-value event :new-id)
+                               :url (assoc-value event :url)
+                               :styles nil)))
           ((eq type 'debug-request)
            (debug-for-environment
             (assoc-value event :environment)

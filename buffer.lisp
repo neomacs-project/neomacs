@@ -179,17 +179,20 @@ for which MODE-NAME is being disabled."))
   (declare (ignore cell))
   (update-style buffer style))
 
-(defmethod initialize-instance :after ((buffer buffer) &key name disambiguate revert)
+(defmethod initialize-instance :after
+    ((buffer buffer) &key id name disambiguate revert)
   (unless name (alex:required-argument :name))
+  (when id (setf (slot-value buffer 'id) (parse-integer id)))
   (bt:with-recursive-lock-held (*buffer-table-lock*)
     (setf (name buffer) (generate-buffer-name name disambiguate)
           (gethash (name buffer) *buffer-name-table*) buffer)
     (setf (gethash (slot-value buffer 'id) *buffer-table*) buffer))
-  (cera.d:js cera.d:*driver*
-             (format nil "Ceramic.createBuffer(~S, ~S, {});
+  (unless (< (slot-value buffer 'id) 0)
+    (cera.d:js cera.d:*driver*
+               (format nil "Ceramic.createBuffer(~S, ~S, {});
 Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
-                     (id buffer) (url buffer)
-                     (id buffer)))
+                       (id buffer) (url buffer)
+                       (id buffer))))
   (setf (document-root buffer)
         (make-instance 'element :tag-name "body" :host buffer)
         (restriction buffer) (document-root buffer)
