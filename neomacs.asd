@@ -35,6 +35,7 @@
                (:file "modes/completion")
                (:file "modes/lisp")
                (:file "modes/debug")
+               (:file "modes/describe")
                (:file "modes/html-doc")
                (:file "modes/web")
                (:file "modes/web-hints")
