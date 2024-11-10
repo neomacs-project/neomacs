@@ -504,6 +504,10 @@ Called by `self-insert-command' to get the character for insertion."
   "Insert the last typed character into current buffer."
   (undo-auto-amalgamate)
   (insert-nodes (focus) (string (self-insert-char)))
+  ;; If `insert-text-aux' did some wrapping, try to make focus move to
+  ;; end of wrapped element
+  (unless (characterp (node-before (focus)))
+    (setf (pos (focus)) (pos-prev (pos (focus)))))
   (setf (adjust-marker-direction (current-buffer)) 'backward))
 
 (define-command new-line (&optional (marker (focus)))
