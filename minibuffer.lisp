@@ -52,7 +52,7 @@ ARGS are passed to `make-buffer' to create the minibuffer."
           (apply #'make-buffer "*minibuffer*"
                  :prompt prompt args))
         (saved-focus (focused-buffer)))
-    (display-buffer-below minibuf)
+    (split-window-below minibuf)
     (focus-buffer minibuf)
     (unwind-protect
          (with-current-buffer minibuf
@@ -60,7 +60,7 @@ ARGS are passed to `make-buffer' to create the minibuffer."
            (recursive-edit (lambda () (not (completed minibuf))))
            (minibuffer-input minibuf))
       (focus-buffer saved-focus)
-      (close-buffer-display minibuf)
+      (close-window minibuf)
       (delete-buffer minibuf))))
 
 (defun read-yes-or-no (prompt)

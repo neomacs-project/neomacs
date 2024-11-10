@@ -290,7 +290,7 @@ fixed in future Electron, our logic may be simplified."
         (with-current-buffer (frame-root victim)
           (insert-nodes (pos-right (window-decoration victim))
                         (make-window-decoration buffer))
-          (close-buffer-display victim))
+          (close-window victim))
         buffer)))
 
 (defun make-scratch ()
@@ -319,7 +319,7 @@ A replacement buffer has to be alive and not already displayed."
   (check-displayed buffer)
   (switch-to-buffer (replacement-buffer buffer) buffer))
 
-(define-command close-buffer-display (&optional (buffer (current-buffer)))
+(define-command close-window (&optional (buffer (current-buffer)))
   "Close the window which displays BUFFER.
 
 If BUFFER is the only displayed buffer in a frame, this functions do
@@ -330,16 +330,16 @@ nothing instead, because deleting it would break window management."
       (forward-node-cycle m)
       (when (eq (node-after m) (window-decoration buffer))
         (message "Attempting to delete sole window in a frame")
-        (return-from close-buffer-display)))
+        (return-from close-window)))
     (delete-node (window-decoration buffer))))
 
 (define-command quit-buffer (&optional (buffer (current-buffer)))
-  "Delete BUFFER and close its display, if any."
+  "Delete BUFFER and close its window, if any."
   (when (frame-root buffer)
-    (close-buffer-display buffer))
+    (close-window buffer))
   (delete-buffer buffer))
 
-(define-command display-buffer-right (&optional (buffer (replacement-buffer)))
+(define-command split-window-right (&optional (buffer (replacement-buffer)))
   "Split a window to the right and display BUFFER in it."
   (check-displayable buffer)
   (with-current-buffer (current-frame-root)
@@ -349,7 +349,7 @@ nothing instead, because deleting it would break window management."
                   (make-window-decoration buffer))
     buffer))
 
-(define-command display-buffer-below (&optional (buffer (replacement-buffer)))
+(define-command split-window-below (&optional (buffer (replacement-buffer)))
   "Split a window to the bottom and display BUFFER in it."
   (check-displayable buffer)
   (with-current-buffer (current-frame-root)
@@ -370,10 +370,10 @@ BUFFER must be already displayed."
 
 (define-keys :global
   "C-x o" 'other-window
-  "C-x 0" 'close-buffer-display
+  "C-x 0" 'close-window
   "C-x 1" 'delete-other-windows
-  "C-x 2" 'display-buffer-below
-  "C-x 3" 'display-buffer-right
+  "C-x 2" 'split-window-below
+  "C-x 3" 'split-window-right
   "C-x b" 'switch-to-buffer
   "C-x k" 'delete-buffer)
 

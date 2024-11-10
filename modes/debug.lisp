@@ -129,7 +129,7 @@
            :mailbox mailbox
            :revert t)))
     (focus-buffer
-     (display-buffer-right
+     (split-window-right
       debugger))))
 
 (defun invoke-neomacs-debugger (c)

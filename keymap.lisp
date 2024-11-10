@@ -25,8 +25,6 @@
         (setf (gethash hashkey *key-constructor-cache*)
               (apply #'%make-key args)))))
 
-(defvar *keymap-table* (make-hash-table))
-
 (deftype key-sequence ()
   '(trivial-types:proper-list key))
 
@@ -206,28 +204,30 @@ Example: (define-keys :global
                       table)))
     (f (keymap-table keymap) nil)))
 
-(defgeneric keymap-find-keybind (keymap key cmd)
-  (:method ((keymap t) key cmd)
-    (let ((table (keymap-table keymap)))
-      (labels ((f (k)
-                 (let ((cmd (gethash k table)))
-                   (cond ((prefix-command-p cmd)
-                          (setf table cmd))
-                         ((keymap-p cmd)
-                          (setf table (keymap-table cmd)))
-                         (t cmd)))))
-        (or (etypecase key
-              (key
-               (f key))
-              (list
-               (let (cmd)
-                 (dolist (k key)
-                   (unless (setf cmd (f k))
-                     (return)))
-                 cmd)))
-            (gethash cmd (keymap-function-table keymap))
-            (keymap-undef-hook keymap)
-            cmd)))))
+(defun keymap-find-keybind (keymap key cmd)
+  (let ((table (keymap-table keymap)))
+    (labels ((f (k)
+               (let ((cmd (gethash k table)))
+                 (cond ((prefix-command-p cmd)
+                        (setf table cmd))
+                       ((keymap-p cmd)
+                        (setf table (keymap-table cmd)))
+                       (t cmd)))))
+      (if-let (next (etypecase key
+                     (key
+                      (f key))
+                     (list
+                      (let (cmd)
+                        (dolist (k key)
+                          (unless (setf cmd (f k))
+                            (return)))
+                        cmd))))
+        (values next :key)
+        (if-let (next (gethash cmd (keymap-function-table keymap)))
+          (values next :function)
+          (if-let (next (keymap-undef-hook keymap))
+            (values next :undef)
+            cmd))))))
 
 (defun lookup-keybind (key &optional (keymaps (keymaps (current-buffer))))
   (let (cmd)

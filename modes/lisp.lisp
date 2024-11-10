@@ -586,7 +586,7 @@ Highlights compiler notes."
               (uiop:delete-file-if-exists output-file))
             (unless (frame-root *compilation-buffer*)
               (when (first-child (document-root *compilation-buffer*))
-                (display-buffer-right *compilation-buffer*)))))))))
+                (split-window-right *compilation-buffer*)))))))))
 
 (defun last-expression (pos)
   (setq pos (resolve-marker pos))
@@ -760,7 +760,7 @@ sb-introspect:definition-source)'."
             (if (= (length definitions) 1)
                 (visit-definition (cadr (car definitions)))
                 (focus-buffer
-                 (display-buffer-right
+                 (split-window-right
                   (make-buffer
                    "*xref*" :mode 'xref-list-mode
                             :symbol symbol :revert t))))))))))
