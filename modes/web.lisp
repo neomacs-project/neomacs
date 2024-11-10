@@ -106,34 +106,34 @@
 (define-keys web-mode
   'next-line #+nil 'web-next-line
   (make-web-send-key-command
-   (car (parse-keyspec "down")))
+   (car (kbd "down")))
   'previous-line #+nil 'web-previous-line
   (make-web-send-key-command
-   (car (parse-keyspec "up")))
+   (car (kbd "up")))
   'backward-node #+nil 'web-go-backward
   (make-web-send-key-command
-   (car (parse-keyspec "left")))
+   (car (kbd "left")))
   'forward-node #+nil 'web-go-forward
   (make-web-send-key-command
-   (car (parse-keyspec "right")))
+   (car (kbd "right")))
   'scroll-up-command #+nil 'web-scroll-up
   (make-web-send-key-command
-   (car (parse-keyspec "page-up")))
+   (car (kbd "page-up")))
   'scroll-down-command #+nil 'web-scroll-down
   (make-web-send-key-command
-   (car (parse-keyspec "page-down")))
+   (car (kbd "page-down")))
   'beginning-of-buffer #+nil 'web-scroll-to-top
   (make-web-send-key-command
-   (car (parse-keyspec "home")))
+   (car (kbd "home")))
   'end-of-buffer #+nil 'web-scroll-to-bottom
   (make-web-send-key-command
-   (car (parse-keyspec "end")))
+   (car (kbd "end")))
   'self-insert-command 'web-forward-key
   "escape" 'web-forward-key
   "enter" 'web-forward-key
   'backward-delete
   (make-web-send-key-command
-   (car (parse-keyspec "backspace"))))
+   (car (kbd "backspace"))))
 
 (define-command web-next-line
   :mode web-mode ()

@@ -403,7 +403,7 @@ JSON should have the format like what `+get-body-json-code+' produces:
 
 (defun build-manual ()
   (let ((sections '("intro" "dom" "positions" "markers"
-                    "mode" "buffers"
+                    "mode" "keymaps" "buffers"
                     "motion" "command-loop"
                     "edit" "undo" "ranges"
                     "window-management" "syntax")))

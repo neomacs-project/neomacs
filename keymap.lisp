@@ -3,7 +3,7 @@
 (sera:eval-always
   '(key key-p
     key-ctrl key-meta key-super key-super key-shift key-sym
-    parse-keyspec key-description
+    kbd key-description
     lookup-keybind find-keybind collect-command-keybindings
     set-key define-keys))
 
@@ -53,14 +53,14 @@ Example: (set-key *global-keymap* \"C-x b\" 'switch-to-buffer)"
      (setf (gethash keyspec (keymap-function-table keymap))
            command))
     (string
-     (let ((keys (parse-keyspec keyspec)))
+     (let ((keys (kbd keyspec)))
        (define-key-internal keymap keys command))))
   (values))
 
 (defmacro define-keys (mode-name &body bindings)
   "Define key BINDINGS for MODE-NAME.
 
-If MODE-NAME is `global', define global key bindings instead.
+If MODE-NAME is `:global', define global key bindings instead.
 
 Example: (define-keys :global
     \"C-x b\" 'switch-to-buffer
@@ -152,7 +152,8 @@ Example: (define-keys :global
   (add #\} "bracket-right" t)
   (add #\" "quote" t))
 
-(defun parse-keyspec (string)
+(defun kbd (string)
+  "Parse STRING into a key sequence."
   (labels ((fail ()
              (error "parse error: ~A" string))
            (parse (str)
@@ -184,6 +185,11 @@ Example: (define-keys :global
     (mapcar #'parse (uiop:split-string string :separator " "))))
 
 (defun key-description (key &optional stream)
+  "Format the string representation of KEY and write to STREAM.
+
+KEY can either by a key or a key sequence.
+
+If STREAM is nil, return the string representation instead."
   (ematch key
     ((key ctrl meta super hypher shift sym)
      (if-let (translation (gethash (cons sym shift) *event-to-char*))
@@ -230,6 +236,9 @@ Example: (define-keys :global
             cmd))))))
 
 (defun lookup-keybind (key &optional (keymaps (keymaps (current-buffer))))
+  "Lookup the command bound to KEY using KEYMAPS.
+
+KEYMAPS default to the keymaps of current buffer."
   (let (cmd)
     (loop :for keymap :in (reverse keymaps)
           :do (setf cmd (keymap-find-keybind keymap key cmd)))
