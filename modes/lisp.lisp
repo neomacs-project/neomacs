@@ -705,35 +705,37 @@ DEFINITION should be a `sb-introspect:definition-source'."
   "q" 'quit-buffer
   "enter" 'xref-list-goto-definition)
 
+(defun render-xref-definition (symbol type def)
+  (lret ((el (make-element
+              "tr"
+              :children
+              (list (make-element
+                     "td" :children
+                     (list (prin1-to-string type)))
+                    (make-element
+                     "td" :children
+                     (list (print-arglist
+                            (sb-introspect::definition-source-description def)
+                            (symbol-package symbol))))
+                    (make-element
+                     "td" :children
+                     (list (princ-to-string
+                            (sb-introspect::definition-source-pathname def))))))))
+    (setf (attribute el 'definition) def)))
+
 (defmethod generate-rows ((buffer xref-list-mode))
   (let ((*print-case* :downcase)
         (symbol (for-symbol buffer)))
     (iter (for (type def) in (find-definitions symbol))
       (insert-nodes
-       (focus)
-       (lret ((el (make-element
-                   "tr"
-                   :children
-                   (list (make-element
-                          "td" :children
-                          (list (prin1-to-string type)))
-                         (make-element
-                          "td" :children
-                          (list (print-arglist
-                                 (sb-introspect::definition-source-description def)
-                                 (symbol-package symbol))))
-                         (make-element
-                          "td" :children
-                          (list (princ-to-string
-                                 (sb-introspect::definition-source-pathname def))))))))
-         (setf (attribute el 'definition) def))))))
+       (focus) (render-xref-definition symbol type def)))))
 
-(defun find-definitions (symbol)
+(defun find-definitions (symbol &optional (types *definition-types*))
   "Find all definitions for SYMBOL.
 
 Return a list with items of the form `(definition-type
 sb-introspect:definition-source)'."
-  (iter (for type in *definition-types*)
+  (iter (for type in types)
     (appending
      (mapcar (alex:curry #'list type)
              (sb-introspect:find-definition-sources-by-name

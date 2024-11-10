@@ -61,7 +61,7 @@
         (progn
           (insert-nodes
            (end-pos (document-root buffer))
-           (dom `(:span
+           (dom `(:div
                   (:code ,(key-description (for-key buffer)))
                   " is bound to "
                   ,(print-dom cmd)
@@ -69,12 +69,13 @@
                   ,(print-dom (for-buffer buffer)))))
           (insert-nodes
            (end-pos (document-root buffer))
+           (make-element "h1" :children (list "Bindings:"))
            (dom
-            (cons :ul (iter (for (cmd mode bind-type) in trace)
+            (cons :div (iter (for (cmd mode bind-type) in trace)
                         (ecase bind-type
                           ((:key)
                            (collect
-                               `(:li
+                               `(:p
                                  "bound to "
                                  ,(print-dom cmd)
                                  " by "
@@ -85,7 +86,7 @@
                                            mode))))))
                           ((:function)
                            (collect
-                               `(:li
+                               `(:p
                                  "translated to "
                                  ,(print-dom cmd)
                                  " by "
@@ -94,6 +95,18 @@
                                        '*global-keymap*
                                        (or (class-name mode)
                                            mode)))))))))))
+          (insert-nodes
+           (end-pos (document-root buffer))
+           (make-element "h1" :children (list "Definitions:"))
+           (dom `(:table
+                  (:tbody
+                   ,@(iter
+                       (for
+                        (type def) in
+                        (find-definitions
+                         cmd '(:function :generic-function :method)))
+                       (collect (render-xref-definition cmd type def))))))
+           (make-element "h1" :children (list "Documentation:")))
           (if-let (doc (documentation cmd 'function))
             (let ((paragraphs (str:split "
 
@@ -119,4 +132,7 @@
                   " is unbound in "
                   ,(print-dom (for-buffer buffer)))))))))
 
-(defstyle describe-key-mode `(("ul" :margin-top 0)))
+(defstyle describe-mode
+    `(("p" :margin-top 0 :margin-bottom 0)
+      ("h1" :margin-top 0 :margin-bottom 0
+            :font-size "1.2rem")))
