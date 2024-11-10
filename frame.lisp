@@ -334,9 +334,16 @@ nothing instead, because deleting it would break window management."
     (delete-node (window-decoration buffer))))
 
 (define-command quit-buffer (&optional (buffer (current-buffer)))
-  "Delete BUFFER and close its window, if any."
+  "Delete BUFFER and restore any `display-buffer' action to display it.
+
+This runs BUFFER's `window-quit-action' to restore window
+configuration. `display-buffer' action functions is responsible for
+setting appropriate `window-quit-action'.  If `window-quit-action' is
+nil, the window displaying BUFFER is closed instead."
   (when (frame-root buffer)
-    (close-window buffer))
+    (if-let (action (window-quit-action buffer))
+      (funcall action buffer)
+      (close-window buffer)))
   (delete-buffer buffer))
 
 (define-command split-window-right (&optional (buffer (replacement-buffer)))
@@ -411,15 +418,29 @@ BUFFER must be already displayed."
 
 (defun pop-to-buffer
     (buffer &optional (actions *display-buffer-base-actions*))
-  "Display BUFFER in some window and focus it."
+  "Display BUFFER in some window and focus it.
+
+This function wraps `window-quit-action' to restore focused buffer
+before other quit actions."
   (display-buffer buffer actions)
+  (setf (window-quit-action buffer)
+        (let ((next (or (window-quit-action buffer)
+                        #'close-window))
+              (old-focus (focused-buffer)))
+          (nclo quit-pop-to-buffer (buffer)
+            (focus-buffer old-focus)
+            (funcall next buffer))))
   (focus-buffer buffer))
 
 (defun display-buffer-use-some-window (buffer)
   "Display BUFFER in an existing window."
   (with-marker (m (focus))
     (forward-node-cycle m)
-    (switch-to-buffer buffer (window-buffer (node-after m)))))
+    (let ((victim (window-buffer (node-after m))))
+      (setf (window-quit-action buffer)
+            (nclo quit-display-buffer-use-some-window (buffer)
+              (switch-to-buffer victim buffer)))
+      (switch-to-buffer buffer victim))))
 
 (defvar *split-width-threshold* 800)
 
