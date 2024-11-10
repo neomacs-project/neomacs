@@ -675,7 +675,7 @@ WIDTH and HEIGHT are numbers in pixels."
 
 (defun user-error (control-string &rest format-arguments)
   (signal 'user-error
-          :message (format nil control-string format-arguments)))
+          :message (apply #'format nil control-string format-arguments)))
 
 (define-condition read-only-error (user-error)
   ((buffer :initarg :buffer))
