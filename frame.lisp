@@ -428,7 +428,8 @@ before other quit actions."
                         #'close-window))
               (old-focus (focused-buffer)))
           (nclo quit-pop-to-buffer (buffer)
-            (focus-buffer old-focus)
+            (when (frame-root old-focus)
+              (focus-buffer old-focus))
             (funcall next buffer))))
   (focus-buffer buffer))
 

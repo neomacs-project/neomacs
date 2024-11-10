@@ -129,15 +129,19 @@ If nil, disable message logging. If t, log messages but don't truncate
   (message "Debug on error ~:[disabled~;enabled~]" *debug-on-error*))
 
 (defun run-command (command)
-  (message nil)
-  (let ((*this-command* command))
-    (unwind-protect
-         (with-current-buffer (focused-buffer)
-           (call-interactively command))
-      (setq *this-command-keys* nil
-            *last-command* *this-command*))))
+  (if command
+      (let ((*this-command* command))
+        (message nil)
+        (unwind-protect
+             (with-current-buffer (focused-buffer)
+               (call-interactively command))
+          (setq *this-command-keys* nil
+                *last-command* *this-command*)))
+      (progn
+        (message "~a is undefined" (key-description *this-command-keys*))
+        (setq *this-command-keys* nil))))
 
-(defun handle-event (buffer event)
+(defun handle-event (buffer event run-command-fn)
   (let ((type (assoc-value event :type)))
     (cond ((equal type "keyDown")
            (unless (eql (focused-buffer) buffer)
@@ -164,10 +168,8 @@ If nil, disable message logging. If t, log messages but don't truncate
                  (if (prefix-command-p cmd)
                      (let ((*message-log-max* nil))
                        (message "~a-" (key-description *this-command-keys*)))
-                     (run-command cmd))
-                 (progn
-                   (message "~a is undefined" (key-description *this-command-keys*))
-                   (setq *this-command-keys* nil))))))
+                     (funcall run-command-fn cmd))
+                 (funcall run-command-fn nil)))))
           ((equal type "load")
            (with-current-buffer buffer
              (on-buffer-loaded
@@ -198,7 +200,8 @@ If nil, disable message logging. If t, log messages but don't truncate
 
 (defun command-loop (&optional recursive-p
                        (guard-fn (constantly t))
-                       (handlers-p t))
+                       (handlers-p t)
+                       (run-command-fn #'run-command))
   (when *use-neomacs-debugger*
     (trivial-custom-debugger:install-debugger
      #'neomacs-debugger-hook))
@@ -232,14 +235,15 @@ If nil, disable message logging. If t, log messages but don't truncate
                      (lambda (c)
                        (declare (ignore c))
                        (unless recursive-p (next-iteration)))))
-                (handle-event buffer event))
+                (handle-event buffer event run-command-fn))
             (abort ()
               :report "Return to command loop"))
-          (handle-event buffer event))
+          (handle-event buffer event run-command-fn))
       (while (funcall guard-fn)))))
 
 (defun recursive-edit (&optional (guard-fn (constantly t))
-                         (handlers-p t))
+                         (handlers-p t)
+                         (run-command-fn #'run-command))
   "Start a recursive edit level.
 
 GUARD-FN is called after every command invocation and the level exits
@@ -250,7 +254,7 @@ and restart handlers."
     (bt:release-lock (lock buffer)))
   (unwind-protect
        (let (*locked-buffers*)
-         (command-loop t guard-fn handlers-p))
+         (command-loop t guard-fn handlers-p run-command-fn))
     (dolist (buffer *locked-buffers*)
       (bt:acquire-lock (lock buffer))))
   nil)
