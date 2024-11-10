@@ -79,7 +79,6 @@
   ((scroll-multiplier :default 16 :type (integer 1))
    (hints-selector :default "a, button, input, textarea, details, select"
                    :type string)
-   (history-blocklist :default '("https://duckduckgo.com/l/"))
    (history-entry :initform nil)))
 
 (defmethod render-focus-aux ((buffer web-mode) (pos t)))
@@ -186,9 +185,12 @@
 (defmethod on-buffer-did-start-navigation progn
     ((buffer web-mode) url)
   (when (leaf-p (undo-entry (current-buffer)))
-    (unless (or #+nil (find-if (alex:rcurry #'sera:string-prefix-p url)
-                               (history-blocklist buffer))
-                (equal (url buffer) url))
+    (unless (or
+             ;; Don't record more than 1 undo-navigate
+             (find-if
+              (alex:rcurry #'typep 'undo-navigate)
+              (undo-thunks (undo-entry (current-buffer))))
+             (equal (url buffer) url))
       (let ((old-url (url buffer)))
         (unless (or (sera:string-prefix-p "file" url)
                     (sera:string-prefix-p "about:" url))
