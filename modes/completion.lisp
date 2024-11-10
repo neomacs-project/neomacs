@@ -123,10 +123,10 @@ X and Y are numbers in pixels."
         (evaluate-javascript-sync
          "document.body.scrollWidth"
          completion-buffer))
+       (rect (get-bounding-client-rect (range-end range)))
        (coord
         (compute-floating-buffer-position
-         (get-bounding-client-rect (range-end range))
-         min-width
+         rect min-width
          (cadr *completion-menu-size*)
          (assoc-value buffer-bounds :width)
          (assoc-value buffer-bounds :height))))
