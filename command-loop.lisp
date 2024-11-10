@@ -89,7 +89,7 @@ loop.")
 (defvar *this-command-keys* nil
   "List of keys that cause current command to run.
 
-the value is bound to nil outside command invocation made by command
+The value is bound to nil outside command invocation made by command
 loop.")
 
 (defvar *debug-on-error* nil)
