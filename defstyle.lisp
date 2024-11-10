@@ -80,3 +80,20 @@ named by SYMBOL."
   (or (get symbol 'css)
       (setf (get symbol 'css)
             (cell (apply #'styled-css (get-style symbol))))))
+
+(defun set-style (&rest bindings)
+  "Set styles according to BINDINGS.
+
+BINDINGS should be of the form {SYMBOL SPEC}*, and style named by each
+SYMBOL is set to SPEC.
+
+Example: (set-style 'default '(:font-family \"sans-serif\")
+    'bold '(:font-weight 900))"
+  (iter (for (symbol spec) on bindings by #'cddr)
+    (setf (cell-ref (get symbol 'style)) spec)))
+
+(defun apply-theme (theme)
+  (cond ((eql theme :default)
+         (iter (for symbol in *styles*)
+           (set-style symbol (get symbol 'standard-style))))
+        (t (error "TODO"))))
