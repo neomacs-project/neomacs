@@ -828,7 +828,7 @@ sb-introspect:definition-source)'."
       (iter
         (for last first nil then cur)
         (for cur first pos then (pos-up cur))
-        (while cur)
+        (while (sexp-node-p cur))
         (when last
           (push (or (sexp-child-number last)
                     (return-from compute-autodoc))
@@ -1066,6 +1066,30 @@ sb-introspect:definition-source)'."
         (*package* (find-package "NEOMACS"))
         (*print-pretty* t))
     (prin1 node stream)))
+
+;;; Minibuffer
+
+(define-mode lisp-minibuffer-mode (lisp-mode minibuffer-mode) ())
+
+(defmethod on-focus-move :around ((buffer lisp-minibuffer-mode) old new)
+  (declare (ignore old))
+  (if (class-p (node-containing new) "input")
+      (enable 'sexp-editing-mode)
+      (call-next-method)))
+
+(defmethod minibuffer-input ((buffer lisp-minibuffer-mode))
+  (node-to-sexp (first-child (minibuffer-input-element buffer))))
+
+(define-command eval-expression ()
+  "Read a Lisp expression from minibuffer and evaluate it."
+  (let ((*package* (find-package "NEOMACS")))
+    (message
+     "~S"
+     (eval (read-from-minibuffer
+            "Eval: " :mode 'lisp-minibuffer-mode)))))
+
+(define-keys :global
+  "M-:" 'eval-expression)
 
 ;;; Style
 
