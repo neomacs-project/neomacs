@@ -396,6 +396,47 @@ BUFFER must be already displayed."
   (content-node-buffer
    (only-elt (get-elements-by-class-name window-node "main"))))
 
+;;; Display buffer
+
+(defvar *display-buffer-base-actions*
+  '(display-buffer-pop-up-window
+    display-buffer-use-some-window))
+
+(defun display-buffer
+    (buffer &optional (actions *display-buffer-base-actions*))
+  "Display BUFFER in some window without focusing it."
+  (unless (frame-root buffer)
+    (with-current-buffer (current-frame-root)
+      (some (alex:rcurry #'funcall buffer) actions))))
+
+(defun pop-to-buffer
+    (buffer &optional (actions *display-buffer-base-actions*))
+  "Display BUFFER in some window and focus it."
+  (display-buffer buffer actions)
+  (focus-buffer buffer))
+
+(defun display-buffer-use-some-window (buffer)
+  "Display BUFFER in an existing window."
+  (with-marker (m (focus))
+    (forward-node-cycle m)
+    (switch-to-buffer buffer (window-buffer (node-after m)))))
+
+(defvar *split-width-threshold* 800)
+
+(defvar *split-height-threshold* 600)
+
+(defun display-buffer-pop-up-window (buffer)
+  "Display BUFFER by splitting the focused window."
+  (bind (((_ _ w h)
+          (get-bounding-client-rect (window-decoration
+                                     (focused-buffer)))))
+    (cond ((> w *split-width-threshold*)
+           (split-window-right buffer))
+          ((> h *split-height-threshold*)
+           (split-window-below buffer)))))
+
+;;; Messages and echo area
+
 (defun get-message-buffer ()
   (get-buffer-create "*Messages*" :mode '(read-only-mode doc-mode)))
 
@@ -488,6 +529,8 @@ be nil in this case."
   (evaluate-javascript
    (ps:ps (ps:chain (js-buffer (current-buffer)) web-contents (open-dev-tools)))
    :global))
+
+;;; Style
 
 (defstyle frame-root-mode
     `((".vertical"

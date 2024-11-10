@@ -128,9 +128,7 @@
            :environment env
            :mailbox mailbox
            :revert t)))
-    (focus-buffer
-     (split-window-right
-      debugger))))
+    (pop-to-buffer debugger)))
 
 (defun invoke-neomacs-debugger (c)
   (if (eq (bt:current-thread) *command-loop-thread*)
