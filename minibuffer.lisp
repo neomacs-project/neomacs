@@ -232,7 +232,7 @@ when this row is selected.")))
                :keybinding-index
                (collect-keybindings (keymaps (current-buffer))))))
     (if-let (cmd (find-command name (modes (current-buffer))))
-      (funcall cmd)
+      (call-interactively cmd)
       (message "No such command"))))
 
 (define-keys :global
