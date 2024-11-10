@@ -83,14 +83,14 @@ non-nil HANDLER-P, which would return and signal a `quit' condition."))
 (defvar *this-command* nil
   "Current command run by command loop.
 
-The value is also available after a command has finished and before
-command loop run the next command.")
+The value is bound to nil outside command invocation made by command
+loop.")
 
 (defvar *this-command-keys* nil
   "List of keys that cause current command to run.
 
-The value is also available after a command has finished and before
-command loop run the next command.")
+The value is bound to nil outside command invocation made by command
+loop.")
 
 (defvar *debug-on-error* nil)
 
@@ -129,13 +129,13 @@ If nil, disable message logging. If t, log messages but don't truncate
   (message "Debug on error ~:[disabled~;enabled~]" *debug-on-error*))
 
 (defun run-command (command)
-  (setf *last-command* *this-command*
-        *this-command* command)
   (message nil)
-  (unwind-protect
-       (with-current-buffer (focused-buffer)
-         (call-interactively command))
-    (setq *this-command-keys* nil)))
+  (let ((*this-command* command))
+    (unwind-protect
+         (with-current-buffer (focused-buffer)
+           (call-interactively command))
+      (setq *this-command-keys* nil
+            *last-command* *this-command*))))
 
 (defun handle-event (buffer event)
   (let ((type (assoc-value event :type)))

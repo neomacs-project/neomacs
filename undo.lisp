@@ -21,7 +21,8 @@
   "C-x u" 'undo-history)
 
 (defmethod on-pre-command progn ((buffer undo-mode))
-  (undo-boundary))
+  (when *this-command*
+    (undo-boundary)))
 
 (define-mode active-undo-mode (read-only-mode)
   ((node-table :initform (make-hash-table))
@@ -109,10 +110,11 @@ If `*inhibit-record-undo*' is non-nil, do nothing instead."
   "Ensure undo state is at a undo boudary, insert one if necessary."
   (when (typep buffer 'undo-mode)
     (let ((entry (undo-entry buffer)))
-      (when (leaf-p entry)
-        (unless (undo-boundary-p entry)
-          (setf (undo-entry buffer)
-                (make-instance 'undo-child :parent entry))))
+      (unless (undo-boundary-p entry)
+        (setf (undo-entry buffer)
+              (or (find-if #'undo-boundary-p
+                           (child-entries entry))
+                  (make-instance 'undo-child :parent entry))))
       nil)))
 
 (defun remove-undo-boundary (buffer)
@@ -170,12 +172,14 @@ This amalgamate the undo entry if `*this-command*' is the same as
 (define-command redo-command
   :mode undo-mode (&optional (buffer (current-buffer)))
   "Redo."
+  (remove-undo-boundary buffer)
   (redo 0 buffer)
   (update-undo-history))
 
 (define-command next-branch
   :mode undo-mode (&optional (buffer (current-buffer)))
   "Goto next sibling branch in undo history."
+  (remove-undo-boundary buffer)
   (let* ((entry (undo-entry buffer))
          (parent (or (parent entry)
                      (user-error "No next branch")))
@@ -189,6 +193,7 @@ This amalgamate the undo entry if `*this-command*' is the same as
 (define-command previous-branch
   :mode undo-mode (&optional (buffer (current-buffer)))
   "Goto previous sibling branch in undo history."
+  (remove-undo-boundary buffer)
   (let* ((entry (undo-entry buffer))
          (parent (or (parent entry)
                      (user-error "No previous branch")))
