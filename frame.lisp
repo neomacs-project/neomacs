@@ -554,6 +554,29 @@ be nil in this case."
 
 ;;; Style
 
+(defstyle frame-body
+    `(:padding "32px"
+      :margin 0
+      :inherit default
+      :background-size "cover"
+      :background-image "url(https://sozaino.site/wp-content/uploads/2021/08/sf35.png)"))
+
+(defstyle frame-buffer
+    `(:flex "1 0 1em"
+      :min-width "1em"
+      :min-height "1em"
+      :display "flex" :flex-flow "column"
+      :backdrop-filter "blur(10px)"))
+
+(defstyle frame-buffer-focus nil)
+
+(defstyle frame-minibuffer
+    `(:flex "0 0 2em"
+      :display "flex" :flex-flow "column"
+      :backdrop-filter "blur(10px)"))
+
+(defstyle frame-float nil)
+
 (defstyle frame-root-mode
     `((".vertical"
        :flex "1 0 1em" :display "flex" :flex-flow "row"
@@ -565,26 +588,16 @@ be nil in this case."
       (".vertical-child-container"
        :flex "1 0 1em"
        :display "flex" :flex-flow "row")
-      (".buffer" :flex "1 0 1em"
-                 :min-width "1em"
-                 :min-height "1em"
-                 :display "flex" :flex-flow "column"
-                 :backdrop-filter "blur(10px)")
-      (".minibuffer"
-       :flex "0 0 2em"
-       :display "flex" :flex-flow "column"
-       :backdrop-filter "blur(10px)")
+      (".buffer" :inherit frame-buffer)
+      (".focus.buffer" :inherit frame-buffer-focus)
+      (".minibuffer" :inherit frame-minibuffer)
+      (".float" :inherit frame-float)
       (".header" :inherit header)
       (".header > div" :padding-right "1em")
       (".focus .header" :inherit header-focus)
       (".header-buffer-name" :inherit header-buffer-name)
       (".header-buffer-modes" :inherit header-buffer-modes)
-      ("body"
-       :padding "32px"
-       :margin 0
-       :inherit default
-       :background-size "cover"
-       :background-image "url(https://sozaino.site/wp-content/uploads/2021/08/sf35.png)")))
+      ("body" :inherit frame-body)))
 
 (defstyle echo-area-mode
     `(("body" :inherit default
@@ -597,11 +610,13 @@ be nil in this case."
                    :margin-bottom "8px"
                    :background-color "rgba(169,151,160,0.2)"))
 
-(defstyle header-buffer-name `(:flex "1 0 1em"
+(defstyle header-buffer-name `(:inherit default
+                               :flex "1 0 1em"
                                :white-space "nowrap"))
 
 (defstyle header-buffer-modes
-    `(:flex "1 0 1em"
+    `(:inherit default
+      :flex "1 0 1em"
       :text-align "right"
       :white-space "nowrap"
       :overflow "hidden"
