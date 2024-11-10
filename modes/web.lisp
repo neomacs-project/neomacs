@@ -46,6 +46,15 @@
     (setf (access-time self)
           (local-time:parse-timestring access-time))))
 
+(defun record-history-maybe (buffer url)
+  (unless (and (history-entry buffer)
+               (equal url (url (history-entry buffer))))
+    (if (or (sera:string-prefix-p "file" url)
+            (sera:string-prefix-p "about:" url))
+        (setf (history-entry buffer) nil)
+        (setf (history-entry buffer)
+              (make-instance 'history-entry :url url)))))
+
 (defun load-web-history ()
   (message "Loading web history...")
   (setq *web-history-list* nil)
@@ -82,6 +91,11 @@
    (history-entry :initform nil)))
 
 (defmethod render-focus-aux ((buffer web-mode) (pos t)))
+
+(defmethod enable-aux ((mode-name (eql 'web-mode)))
+  (record-history-maybe
+   (current-buffer)
+   (url (current-buffer))))
 
 (define-keys :global
   "C-x C-l" 'find-url)
@@ -191,11 +205,8 @@
               (alex:rcurry #'typep 'undo-navigate)
               (undo-thunks (undo-entry (current-buffer))))
              (equal (url buffer) url))
+      (record-history-maybe buffer url)
       (let ((old-url (url buffer)))
-        (unless (or (sera:string-prefix-p "file" url)
-                    (sera:string-prefix-p "about:" url))
-          (setf (history-entry buffer)
-                (make-instance 'history-entry :url url)))
         (record-undo
          (nclo undo-navigate ()
            (load-url buffer old-url))
