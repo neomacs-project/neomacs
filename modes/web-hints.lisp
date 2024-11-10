@@ -89,7 +89,9 @@
       label-length)))
 
 (define-mode active-web-hint-mode ()
-  ((label-length) (label-keys :initform ""))
+  ((label-length)
+   (label-keys :initform "")
+   (ctrl-p :initform nil :initarg :ctrl))
   (:documentation "Transient mode when selecting web hints."))
 
 (define-keys active-web-hint-mode
@@ -101,7 +103,8 @@
            (string char) 'narrow-hint))
 
 (define-keys web-mode
-  "M-g" 'add-hints)
+  "M-g" 'add-hints
+  "M-G" 'add-hints-ctrl)
 
 (define-command add-hints
   :mode web-mode ()
@@ -112,6 +115,12 @@
                  (current-buffer))))
     (enable 'active-web-hint-mode)
     (setf (label-length (current-buffer)) length)))
+
+(define-command add-hints-ctrl
+  :mode web-mode ()
+  "Like `add-hints', but simulate ctrl click."
+  (add-hints)
+  (setf (ctrl-p (current-buffer)) t))
 
 (defun remove-hints ()
   (evaluate-javascript
@@ -150,7 +159,17 @@
                                         nil "[neomacs-hint=~S]"
                                         (label-keys (current-buffer))))))))
                (ps:chain element (focus))
-               (set-timeout (lambda () (ps:chain element (click))) 0)))
+               (set-timeout
+                (lambda ()
+                  (ps:chain
+                   element
+                   (dispatch-event
+                    (ps:new
+                     (-mouse-event
+                      "click"
+                      (ps:create
+                       ctrl-key (ps:lisp (ctrl-p (current-buffer)))))))))
+                0)))
            (current-buffer))
           (remove-hints)))))
 
