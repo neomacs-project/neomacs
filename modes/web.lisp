@@ -24,6 +24,7 @@
             '(web-history-list-mode completion-buffer-mode)
             :require-match nil))))
   (url-or-query)
+  "Open or search for URL-OR-QUERY."
   (switch-to-buffer
    (make-buffer
     "Web" :mode 'web-mode
