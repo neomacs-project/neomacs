@@ -722,22 +722,23 @@ DEFINITION should be a `sb-introspect:definition-source'."
   "enter" 'xref-list-goto-definition)
 
 (defun render-xref-definition (symbol type def)
-  (lret ((el (make-element
-              "tr"
-              :children
-              (list (make-element
-                     "td" :children
-                     (list (prin1-to-string type)))
-                    (make-element
-                     "td" :children
-                     (list (print-arglist
-                            (sb-introspect::definition-source-description def)
-                            (symbol-package symbol))))
-                    (make-element
-                     "td" :children
-                     (list (princ-to-string
-                            (sb-introspect::definition-source-pathname def))))))))
-    (setf (attribute el 'definition) def)))
+  (attach-presentation
+   (make-element
+    "tr"
+    :children
+    (list (make-element
+           "td" :children
+           (list (prin1-to-string type)))
+          (make-element
+           "td" :children
+           (list (print-arglist
+                  (sb-introspect::definition-source-description def)
+                  (symbol-package symbol))))
+          (make-element
+           "td" :children
+           (list (princ-to-string
+                  (sb-introspect::definition-source-pathname def))))))
+   def))
 
 (defmethod generate-rows ((buffer xref-list-mode))
   (let ((*print-case* :downcase)
@@ -759,12 +760,10 @@ sb-introspect:definition-source)'."
 
 (define-command xref-list-goto-definition
   :mode xref-list-mode ()
-  (let ((row (focused-row)))
-    (unless row
-      (user-error "No xref item under focus"))
-    (visit-definition
-     (attribute row 'definition))
-    (quit-buffer)))
+  (visit-definition
+   (or (presentation-at (focus))
+       (user-error "No xref item under focus")))
+  (quit-buffer))
 
 (define-command goto-definition
   :mode lisp-mode ()

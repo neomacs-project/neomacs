@@ -1,7 +1,7 @@
 (in-package #:neomacs)
 
 (sera:export-always
-    '(generate-rows focused-item
+    '(generate-rows
       file-size-readable format-readable-timestring))
 
 (define-mode list-mode (read-only-mode) ())
@@ -10,8 +10,6 @@
   "q" 'bury-buffer)
 
 (defgeneric generate-rows (buffer))
-
-(defgeneric focused-item (buffer))
 
 (defmethod revert-buffer-aux ((buffer list-mode))
   (erase-buffer)
@@ -41,17 +39,19 @@
       (for name = (string-downcase (symbol-name c)))
       (insert-nodes
        (focus)
-       (make-element
-        "tr" :children
-        (list (make-element "td" :children (list name))
-              (make-element
-               "td" :class "keybinds" :children
-               (when-let (bindings (gethash c (keybinding-index buffer)))
-                 (list (sera:mapconcat #'key-description bindings ", "))))
-              (make-element "td" :children (short-doc c))
-              (make-element
-               "td" :children
-               (list (string-downcase (symbol-name mode))))))))))
+       (attach-presentation
+        (make-element
+         "tr" :children
+         (list (make-element "td" :children (list name))
+               (make-element
+                "td" :class "keybinds" :children
+                (when-let (bindings (gethash c (keybinding-index buffer)))
+                  (list (sera:mapconcat #'key-description bindings ", "))))
+               (make-element "td" :children (short-doc c))
+               (make-element
+                "td" :children
+                (list (string-downcase (symbol-name mode))))))
+        c)))))
 
 (defstyle command-list-mode
     `((".keybinds" :max-width "5em" :overflow "hidden"
@@ -73,11 +73,11 @@
 
 (define-command buffer-list-switch-to-buffer
   :mode buffer-list-mode ()
-  (switch-to-buffer (focused-item (current-buffer))))
+  (switch-to-buffer (presentation-at (focus))))
 
 (define-command buffer-list-delete-buffer
   :mode buffer-list-mode ()
-  (delete-buffer (focused-item (current-buffer))))
+  (delete-buffer (presentation-at (focus))))
 
 (define-command buffer-list-toggle-hidden
   :mode buffer-list-mode ()
@@ -94,11 +94,14 @@
     (unless (or (member buf (exclude-buffers buffer))
                 (and (not (show-hidden buffer))
                      (sera:string-prefix-p " " name)))
-      (insert-nodes (focus)
-                    (dom `(:tr :buffer ,(id buf)
-                               (:td ,name)
-                               (:td ,@(when (> (length modes) 0)
-                                        (list modes)))))))))
+      (insert-nodes
+       (focus)
+       (attach-presentation
+        (dom `(:tr :buffer ,(id buf)
+                   (:td ,name)
+                   (:td ,@(when (> (length modes) 0)
+                            (list modes)))))
+        buf)))))
 
 (define-command list-commands ()
   (switch-to-buffer
@@ -112,15 +115,6 @@
   (switch-to-buffer
    (get-buffer-create "*buffers*" :mode 'buffer-list-mode
                       :revert t)))
-
-(defun focused-row ()
-  (pos-up-ensure (focus) (alex:rcurry #'tag-name-p "tr")))
-
-(defmethod focused-item ((buffer buffer-list-mode))
-  (let ((row (focused-row)))
-    (unless row
-      (user-error "No focused buffer"))
-    (gethash (parse-integer (attribute row "buffer")) *buffer-table*)))
 
 (defstyle list-mode `(("table" :white-space "pre" :width "100%"
                                :border-collapse "collapse")
@@ -192,20 +186,23 @@ This should always be a directory pathname (with NIL name and type fields).")
 (defmethod generate-rows ((buffer file-list-mode))
   (iter (for path in (osicat:list-directory (file-path buffer)))
     (for stat = (ignore-errors (osicat-posix:stat path)))
-    (insert-nodes (focus)
-                  (dom `(:tr
-                         ,(if (uiop:directory-pathname-p path)
-                              `(:td :class "directory"
-                                    ,(lastcar (pathname-directory path)))
-                              `(:td ,(file-namestring path)))
-                         ,@ (if stat
-                                `((:td ,@ (unless (uiop:directory-pathname-p path)
-                                            (list (file-size-readable (osicat-posix:stat-size stat)))))
-                                  (:td ,(osicat-posix:getpwuid
-                                         (osicat-posix:stat-uid stat)))
-                                  (:td ,(file-date-readable
-                                         (osicat-posix:stat-mtime stat))))
-                                `((:td) (:td) (:td "<Not Avaliable>"))))))))
+    (insert-nodes
+     (focus)
+     (attach-presentation
+      (dom `(:tr
+             ,(if (uiop:directory-pathname-p path)
+                  `(:td :class "directory"
+                        ,(lastcar (pathname-directory path)))
+                  `(:td ,(file-namestring path)))
+             ,@ (if stat
+                    `((:td ,@ (unless (uiop:directory-pathname-p path)
+                                (list (file-size-readable (osicat-posix:stat-size stat)))))
+                      (:td ,(osicat-posix:getpwuid
+                             (osicat-posix:stat-uid stat)))
+                      (:td ,(file-date-readable
+                             (osicat-posix:stat-mtime stat))))
+                    `((:td) (:td) (:td "<Not Avaliable>")))))
+      path))))
 
 (defmethod revert-buffer-aux ((buffer file-list-mode))
   (call-next-method)
@@ -225,16 +222,9 @@ This should always be a directory pathname (with NIL name and type fields).")
 (defstyle file-list-mode `((".directory::after" :content "/")
                            (".header" :inherit bold)))
 
-(defmethod focused-item ((buffer file-list-mode))
-  (let ((row (focused-row)))
-    (unless row
-      (user-error "No focused file"))
-    (merge-pathnames (text-content (first-child row))
-                     (file-path buffer))))
-
 (define-command file-list-find-file
   :mode file-list-mode ()
-  (find-file (focused-item (current-buffer))))
+  (find-file (presentation-at (focus))))
 
 (define-mode clipboard-list-mode (list-mode) ())
 

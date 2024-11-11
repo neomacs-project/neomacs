@@ -686,6 +686,23 @@ If selection is active, copy selected contents instead."
       (clipboard-insert (extract-nodes pos end))
       (return))))
 
+;;; Presentations
+
+(defun presentation-at (pos-or-marker)
+  (let ((pos (resolve-marker pos-or-marker))
+        presentation)
+    (iter
+      (when (element-p pos)
+        (setq presentation (attribute pos 'presentation)))
+      (until presentation)
+      (setq pos (pos-up pos))
+      (while pos))
+    presentation))
+
+(defun attach-presentation (element object)
+  (setf (attribute element 'presentation) object)
+  element)
+
 ;;; Default key bindings
 
 (define-keys :global

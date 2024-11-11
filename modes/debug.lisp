@@ -34,11 +34,12 @@
       (for i from 0)
       (insert-nodes
        (end-pos tbody)
-       (lret ((el (dom `(:tr
-                         (:td :class "restart-name"
-                              ,(format nil "~a. ~a" i (dissect:name r)))
-                         (:td ,(dissect:report r))))))
-         (setf (attribute el 'restart) r))))
+       (attach-presentation
+        (dom `(:tr
+               (:td :class "restart-name"
+                    ,(format nil "~a. ~a" i (dissect:name r)))
+               (:td ,(dissect:report r))))
+        r)))
     (setf (pos (focus)) (pos-down tbody)))
   (insert-nodes (end-pos (document-root buffer))
                 (make-element "p" :children (list "Backtrace:")))
@@ -53,24 +54,24 @@
       (for i from 0)
       (insert-nodes
        (end-pos tbody)
-       (lret ((el
-               (dom `(:tr
-                      (:td :class "frame-number"
-                           ,(format nil "~a." i))
-                      (:td
-                       ,(print-dom
-                         (cons (dissect:call frame)
-                               (dissect:args frame)))
-                       ,@(when-let (locals (dissect:locals frame))
-                           `((:table
-                              :class "locals-table"
-                              (:tbody
-                               ,@(iter (for (name . value) in locals)
-                                   (collect
-                                       `(:tr
-                                         (:td ,(princ-to-string name))
-                                         (:td ,(print-dom value))))))))))))))
-         (setf (attribute el 'frame) frame))))))
+       (attach-presentation
+        (dom `(:tr
+               (:td :class "frame-number"
+                    ,(format nil "~a." i))
+               (:td
+                ,(print-dom
+                  (cons (dissect:call frame)
+                        (dissect:args frame)))
+                ,@(when-let (locals (dissect:locals frame))
+                    `((:table
+                       :class "locals-table"
+                       (:tbody
+                        ,@(iter (for (name . value) in locals)
+                            (collect
+                                `(:tr
+                                  (:td ,(princ-to-string name))
+                                  (:td ,(print-dom value))))))))))))
+        frame)))))
 
 (defun find-restart-by-name (name)
   (iter (for r in (dissect:environment-restarts
@@ -98,27 +99,23 @@
 
 (define-command debugger-invoke-restart
   :mode debugger-mode ()
-  (let ((restart (when-let (row (focused-row))
-                   (attribute row 'restart))))
-    (unless restart
-      (user-error "No restart under focus"))
-    (debugger-invoke restart)))
+  (debugger-invoke
+   (or (presentation-at (focus))
+       (user-error "No restart under focus"))))
 
 (define-command debugger-show-source
   :mode debugger-mode ()
-  (let ((frame (when-let (row (focused-row))
-                 (attribute row 'frame))))
-    (unless frame
-      (user-error "No frame under focus"))
-    (let* ((frame (dissect::frame frame))
-           (location (sb-di:frame-code-location frame))
-           (source (sb-di::code-location-debug-source location))
-           (namestring (sb-c::debug-source-namestring source)))
-      (visit-source
-       (when namestring (pathname namestring))
-       (sb-di::code-location-toplevel-form-offset location)
-       (sb-di::code-location-form-number location)
-       (sb-c::debug-source-plist source)))))
+  (let* ((frame (dissect::frame
+                 (or (presentation-at (focus))
+                     (user-error "No frame under focus"))))
+         (location (sb-di:frame-code-location frame))
+         (source (sb-di::code-location-debug-source location))
+         (namestring (sb-c::debug-source-namestring source)))
+    (visit-source
+     (when namestring (pathname namestring))
+     (sb-di::code-location-toplevel-form-offset location)
+     (sb-di::code-location-form-number location)
+     (sb-c::debug-source-plist source))))
 
 (defun debug-for-environment (env mailbox)
   (let ((debugger
