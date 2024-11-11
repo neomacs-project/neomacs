@@ -1178,13 +1178,13 @@ sb-introspect:definition-source)'."
                            :inherit comment))
 
 (defstyle compiler-note
-    `(:border-bottom "solid rgba(200,200,200,1.0)"))
+    `(:border-bottom "solid 1px rgba(169,151,160,1.0)"))
 (defstyle compiler-style-warning
-  `(:border-bottom "solid rgba(150,150,255,1.0)"))
+    `(:border-bottom "dashed 1px rgba(240,0,120,1.0)"))
 (defstyle compiler-warning
-  `(:border-bottom "solid rgba(255,150,0,1.0)"))
+    `(:border-bottom "solid 1px rgba(240,0,120,1.0)"))
 (defstyle compiler-error
-    `(:border-bottom "solid rgba(255,75,0,1.0)"))
+    `(:border-bottom "double 1px rgba(240,0,120,1.0)"))
 
 (defstyle lisp-mode
     `((".symbol" :inherit symbol-node)
