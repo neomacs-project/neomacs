@@ -81,6 +81,7 @@ BINDINGS are passed as arguments to `set-style' to apply the theme."
   `((:import (url "https://fonts.cdnfonts.com/css/space-mono")))
   'default
   `(:font-family "Space Mono"
+    :font-variant-ligatures "none"
     :color "rgba(210,239,240,0.5)")
   'keyword
   `(:color "rgb(120,160,190)")
@@ -91,6 +92,11 @@ BINDINGS are passed as arguments to `set-style' to apply the theme."
   'selection
   `(:background-color "rgba(120,160,190,0.5)"
     :color "rgba(210,239,240,0.8)")
+  'monospace
+  `(:inherit default
+    :inherit comment)
+
+  ;; Frame
   'header
   `(:padding "8px"
     :display "flex" :flex-flow "row"
@@ -163,7 +169,17 @@ BINDINGS are passed as arguments to `set-style' to apply the theme."
      :content "<No Item>"
      :display "inline")
     ("td" :padding-right "1em")
-    ("td:first-child" :padding-left "0.5rem")))
+    ("td:first-child" :padding-left "0.5rem"))
+
+  ;; Web
+  'web-hints
+  `((".neomacs-hint"
+     :background-color "rgb(0,9,12)"
+     :padding "0px 0.3em"
+     :border-radius "2px"
+     :border-width "2px"
+     :border-style "solid"
+     :z-index #.(1- (expt 2 31)))))
 
 (define-theme anti-matrix
     "Variant of `matrix', a mostly-monochrome light theme."
@@ -188,6 +204,7 @@ BINDINGS are passed as arguments to `set-style' to apply the theme."
   `((:import (url "https://fonts.cdnfonts.com/css/space-mono")))
   'default
   `(:font-family "Space Mono"
+    :font-variant-ligatures "none"
     :color "#000")
   'keyword
   `(:color "#000" :inherit bold)
@@ -197,6 +214,11 @@ BINDINGS are passed as arguments to `set-style' to apply the theme."
   `(:outline "solid 1px #ccc")
   'selection
   `(:background-color "#ccc")
+  'monospace
+  `(:inherit default
+    :inherit comment)
+
+  ;; Frame
   'header
   `(:padding "8px"
     :display "flex" :flex-flow "row"

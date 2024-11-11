@@ -791,6 +791,8 @@ If it is, should signal a condition of type `read-only-error'."))
 (defstyle comment `(:color "#a997a0"))
 (defstyle bold `(:font-weight 900))
 (defstyle match `(:inherit selection))
+(defstyle monospace `(:font-family "monospace"))
+(defstyle link `(:inherit default))
 
 (defstyle focus-tail
     `(((:append "::after")
@@ -842,6 +844,8 @@ This is suitable for whitespace-sensitive editing."))
       (".newline::after"
        :content " \\A"
        :inherit selection)
+      ("code" :inherit monospace)
+      (":link" :inherit link)
       (".invisible" :display "none")
       ("::highlight(neomacs)" :inherit cursor)
       ("::highlight(neomacs-range)" :inherit range-selection)
