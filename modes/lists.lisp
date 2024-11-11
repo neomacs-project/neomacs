@@ -73,11 +73,11 @@
 
 (define-command buffer-list-switch-to-buffer
   :mode buffer-list-mode ()
-  (switch-to-buffer (presentation-at (focus))))
+  (switch-to-buffer (presentation-at (focus) 'buffer t)))
 
 (define-command buffer-list-delete-buffer
   :mode buffer-list-mode ()
-  (delete-buffer (presentation-at (focus))))
+  (delete-buffer (presentation-at (focus) 'buffer t)))
 
 (define-command buffer-list-toggle-hidden
   :mode buffer-list-mode ()
@@ -224,7 +224,7 @@ This should always be a directory pathname (with NIL name and type fields).")
 
 (define-command file-list-find-file
   :mode file-list-mode ()
-  (find-file (presentation-at (focus))))
+  (find-file (presentation-at (focus) 'pathname t)))
 
 (define-mode clipboard-list-mode (list-mode) ())
 

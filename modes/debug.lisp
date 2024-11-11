@@ -100,14 +100,12 @@
 (define-command debugger-invoke-restart
   :mode debugger-mode ()
   (debugger-invoke
-   (or (presentation-at (focus))
-       (user-error "No restart under focus"))))
+   (presentation-at (focus) 'dissect:restart t)))
 
 (define-command debugger-show-source
   :mode debugger-mode ()
   (let* ((frame (dissect::frame
-                 (or (presentation-at (focus))
-                     (user-error "No frame under focus"))))
+                 (presentation-at (focus) 'dissect:call t)))
          (location (sb-di:frame-code-location frame))
          (source (sb-di::code-location-debug-source location))
          (namestring (sb-c::debug-source-namestring source)))

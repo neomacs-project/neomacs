@@ -688,15 +688,23 @@ If selection is active, copy selected contents instead."
 
 ;;; Presentations
 
-(defun presentation-at (pos-or-marker)
+(defun presentation-at
+    (pos-or-marker &optional (type t) error-p)
+  "Find enclosing element with a presentation attribute of TYPE.
+
+If ERROR-P is t, signal a `user-error' if no such element is found"
   (let ((pos (resolve-marker pos-or-marker))
         presentation)
     (iter
       (when (element-p pos)
-        (setq presentation (attribute pos 'presentation)))
+        (when-let (p (attribute pos 'presentation))
+          (when (typep p type)
+            (setq presentation p))))
       (until presentation)
       (setq pos (pos-up pos))
       (while pos))
+    (when (and error-p (not presentation))
+      (user-error "No ~a under focus" type))
     presentation))
 
 (defun attach-presentation (element object)

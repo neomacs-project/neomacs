@@ -761,8 +761,7 @@ sb-introspect:definition-source)'."
 (define-command xref-list-goto-definition
   :mode xref-list-mode ()
   (visit-definition
-   (or (presentation-at (focus))
-       (user-error "No xref item under focus")))
+   (presentation-at (focus) 'sb-introspect:definition-source t))
   (quit-buffer))
 
 (define-command goto-definition
