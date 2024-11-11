@@ -610,13 +610,11 @@ be nil in this case."
                    :margin-bottom "8px"
                    :background-color "rgba(169,151,160,0.2)"))
 
-(defstyle header-buffer-name `(:inherit default
-                               :flex "1 0 1em"
+(defstyle header-buffer-name `(:flex "1 0 1em"
                                :white-space "nowrap"))
 
 (defstyle header-buffer-modes
-    `(:inherit default
-      :flex "1 0 1em"
+    `(:flex "1 0 1em"
       :text-align "right"
       :white-space "nowrap"
       :overflow "hidden"
