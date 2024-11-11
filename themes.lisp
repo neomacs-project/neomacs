@@ -174,6 +174,7 @@ BINDINGS are passed as arguments to `set-style' to apply the theme."
   ;; Web
   'web-hints
   `((".neomacs-hint"
+     :color "#fff"
      :background-color "rgb(0,9,12)"
      :padding "0px 0.3em"
      :border-radius "2px"
