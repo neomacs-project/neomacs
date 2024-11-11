@@ -88,12 +88,22 @@ BINDINGS should be of the form {SYMBOL SPEC}*, and style named by each
 SYMBOL is set to SPEC.
 
 Example: (set-style 'default '(:font-family \"sans-serif\")
-    'bold '(:font-weight 900))"
+    'bold '(:font-weight 900))
+
+SYMBOL is allowed to take some special value:
+
+:native-theme -- SPEC should be one of \"system\",\"dark\" and \"light\". This sets the color theme used by the renderer."
   (iter (for (symbol spec) on bindings by #'cddr)
-    (setf (cell-ref (get symbol 'style)) spec)))
+    (case symbol
+      ((:native-theme)
+       (evaluate-javascript
+        (format nil "nativeTheme.themeSource = ~S" spec)
+        :global))
+      (t (setf (cell-ref (get symbol 'style)) spec)))))
 
 (defun apply-theme (theme)
   (cond ((eql theme :default)
+         (set-style :native-theme "light")
          (iter (for symbol in *styles*)
            (set-style symbol (get symbol 'standard-style))))
         (t (error "TODO"))))
