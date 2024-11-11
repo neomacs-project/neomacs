@@ -1,7 +1,7 @@
 (in-package :neomacs)
 
 (sera:eval-always
-  '(defstyle))
+  '(defstyle css-cell set-style *styles*))
 
 (defun get-style (symbol)
   (let ((style (get symbol 'style '%unbound)))

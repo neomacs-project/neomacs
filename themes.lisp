@@ -1,5 +1,7 @@
 (in-package #:neomacs)
 
+(sera:export-always '(*themes* apply-theme define-theme))
+
 (defvar *themes* nil "List of all known themes")
 
 (defmethod documentation (symbol (type (eql 'theme)))
@@ -9,6 +11,9 @@
   (setf (get symbol 'theme-doc) new-val))
 
 (defmacro define-theme (name doc &body bindings)
+  "Define a theme with NAME.
+
+BINDINGS are passed as arguments to `set-style' to apply the theme."
   `(progn
      (setf (get ',name 'theme) (list ,@bindings))
      (pushnew ',name *themes*)
