@@ -100,10 +100,3 @@ SYMBOL is allowed to take some special value:
         (format nil "nativeTheme.themeSource = ~S" spec)
         :global))
       (t (setf (cell-ref (get symbol 'style)) spec)))))
-
-(defun apply-theme (theme)
-  (cond ((eql theme :default)
-         (set-style :native-theme "light")
-         (iter (for symbol in *styles*)
-           (set-style symbol (get symbol 'standard-style))))
-        (t (error "TODO"))))

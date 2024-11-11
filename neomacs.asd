@@ -26,6 +26,7 @@
                #+nil (:file "manual")
                (:file "syntax")
                (:file "modes/lists")
+               (:file "modes/themes")
                (:file "modes/occur")
                (:file "modes/search")
                (:file "modes/file")
