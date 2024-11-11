@@ -1,6 +1,9 @@
 (in-package #:neomacs)
 
 (defun start (&optional (use-neomacs-debugger t))
+  ;; We don't have preemptive quit yet, so we put in those to avoid
+  ;; infinite recursion
+  (setq *print-level* 50 *print-length* 50)
   (let ((config-file (uiop:xdg-config-home "neomacs" "init.lisp")))
     (if (uiop:file-exists-p config-file)
         (progn

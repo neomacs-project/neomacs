@@ -58,6 +58,8 @@
         (enable 'sexp-editing-mode)
         (disable 'sexp-editing-mode))))
 
+(defvar *current-level-in-print* 0)
+
 (defgeneric print-dom (object &key &allow-other-keys))
 
 (defun compute-operator (node)
@@ -115,6 +117,10 @@
     (when (plusp (length text))
       (append-child node (make-instance 'text-node :text text)))))
 
+(defun make-presentation-node (text object)
+  (lret ((node (make-atom-node "object" text)))
+    (setf (attribute node 'presentation) object)))
+
 (defun list-node-p (node)
   (class-p node "list"))
 
@@ -131,14 +137,25 @@
   (and (symbol-node-p node) (first-child node)))
 
 (defmethod print-dom ((cons cons) &key)
-  (make-list-node
-   (iter (for tail first cons then (cdr tail))
-     (typecase tail
-       (cons (collect (print-dom (car tail))))
-       (null)
-       (t (collect (make-atom-node "symbol" "."))
-        (collect (print-dom tail))))
-           (while (consp tail)))))
+  (if (and *print-level*
+           (>= *current-level-in-print* *print-level*))
+      (make-presentation-node "#" cons)
+      (let ((*current-level-in-print*
+              (1+ *current-level-in-print*)))
+        (make-list-node
+         (iter (for i from 0)
+           (for tail first cons then (cdr tail))
+           (typecase tail
+             (cons
+              (if (and *print-length* (>= i *print-length*))
+                  (progn
+                    (collect (make-presentation-node "..." tail))
+                    (finish))
+                  (collect (print-dom (car tail)))))
+             (null)
+             (t (collect (make-atom-node "symbol" "."))
+              (collect (print-dom tail))))
+           (while (consp tail)))))))
 
 (defmethod print-dom ((null null) &key)
   (make-list-node nil))
@@ -161,8 +178,7 @@
   (make-atom-node "symbol" (prin1-to-string obj)))
 
 (defmethod print-dom ((obj t) &key)
-  (lret ((node (make-atom-node "object" (prin1-to-string obj))))
-    (setf (attribute node 'presentation) obj)))
+  (make-presentation-node (prin1-to-string obj) obj))
 
 (define-command open-paren :mode lisp-mode
   (&optional (marker (focus)))
