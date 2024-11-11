@@ -834,7 +834,7 @@ This is suitable for whitespace-sensitive editing."))
 (defstyle doc-mode `(("body" :inherit doc-node)))
 
 (defstyle buffer
-    `(("body" :inherit default)
+    `(("*" :inherit default)
       (".focus" :inherit focus)
       (".focus-tail" :inherit focus-tail)
       (".range-selection" :inherit range-selection)
