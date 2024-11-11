@@ -342,7 +342,7 @@ found are replaced with a dummy symbol."
                            (t (error "Unrecognized DOM node: ~a" node)))))
                (when *form-node-table*
                  (setf (gethash sexp *form-node-table*)
-                       node))
+                       (print node)))
                (if-let (wrappers (ghost-symbol-p (previous-sibling node)))
                  (apply-wrappers wrappers sexp)
                  sexp))))
@@ -562,18 +562,18 @@ Highlights compiler notes."
           (node (pos marker)))
       (setf (attribute node 'compile-cookie) cookie)
       (with-collecting-notes ()
-        (with-compilation-unit
-            (:source-plist
-             (list :neomacs-buffer (name (current-buffer))
-                   :neomacs-compile-cookie cookie))
-          (let* ((*package* (current-package marker))
-                 (*compilation-single-form* t)
-                 (*compilation-document-root* node)
-                 (input-file
-                   (make-pathname
-                    :name cookie :type "lisp"
-                    :defaults (uiop:temporary-directory)))
-                 output-file)
+        (let* ((*package* (current-package marker))
+               (*compilation-single-form* t)
+               (*compilation-document-root* node)
+               (input-file
+                 (make-pathname
+                  :name cookie :type "lisp"
+                  :defaults (uiop:temporary-directory)))
+               output-file)
+          (with-compilation-unit
+              (:source-plist
+               (list :neomacs-buffer (name (current-buffer))
+                     :neomacs-compile-cookie cookie))
             (with-open-file (s input-file
                                :direction :output
                                :if-exists :supersede)
@@ -583,10 +583,10 @@ Highlights compiler notes."
                    (load (setq output-file (compile-file input-file)))
                    (message "Compiled and loaded"))
               (uiop:delete-file-if-exists input-file)
-              (uiop:delete-file-if-exists output-file))
-            (unless (frame-root *compilation-buffer*)
-              (when (first-child (document-root *compilation-buffer*))
-                (display-buffer *compilation-buffer*)))))))))
+              (uiop:delete-file-if-exists output-file)))
+          (unless (frame-root *compilation-buffer*)
+            (when (first-child (document-root *compilation-buffer*))
+              (display-buffer *compilation-buffer*))))))))
 
 (defun last-expression (pos)
   (setq pos (resolve-marker pos))
