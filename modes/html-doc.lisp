@@ -258,6 +258,15 @@ JSON should have the format like what `+get-body-json-code+' produces:
           "dd" :children
           (render-doc-string-paragraph p)))))))
 
+(defun shortcmd (command mode-name)
+  (append-text
+   *dom-output*
+   (format nil "~a (~a)" command
+           (if-let (bindings (collect-command-keybindings
+                              command (keymap mode-name)))
+             (sera:mapconcat #'key-description bindings ", ")
+             "unbound"))))
+
 (defun function-short-description (function)
   (cond ((macro-function function)
          (append-text *dom-output* "Macro"))

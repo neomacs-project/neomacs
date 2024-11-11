@@ -487,9 +487,6 @@ The behavior can be customized via `revert-buffer-aux'."
   (let ((*inhibit-read-only* t))
     (revert-buffer-aux (current-buffer))))
 
-(define-command new-buffer ()
-  (switch-to-buffer (get-buffer-create "*new*")))
-
 ;;; Editing commands
 
 (defun self-insert-char ()

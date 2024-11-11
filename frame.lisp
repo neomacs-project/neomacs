@@ -293,13 +293,15 @@ fixed in future Electron, our logic may be simplified."
           (close-window victim))
         buffer)))
 
-(defun make-scratch ()
+(define-command make-scratch
+  :interactive (lambda () (list t)) (&optional focus)
   (lret ((buffer (make-buffer
                   "*scratch*" :mode '(lisp-mode file-mode)
                   :file-path (asdf:system-relative-pathname :neomacs #p"scratch.lisp"))))
     (with-current-buffer buffer
       (revert-buffer)
-      (disable 'file-mode))))
+      (disable 'file-mode))
+    (when focus (switch-to-buffer buffer))))
 
 (defun replacement-buffer (&optional (buffer (current-buffer)))
   "Find a buffer to display in place of BUFFER.
