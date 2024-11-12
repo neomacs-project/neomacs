@@ -209,6 +209,12 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
     (when revert
       (revert-buffer))))
 
+(defmethod reinitialize-instance :after
+    ((buffer buffer) &key revert)
+  (when revert
+    (with-current-buffer buffer
+      (revert-buffer))))
+
 (defgeneric on-post-command (buffer)
   (:method-combination progn)
   (:method progn ((buffer buffer))
@@ -446,10 +452,21 @@ operation."
   "Returning a buffer with NAME if found, or create one.
 
 When creating a new buffer, NAME and ARGS has the same meaning as in
-`make-buffer'."
+`make-buffer'.
+
+If an existing buffer is found, it is reinitialized with ARGS."
   (bt:with-recursive-lock-held (*buffer-table-lock*)
-    (or (gethash name *buffer-name-table*)
-        (apply #'make-buffer name args))))
+    (if-let (existing (gethash name *buffer-name-table*))
+      (let ((modes (uiop:ensure-list (getf args :mode))))
+        (remf args :mode)
+        (change-class
+         existing
+         (dynamic-mixins::ensure-mixin
+          (apply #'dynamic-mixins:mix
+                 (append modes (list 'buffer)))))
+        (apply #'reinitialize-instance
+               existing args))
+      (apply #'make-buffer name args))))
 
 (defun get-buffer (name)
   "Find and return a buffer with NAME, return nil if not found."
