@@ -549,6 +549,38 @@ be nil in this case."
         (apply #'format *error-output* control-string format-arguments)
         (terpri))))
 
+(defvar *current-standard-output* nil)
+
+(defvar *current-standard-input* nil)
+
+(defun setup-stream-indirection ()
+  "Redirect standard streams to be handled by Neomacs.
+
+This sets up: `*standard-output*', `*standard-input*',
+`*error-output*', `*trace-output*', `*query-io*'."
+  (setf *current-standard-output*
+        (make-instance 'swank/gray::slime-output-stream
+                       :data (swank/gray::make-stream-data
+                              :output-fn
+                              (lambda (s) (message "~a" s))))
+        *current-standard-input*
+        (make-instance 'swank/gray::slime-input-stream
+                       :input-fn
+                       (lambda ()
+                         (str:concat
+                          (read-from-minibuffer
+                           (format nil "Input for ~a: " (bt:current-thread)))
+                          "
+")))
+        *standard-output* *current-standard-output*
+        *trace-output* *current-standard-output*
+        *error-output* *current-standard-output*
+        *standard-input* *current-standard-input*
+        *query-io* (make-two-way-stream *current-standard-input*
+                                        *current-standard-output*))
+  (swank/gray::make-auto-flush-thread *current-standard-output*)
+  nil)
+
 (define-command open-dev-tools ()
   (evaluate-javascript
    (ps:ps (ps:chain (js-buffer (current-buffer)) web-contents (open-dev-tools)))

@@ -1,6 +1,17 @@
 (in-package #:neomacs)
 
 (defun start (&optional (use-neomacs-debugger t))
+  "Start the Neomacs system.
+
+If USE-NEOMACS-DEBUGGER is nil, Neomacs assumes it is being started
+from an external Lisp development environment (e.g. SLIME). This has
+the following effect:
+
+- The Neomacs debugger is disabled. Errors are to be handled by the
+  external IDE.
+
+- The command loop does not call `setup-stream-indirection'. Standard
+  input/output streams are provided by the external IDE."
   ;; We don't have preemptive quit yet, so we put in those to avoid
   ;; infinite recursion
   (setq *print-level* 50 *print-length* 50)
