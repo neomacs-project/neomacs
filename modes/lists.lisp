@@ -260,3 +260,47 @@ This should always be a directory pathname (with NIL name and type fields).")
   (let ((selection (node-after (focus (completion-buffer buffer)))))
     (setq *clipboard-ring-index*
           (position selection (child-nodes (parent selection))))))
+
+(define-mode thread-list-mode (list-mode) ())
+
+(defmethod generate-rows ((buffer thread-list-mode))
+  (iter (for thread in (sb-thread:list-all-threads))
+    (insert-nodes
+     (focus)
+     (attach-presentation
+      (dom `(:tr (:td ,(format nil "~a"
+                               (sb-thread:thread-os-tid thread)))
+                 (:td ,(if (sb-thread:main-thread-p thread)
+                           `(:b ,(sb-thread:thread-name thread))
+                           (sb-thread:thread-name thread)))
+                 (:td ,(cond ((sb-thread::thread-waiting-for thread)
+                              "Waiting")
+                             ((sb-thread:thread-alive-p thread)
+                              "Running")
+                             (t "Stopped")))))
+      thread))))
+
+(define-command list-threads ()
+  (switch-to-buffer
+   (get-buffer-create "*threads*" :mode 'thread-list-mode
+                                  :revert t)))
+
+(define-keys thread-list-mode
+  "d" 'thread-list-debug
+  "k" 'thread-list-kill)
+
+(define-command thread-list-debug
+  :mode thread-list-mode ()
+  "Interrupt focused thread and invoke Neomacs debugger."
+  (sb-thread:interrupt-thread
+   (presentation-at (focus) 'sb-thread:thread t)
+   (lambda ()
+     (let ((*debugger-hook* #'neomacs-debugger-hook))
+       (with-simple-restart (continue "Continue from interrupt")
+         (error "Interrupt"))))))
+
+(define-command thread-list-kill
+  :mode thread-list-mode ()
+  "Kill focused thread immediately."
+  (sb-thread:terminate-thread
+   (presentation-at (focus) 'sb-thread:thread t)))
