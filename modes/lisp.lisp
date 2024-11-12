@@ -54,7 +54,8 @@
   (declare (ignore old))
   (let ((node (node-containing new)))
     (if (or (class-p node "list" "symbol")
-            (tag-name-p node "body"))
+            (tag-name-p node "body")
+            (class-p (pos-prev new) "comment"))
         (enable 'sexp-editing-mode)
         (disable 'sexp-editing-mode))))
 
@@ -216,7 +217,10 @@
   (labels ((cycle-level (n)
              (lret ((n (1+ (mod n 4))))
                (message "Comment Level -> ~a" n))))
-    (if-let (node (comment-around marker))
+    (if-let
+        (node (find-if (alex:rcurry #'class-p "comment")
+                       (list (node-after marker)
+                             (node-containing marker))))
       (setf (attribute node "comment-level")
             (prin1-to-string
              (cycle-level
@@ -797,11 +801,6 @@ sb-introspect:definition-source)'."
 (defun symbol-around (pos)
   (when-let (node (atom-around pos))
     (when (equal "symbol" (attribute node "class"))
-      node)))
-
-(defun comment-around (pos)
-  (when-let (node (atom-around pos))
-    (when (equal "comment" (attribute node "class"))
       node)))
 
 (defmethod compute-completion ((buffer lisp-mode) pos)

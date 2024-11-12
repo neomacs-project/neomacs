@@ -287,9 +287,9 @@ succeeded, ERR is nil."))
   (:method-combination progn)
   (:method progn ((buffer buffer) (title t))))
 
-(defgeneric on-buffer-did-start-navigation (buffer url)
+(defgeneric on-buffer-did-start-navigation (buffer details)
   (:method-combination progn)
-  (:method progn ((buffer buffer) (url t))))
+  (:method progn ((buffer buffer) (details t))))
 
 (defgeneric on-delete-buffer (buffer)
   (:method-combination progn)

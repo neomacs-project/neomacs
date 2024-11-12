@@ -134,7 +134,9 @@
   "enter" 'web-forward-key
   'backward-delete
   (make-web-send-key-command
-   (car (kbd "backspace"))))
+   (car (kbd "backspace")))
+  "C-c b" 'web-go-backward
+  "C-c f" 'web-go-forward)
 
 (define-command web-next-line
   :mode web-mode ()
@@ -198,23 +200,40 @@
   (rename-buffer title))
 
 (defmethod on-buffer-did-start-navigation progn
-    ((buffer web-mode) url)
-  (when (leaf-p (undo-entry (current-buffer)))
-    (unless (or
-             ;; Don't record more than 1 undo-navigate
-             (find-if
-              (alex:rcurry #'typep 'undo-navigate)
-              (undo-thunks (undo-entry (current-buffer))))
-             (equal (url buffer) url))
-      (record-history-maybe buffer url)
-      (let ((old-url (url buffer)))
-        (record-undo
-         (nclo undo-navigate ()
-           (load-url buffer old-url))
-         (nclo redo-navigate ()
-           (load-url buffer url))
-         buffer)
-        (setf (url buffer) url)))))
+    ((buffer web-mode) details)
+  ;; Events caused by history navigation and loadURL doesn't have
+  ;; initiator property. We don't record them here. If some loadURL
+  ;; need to be recorded, the command which invoked it is responsible for that.
+  (if (assoc :initiator details)
+      (record-history-maybe buffer (assoc-value details :url))
+      (setf (history-entry buffer) nil)))
+
+(define-command web-go-backward
+  :mode web-mode ()
+  (unless
+      (evaluate-javascript-sync
+       (ps:ps
+         (let ((h (ps:chain (js-buffer (current-buffer))
+                            web-contents navigation-history)))
+           (when (ps:chain h (can-go-back))
+             (ps:chain h (go-back))
+             t)))
+       :global)
+    (user-error "Can not go backward.")))
+
+(define-command web-go-forward
+  :mode web-mode ()
+  (unless
+      (evaluate-javascript-sync
+       (ps:ps
+         (let ((h (ps:chain (js-buffer (current-buffer))
+                            web-contents navigation-history)))
+           (when (ps:chain h (can-go-forward))
+             (ps:chain h (go-forward))
+             t)))
+       :global)
+    (user-error "Can not go forward.")))
+
 
 (defmethod revert-buffer-aux ((buffer web-mode))
   (load-url buffer (url buffer)))
@@ -365,7 +384,3 @@
     (let ((query (minibuffer-input buffer)))
       (when (>= (length query) (minimum-search-prefix buffer))
         (update-web-search query t)))))
-
-;;; Mode hooks
-
-(pushnew 'undo-mode (hooks 'web-mode))
