@@ -207,10 +207,11 @@ If nil, disable message logging. If t, log messages but don't truncate
                        (guard-fn (constantly t))
                        (handlers-p t)
                        (run-command-fn #'run-command))
-  (when *use-neomacs-debugger*
-    (trivial-custom-debugger:install-debugger
-     #'neomacs-debugger-hook)
-    (setup-stream-indirection))
+  (unless recursive-p
+    (when *use-neomacs-debugger*
+     (trivial-custom-debugger:install-debugger
+      #'neomacs-debugger-hook)
+     (setup-stream-indirection)))
   (let (*this-command-keys*)
     (iter (for data = (sb-concurrency:receive-message *event-queue*))
       (until (eql data 'quit))
