@@ -29,17 +29,18 @@
       (set-hint-element-style hint-element hinted-element))
     hint-element)
 
-  (defun hint-label (i label-length)
+  (defun hint-label (i label-length chars)
     (ps:chain
-     i (to-string 26) (split "")
+     i (to-string (ps:chain chars length)) (split "")
      (map (lambda (char)
             (let ((code (ps:chain char (char-code-at 0))))
-              (ps:chain *string (from-char-code
-                                 (+ code
-                                    (if (< code 97)
-                                        49 10)))))))
+              (ps:chain chars (char-at
+                               (- code
+                                  (if (< code 97)
+                                      48 87)))))))
      (join "")
-     (pad-start label-length "a")))
+     (pad-start label-length
+                (ps:chain chars (char-at 0)))))
 
   (defun element-in-view-port-p (element)
     (let* ((rect (ps:chain element (get-bounding-client-rect)))
@@ -57,7 +58,7 @@
                (not (= (ps:chain computed-style "display") "none")))
           t nil)))
 
-  (defun hint-elements (css)
+  (defun hint-elements (css chars)
     (let* ((hints-parent (ps:chain document (create-element "div")))
            (shadow (ps:chain hints-parent (attach-shadow (ps:create mode "open"))))
            (candidates
@@ -74,7 +75,7 @@
                                    (ps:chain *math (log 26))))))
            (i 0))
       (dolist (hinted-element candidates)
-        (let ((hint (hint-label i label-length)))
+        (let ((hint (hint-label i label-length chars)))
           (ps:chain hinted-element (set-attribute "neomacs-hint" hint))
           (ps:chain shadow (append-child (create-hint-overlay hinted-element hint)))
           (incf i)))
@@ -106,12 +107,16 @@
   "M-g" 'add-hints
   "M-G" 'add-hints-ctrl)
 
+(defvar *hints-chars* "asdfghjklqwertyuiopzxcvbnm")
+
 (define-command add-hints
   :mode web-mode ()
   "Select visible interactive elements using hints."
   (pushnew 'web-hints (content-scripts (current-buffer)))
   (let ((length (evaluate-javascript-sync
-                 (ps:ps (hint-elements (ps:lisp (cell-ref (css-cell 'web-hints)))))
+                 (ps:ps (hint-elements
+                         (ps:lisp (cell-ref (css-cell 'web-hints)))
+                         "asdfghjkl"))
                  (current-buffer))))
     (enable 'active-web-hint-mode)
     (setf (label-length (current-buffer)) length)))
