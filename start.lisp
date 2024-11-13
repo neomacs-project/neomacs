@@ -15,13 +15,6 @@ the following effect:
   ;; We don't have preemptive quit yet, so we put in those to avoid
   ;; infinite recursion
   (setq *print-level* 50 *print-length* 50)
-  (let ((config-file (uiop:xdg-config-home "neomacs" "init.lisp")))
-    (if (uiop:file-exists-p config-file)
-        (progn
-          (format t "Loading ~a.~%" config-file)
-          (load config-file))
-        (format t "~a not yet exist.~%" config-file)))
-  (load-web-history)
   (unless ceramic.runtime:*releasep*
     (ceramic:setup)
     (copy-directory:copy
@@ -54,7 +47,14 @@ Try the following workaround:
   (mount-asset "user" (uiop:xdg-config-home "neomacs/assets/"))
   (setf *current-frame-root* (make-frame-root (make-scratch))
         *use-neomacs-debugger* use-neomacs-debugger)
-  (start-command-loop))
+  (start-command-loop)
+  (let ((config-file (uiop:xdg-config-home "neomacs" "init.lisp")))
+    (if (uiop:file-exists-p config-file)
+        (progn
+          (format t "Loading ~a.~%" config-file)
+          (load config-file))
+        (format t "~a not yet exist.~%" config-file)))
+  (load-web-history))
 
 (in-package #:ceramic-entry)
 

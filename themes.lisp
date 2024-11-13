@@ -75,10 +75,6 @@ BINDINGS are passed as arguments to `set-style' to apply the theme."
   'frame-buffer-focus
   `(:outline "solid 1px rgb(120,160,190,0.4)")
   :native-theme "dark"
-
-  ;; Fonts
-  'common
-  `((:import (url "https://fonts.cdnfonts.com/css/space-mono")))
   'default
   `(:font-family "Space Mono"
     :font-variant-ligatures "none"
@@ -201,8 +197,6 @@ BINDINGS are passed as arguments to `set-style' to apply the theme."
     :background-image (:url "data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3cline x1='0' y1='0' x2='100%25' y2='0' stroke='%23777' stroke-width='1' stroke-dasharray='7%2c 7' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e"))
   'frame-buffer-focus
   `(:outline "solid 1px #777")
-  'common
-  `((:import (url "https://fonts.cdnfonts.com/css/space-mono")))
   'default
   `(:font-family "Space Mono"
     :font-variant-ligatures "none"
