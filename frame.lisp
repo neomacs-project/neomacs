@@ -165,26 +165,21 @@ fixed in future Electron, our logic may be simplified."
 (defun current-buffer ()
   (or *current-buffer* (focused-buffer)))
 
-(defun init-frame-root (init-buffer)
-  (let* ((root (document-root (current-buffer)))
+(defmethod revert-buffer-aux ((buffer frame-root-mode))
+  (let* ((root (document-root buffer))
          (split (make-element "div" :class "horizontal")))
     (insert-nodes (end-pos root) split)
     (insert-nodes (end-pos split)
-                  (make-window-decoration
-                   (echo-area (current-buffer))))
+                  (make-window-decoration (echo-area buffer)))
     (insert-nodes (pos-down split)
                   (make-window-decoration
-                   init-buffer))
+                   (replacement-buffer nil)))
     (setf (pos (focus)) (pos-down split))))
 
-(defun make-frame-root (init-buffer)
-  (lret ((buffer (make-buffer " *frame-root*" :styles nil)))
-    (with-current-buffer buffer
-      ;; FIXME: If I move (enable 'frame-root-mode) into (make-buffer
-      ;; ... :mode 'frame-root-mode), it stops working.
-      ;; Figure out why.
-      (enable 'frame-root-mode)
-      (init-frame-root init-buffer))))
+(defun make-frame-root ()
+  (make-buffer " *frame-root*"
+               :mode 'frame-root-mode
+               :styles nil :revert t))
 
 (define-command other-window ()
   "Focus another buffer in cyclic order in current frame."
@@ -315,7 +310,8 @@ fixed in future Electron, our logic may be simplified."
 A replacement buffer has to be alive and not already displayed."
   (let (replacement)
     ;; Try to find any buffer for replacement.
-    (iter (for buf in (all-buffer-list (frame-root buffer)))
+    (iter (for buf in (all-buffer-list
+                       (when buffer (frame-root buffer))))
       (unless (or (frame-root buf)
                   (typep buf 'frame-root-mode))
         (setq replacement buf)

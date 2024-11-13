@@ -52,7 +52,7 @@
 (defvar *buffer-table-lock* (bt:make-recursive-lock))
 
 (define-class buffer (default-mixin)
-  ((id :initform (generate-buffer-id) :type integer)
+  ((id :type integer)
    (name :type string)
    (url :initarg :url :type quri:uri)
    (load-status :initform :loading)
@@ -187,6 +187,8 @@ for which MODE-NAME is being disabled."))
   (bt:with-recursive-lock-held (*buffer-table-lock*)
     (setf (name buffer) (generate-buffer-name name disambiguate)
           (gethash (name buffer) *buffer-name-table*) buffer)
+    (unless (slot-boundp buffer 'id)
+      (setf (slot-value buffer 'id) (generate-buffer-id)))
     (setf (gethash (slot-value buffer 'id) *buffer-table*) buffer))
   (unless (< (slot-value buffer 'id) 0)
     (cera.d:js cera.d:*driver*
