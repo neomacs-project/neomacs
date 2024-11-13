@@ -45,7 +45,7 @@ Try the following workaround:
   (ceramic:start)
   (mount-asset "sys" (ceramic:resource-directory 'assets))
   (mount-asset "user" (uiop:xdg-config-home "neomacs/assets/"))
-  (setf *current-frame-root* (make-frame-root)
+  (setf *current-frame-root* (make-frame)
         *use-neomacs-debugger* use-neomacs-debugger)
   (start-command-loop)
   (let ((config-file (uiop:xdg-config-home "neomacs" "init.lisp")))

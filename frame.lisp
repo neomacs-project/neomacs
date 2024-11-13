@@ -151,6 +151,7 @@ fixed in future Electron, our logic may be simplified."
   (evaluate-javascript
    (ps:ps (ps:chain -ceramic (close-frame (ps:lisp (id (current-buffer))))))
    :global)
+  (setf (frame-root (echo-area buffer)) nil)
   (delete-buffer (echo-area buffer)))
 
 (defmethod selectable-p-aux ((buffer frame-root-mode) pos)
@@ -165,7 +166,7 @@ fixed in future Electron, our logic may be simplified."
 (defun current-buffer ()
   (or *current-buffer* (focused-buffer)))
 
-(defmethod revert-buffer-aux ((buffer frame-root-mode))
+(defun init-frame-root (buffer init-buffer)
   (let* ((root (document-root buffer))
          (split (make-element "div" :class "horizontal")))
     (insert-nodes (end-pos root) split)
@@ -173,13 +174,22 @@ fixed in future Electron, our logic may be simplified."
                   (make-window-decoration (echo-area buffer)))
     (insert-nodes (pos-down split)
                   (make-window-decoration
-                   (replacement-buffer nil)))
+                   (or init-buffer (replacement-buffer nil))))
     (setf (pos (focus)) (pos-down split))))
 
-(defun make-frame-root ()
+(defmethod revert-buffer-aux ((buffer frame-root-mode))
+  (init-frame-root buffer nil))
+
+(define-command make-frame ()
+  "Create a new Neomacs frame."
   (make-buffer " *frame-root*"
                :mode 'frame-root-mode
                :styles nil :revert t))
+
+(define-command delete-frame
+    (&optional (frame-root (current-frame-root)))
+  "Delete frame managed by FRAME-ROOT, default to currently focused one."
+  (delete-buffer frame-root))
 
 (define-command other-window ()
   "Focus another buffer in cyclic order in current frame."
@@ -197,7 +207,7 @@ fixed in future Electron, our logic may be simplified."
   (check-displayed buffer)
   (with-current-buffer (current-frame-root)
     (erase-buffer)
-    (init-frame-root buffer)))
+    (init-frame-root (current-buffer) buffer)))
 
 (defvar *delay-frame-update-views* nil)
 

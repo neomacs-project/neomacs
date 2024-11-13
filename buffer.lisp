@@ -385,12 +385,12 @@ function does nothing."
   (buffer)
   (cleanup-buffer-display buffer)
   (with-current-buffer buffer
-    (on-delete-buffer buffer)
     (dolist (style (styles buffer))
       (remove-observer (css-cell style) buffer
                        :key (lambda (f) (and (typep f 'update-style)
                                              (slot-value f 'buffer)))))
     (do-dom #'node-cleanup (document-root buffer))
+    (on-delete-buffer buffer)
     (cera.d:js cera.d:*driver*
                (format nil "Ceramic.closeBuffer(~S)" (id buffer)))
     (bt:with-recursive-lock-held (*buffer-table-lock*)
