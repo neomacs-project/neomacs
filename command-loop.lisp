@@ -105,12 +105,10 @@ If nil, disable message logging. If t, log messages but don't truncate
 (defun play-loud-audio (c)
   (if (or (typep c 'quit) (typep c 'user-error))
       (evaluate-javascript
-       (format nil "new Audio(`~a`).play()"
-               (quote-js (asset-url #p"vine-boom.mp3")))
+       "new Audio('neomacs://sys/vine-boom.mp3').play()"
        (current-frame-root))
       (evaluate-javascript
-       (format nil "new Audio(`~a`).play()"
-               (quote-js (asset-url #p"amogus.mp3")))
+       "new Audio('neomacs://sys/amogus.mp3').play()"
        (current-frame-root))))
 
 (defun do-nothing (&rest args)

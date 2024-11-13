@@ -1,8 +1,10 @@
 const electron = require('electron');
-const {app,WebContentsView,BaseWindow,
+const {app,net,WebContentsView,BaseWindow,
        protocol,clipboard,nativeTheme} = electron;
 const WebSocket = require('ws');
 const dialog = require('electron').dialog;
+const { pathToFileURL } = require('url')
+const path = require('node:path')
 
 var Ceramic = {
     dialog: dialog
@@ -125,13 +127,20 @@ app.on('window-all-closed', function() {
 /* Start up */
 
 var Contents = {};
+var Mounts = {};
 
 app.on('ready', function() {
     // Start the WebSockets server
     Ceramic.startWebSockets(process.argv[2],
                             parseInt(process.argv[3]));
     protocol.handle('neomacs', (req) => {
-        const content = Contents[req.url];
-        delete Contents[req.url];
-        return new Response(content,{headers: {'content-type': "text/html"}});});
-});
+        const {host, pathname} = new URL(req.url);
+        p = pathname.substring(1);
+        if (host == 'contents'){
+            const content = Contents[p];
+            delete Contents[p];
+            return new Response(content,{headers: {'content-type': "text/html"}});
+        }
+        else{
+            const pathToServe = path.resolve(Mounts[host],p);
+            return net.fetch(pathToFileURL(pathToServe).toString());}});});

@@ -189,12 +189,9 @@ for which MODE-NAME is being disabled."))
     (setf (gethash (slot-value buffer 'id) *buffer-table*) buffer))
   (unless (< (slot-value buffer 'id) 0)
     (cera.d:js cera.d:*driver*
-               (format nil "Ceramic.createBuffer(~S, ~S, ~A);
+               (format nil "Ceramic.createBuffer(~S, ~S, {});
 Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
                        (id buffer) (url buffer)
-                       (if (typep buffer 'web-mode)
-                           "{}"
-                           "{webPreferences:{webSecurity:false}}")
                        (id buffer))))
   (setf (document-root buffer)
         (make-instance 'element :tag-name "body" :host buffer)
@@ -830,10 +827,8 @@ If it is, should signal a condition of type `read-only-error'."))
       :inherit selection))
 
 (defstyle common
-    `((:import (url
-                ,(asset-url #p"space-mono/space-mono.css")))
-      (:import (url
-                ,(asset-url #p"cmu-concrete/cmu-concrete.css")))))
+    `((:import (url "neomacs://sys/space-mono/space-mono.css"))
+      (:import (url "neomacs://sys/cmu-concrete/cmu-concrete.css"))))
 
 (defstyle doc-node `(((:append ".focus-tail::after")
                       :content "  "

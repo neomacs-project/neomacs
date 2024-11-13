@@ -239,13 +239,12 @@ Used to detect modification from other processes before saving."))
    (read-dom-from-file (file-path buffer)))
   (dolist (c (child-nodes (document-root buffer)))
     (do-dom (alex:rcurry #'node-setup buffer) c))
-  (let ((internal-url (format nil "neomacs:~a" (id buffer))))
-    (evaluate-javascript
-     (ps:ps
-       (setf (ps:getprop -contents (ps:lisp internal-url))
-             (ps:lisp (serialize (document-root buffer) nil))))
-     :global)
-    (load-url buffer internal-url))
+  (evaluate-javascript
+   (format nil "Contents[~s]=`~a`"
+           (id buffer)
+           (serialize (document-root buffer) nil))
+   :global)
+  (load-url buffer (format nil "neomacs://contents/~a" (id buffer)))
   (setf (modified buffer) nil
         (modtime buffer)
         (osicat-posix:stat-mtime

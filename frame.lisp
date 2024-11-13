@@ -600,7 +600,7 @@ This sets up: `*standard-output*', `*standard-input*',
       :inherit default
       :background-size "cover"
       :background-image
-               (url ,(asset-url #p"okumono-sf35.png"))))
+               (url "neomacs://sys/okumono-sf35.png")))
 
 (defstyle frame-buffer
     `(:flex "1 0 1em"

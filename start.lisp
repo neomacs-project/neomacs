@@ -31,6 +31,12 @@ the following effect:
                        (ceramic.file:release-directory)
                        :operating-system ceramic.os:*operating-system*))))
   (ceramic:start)
+  (evaluate-javascript
+   (format nil "Mounts['sys']=`~a`"
+           (quote-js
+            (uiop:native-namestring
+             (ceramic:resource-directory 'assets))))
+   :global)
   (setf *current-frame-root* (make-frame-root (make-scratch))
         *use-neomacs-debugger* use-neomacs-debugger)
   (start-command-loop))
