@@ -219,7 +219,7 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
       (revert-buffer))))
 
 (defgeneric on-post-command (buffer)
-  (:method-combination progn)
+  (:method-combination progn :most-specific-last)
   (:method progn ((buffer buffer))
     (iter (for saved = (post-command-thunks buffer))
       (while saved)
@@ -260,7 +260,7 @@ changed."
   `(ps:getprop (ps:chain -ceramic buffers) (ps:lisp (id ,buffer))))
 
 (defgeneric on-buffer-dom-ready (buffer)
-  (:method-combination progn)
+  (:method-combination progn :most-specific-last)
   (:method progn ((buffer buffer))
     (let ((marker (focus-marker buffer)))
       (setf (pos marker) (pos marker)))
@@ -274,7 +274,7 @@ changed."
        :global))))
 
 (defgeneric on-buffer-loaded (buffer url err)
-  (:method-combination progn)
+  (:method-combination progn :most-specific-last)
   (:method progn ((buffer buffer) (url t) (err t)))
   (:method :around ((buffer buffer) (url t) err)
     (when err
@@ -293,21 +293,26 @@ This is invoked both when load succeeded or failed. When load
 succeeded, ERR is nil."))
 
 (defgeneric on-buffer-title-updated (buffer title)
-  (:method-combination progn)
+  (:method-combination progn :most-specific-last)
   (:method progn ((buffer buffer) (title t))))
 
 (defgeneric on-buffer-did-start-navigation (buffer details)
-  (:method-combination progn)
+  (:method-combination progn :most-specific-last)
   (:method progn ((buffer buffer) (details t))))
 
 (defgeneric on-delete-buffer (buffer)
-  (:method-combination progn)
-  (:method progn ((buffer buffer)))
+  (:method-combination progn :most-specific-last)
+  (:method progn ((buffer buffer))
+    (dolist (style (styles buffer))
+      (remove-observer (css-cell style) buffer
+                       :key (lambda (f) (and (typep f 'update-style)
+                                             (slot-value f 'buffer)))))
+    (do-dom #'node-cleanup (document-root buffer)))
   (:documentation
    "Run when BUFFER is about to be deleted."))
 
 (defgeneric on-node-setup (buffer node)
-  (:method-combination progn)
+  (:method-combination progn :most-specific-last)
   (:method progn ((buffer buffer) (node t)))
   (:documentation
    "Run some action when NODE is inserted into BUFFER.
@@ -333,7 +338,7 @@ actually inserted. This runs before `on-node-setup', so that if an
 This runs only when NODE is an element (i.e. not a text node)."))
 
 (defgeneric on-focus-move (buffer saved new)
-  (:method-combination progn)
+  (:method-combination progn :most-specific-last)
   (:method progn ((buffer buffer) (saved t) (new t)))
   (:documentation
    "Run when BUFFER's focus is moved from SAVED to NEW."))
@@ -385,11 +390,6 @@ function does nothing."
   (buffer)
   (cleanup-buffer-display buffer)
   (with-current-buffer buffer
-    (dolist (style (styles buffer))
-      (remove-observer (css-cell style) buffer
-                       :key (lambda (f) (and (typep f 'update-style)
-                                             (slot-value f 'buffer)))))
-    (do-dom #'node-cleanup (document-root buffer))
     (on-delete-buffer buffer)
     (cera.d:js cera.d:*driver*
                (format nil "Ceramic.closeBuffer(~S)" (id buffer)))
