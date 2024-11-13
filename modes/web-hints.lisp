@@ -72,7 +72,7 @@
            (label-length (ps:chain
                           *math
                           (ceil (/ (ps:chain *math (log (ps:chain candidates length)))
-                                   (ps:chain *math (log 26))))))
+                                   (ps:chain *math (log (ps:chain chars length)))))))
            (i 0))
       (dolist (hinted-element candidates)
         (let ((hint (hint-label i label-length chars)))
@@ -116,7 +116,7 @@
   (let ((length (evaluate-javascript-sync
                  (ps:ps (hint-elements
                          (ps:lisp (cell-ref (css-cell 'web-hints)))
-                         "asdfghjkl"))
+                         (ps:lisp *hints-chars*)))
                  (current-buffer))))
     (enable 'active-web-hint-mode)
     (setf (label-length (current-buffer)) length)))
