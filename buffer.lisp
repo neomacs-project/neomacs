@@ -17,7 +17,8 @@
     window-decoration frame-root
     window-decoration-aux update-window-decoration-field
     load-url with-amalgamate-js
-    user-error not-supported with-demoted-errors
+    user-error simple-user-error
+    not-supported with-demoted-errors
     read-only-error element-read-only-error
     *inhibit-read-only* check-read-only
     define-content-script))
@@ -658,13 +659,18 @@ WIDTH and HEIGHT are numbers in pixels."
 
 ;;; User error
 
-(define-condition user-error (error)
-  ((message :initform nil :initarg :message))
+(define-condition user-error (error) ()
   (:report
    (lambda (c stream)
-     (if-let (message (slot-value c 'message))
-       (write-string message stream)
-       (write-string "User error" stream)))))
+     (declare (ignore c))
+     (write-string "User error" stream))))
+
+(define-condition simple-user-error (user-error)
+  ((message :initform (alex:required-argument :message)
+            :initarg :message))
+  (:report
+   (lambda (c stream)
+     (write-string (slot-value c 'message) stream))))
 
 (define-condition not-supported (user-error)
   ((buffer :initarg :buffer)
@@ -691,7 +697,7 @@ WIDTH and HEIGHT are numbers in pixels."
 ;;; Read-only state
 
 (defun user-error (control-string &rest format-arguments)
-  (signal 'user-error
+  (signal 'simple-user-error
           :message (apply #'format nil control-string format-arguments)))
 
 (define-condition read-only-error (user-error)
