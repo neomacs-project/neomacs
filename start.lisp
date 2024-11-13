@@ -23,7 +23,13 @@ the following effect:
         (format t "~a not yet exist.~%" config-file)))
   (load-web-history)
   (unless ceramic.runtime:*releasep*
-    (ceramic:setup))
+    (ceramic:setup)
+    (copy-directory:copy
+     (asdf:system-relative-pathname "neomacs" "assets/")
+     (merge-pathnames #p"assets/"
+                      (electron-tools:app-directory
+                       (ceramic.file:release-directory)
+                       :operating-system ceramic.os:*operating-system*))))
   (ceramic:start)
   (setf *current-frame-root* (make-frame-root (make-scratch))
         *use-neomacs-debugger* use-neomacs-debugger)

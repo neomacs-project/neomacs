@@ -701,10 +701,40 @@ Highlight compiler notes."
       (pop form-path)
       (find-node-for-form-path tlf form-path))))
 
+(defvar *relocated-source-list*
+  #.(cons 'list
+          (mapcar #'uiop:truenamize
+                  '(#P"~/quicklisp/dists/ultralisp/software/"
+                    #P"~/quicklisp/dists/quicklisp/software/"
+                    #P"~/quicklisp/local-projects/"))))
+
+(defun translate-relocated-source (pathname from-list to)
+  (iter (for from in from-list)
+    (multiple-value-bind (p rest)
+        (alex:starts-with-subseq
+         (pathname-directory from)
+         (pathname-directory pathname)
+         :test 'equal :return-suffix t)
+      (when p
+        (return (make-pathname
+                 :directory
+                 (append (pathname-directory to) rest)
+                 :defaults pathname))))
+    (finally (return pathname))))
+
 (defun visit-source (pathname tlf-number form-number plist)
   (with-current-buffer
       (or (get-buffer (getf plist :neomacs-buffer))
-          (when (and pathname (uiop:file-exists-p pathname))
+          (when pathname
+            (or (uiop:file-exists-p pathname)
+                (when ceramic.runtime:*releasep*
+                  (setq pathname
+                        (translate-relocated-source
+                         pathname *relocated-source-list*
+                         (ceramic.runtime:executable-relative-pathname
+                          #P"src/")))
+                  (uiop:file-exists-p pathname))
+                (user-error "~a does not exist!" pathname))
             (find-file pathname))
           (user-error "Unknown source location"))
     (setf (pos (focus))
@@ -775,18 +805,20 @@ sb-introspect:definition-source)'."
 (define-command goto-definition
   :mode lisp-mode ()
   "Goto definition of symbol under focus."
-  (when-let (node (symbol-around (focus)))
+  (if-let (node (symbol-around (focus)))
     (let ((name (nth-value 1 (parse-prefix (text-content node)))))
       (when (> (length name) 0)
-        (when-let (symbol (find-symbol (string-upcase name)
-                                       (current-package)))
-          (let ((definitions (find-definitions symbol)))
-            (if (= (length definitions) 1)
-                (visit-definition (cadr (car definitions)))
-                (pop-to-buffer
-                 (make-buffer
-                  "*xref*" :mode 'xref-list-mode
-                           :symbol symbol :revert t)))))))))
+        (let ((*package* (current-package)))
+          (if-let (symbol (swank::parse-symbol name (current-package)))
+            (let ((definitions (find-definitions symbol)))
+              (if (= (length definitions) 1)
+                  (visit-definition (cadr (car definitions)))
+                  (pop-to-buffer
+                   (make-buffer
+                    "*xref*" :mode 'xref-list-mode
+                             :symbol symbol :revert t))))
+            (user-error "No symbol named ~a" name)))))
+    (user-error "No symbol under focus")))
 
 ;;; Auto-completion
 

@@ -189,9 +189,12 @@ for which MODE-NAME is being disabled."))
     (setf (gethash (slot-value buffer 'id) *buffer-table*) buffer))
   (unless (< (slot-value buffer 'id) 0)
     (cera.d:js cera.d:*driver*
-               (format nil "Ceramic.createBuffer(~S, ~S, {});
+               (format nil "Ceramic.createBuffer(~S, ~S, ~A);
 Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
                        (id buffer) (url buffer)
+                       (if (typep buffer 'web-mode)
+                           "{}"
+                           "{webPreferences:{webSecurity:false}}")
                        (id buffer))))
   (setf (document-root buffer)
         (make-instance 'element :tag-name "body" :host buffer)
@@ -827,13 +830,10 @@ If it is, should signal a condition of type `read-only-error'."))
       :inherit selection))
 
 (defstyle common
-    `((:import (url "https://fonts.googleapis.com/css2?family=Yomogi&display=swap"))
-      ;; (:import (url "https://lalten.github.io/lmweb/style/latinmodern-sans.css"))
-      (:import (url "https://fonts.cdnfonts.com/css/cmu-concrete"))
-      ;; (:import (url "https://cdn.jsdelivr.net/npm/@fontsource/cascadia-code@4.2.1/index.min.css"))
-      ;; (:import (url "https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"))
-      ;; (:import (url "https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"))
-      ))
+    `((:import (url
+                ,(asset-url #p"space-mono/space-mono.css")))
+      (:import (url
+                ,(asset-url #p"cmu-concrete/cmu-concrete.css")))))
 
 (defstyle doc-node `(((:append ".focus-tail::after")
                       :content "  "

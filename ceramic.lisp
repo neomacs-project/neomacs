@@ -9,6 +9,13 @@
                            (ppcre:regex-replace-all "\\\\(?!\")" js-code "\\\\\\\\")
                            "\\\\`"))
 
+(defun asset-url (relative-pathname)
+  (str:concat
+   "file://"
+   (uiop:native-namestring
+    (ceramic:resource
+     'assets relative-pathname))))
+
 (defvar *force-sync-evaluate* nil)
 
 (defun send-js-for-buffer (code buffer)
@@ -66,6 +73,9 @@ BUFFER is NIL."
                 (assoc-value data :result))
           (bt2:condition-broadcast cera.d::js-cond))
         (sb-concurrency:send-message *event-queue* data)))))
+
+(ceramic.resource:define-resources :neomacs ()
+  (assets #p"assets/"))
 
 (define-command kill-neomacs ()
   "Exit Neomacs."

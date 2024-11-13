@@ -1,0 +1,4 @@
+@font-face{font-family:space mono;font-style:normal;font-weight:400;src:local('Space Mono'),url(SpaceMono-Regular.ttf) format('truetype')}
+@font-face{font-family:space mono;font-style:italic;font-weight:400;src:local('Space Mono'),url(SpaceMono-Italic.ttf) format('truetype')}
+@font-face{font-family:space mono;font-style:normal;font-weight:700;src:local('Space Mono'),url(SpaceMono-Bold.ttf) format('truetype')}
+@font-face{font-family:space mono;font-style:italic;font-weight:700;src:local('Space Mono'),url(SpaceMono-BoldItalic.ttf) format('truetype')}

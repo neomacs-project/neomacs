@@ -599,7 +599,8 @@ This sets up: `*standard-output*', `*standard-input*',
       :margin 0
       :inherit default
       :background-size "cover"
-      :background-image "url(https://sozaino.site/wp-content/uploads/2021/08/sf35.png)"))
+      :background-image
+               (url ,(asset-url #p"okumono-sf35.png"))))
 
 (defstyle frame-buffer
     `(:flex "1 0 1em"
