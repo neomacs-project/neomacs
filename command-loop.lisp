@@ -200,6 +200,9 @@ If nil, disable message logging. If t, log messages but don't truncate
                                :id (assoc-value event :new-id)
                                :url (assoc-value event :url)
                                :styles nil)))
+          ((equal type "frame-closed")
+           (when buffer
+             (delete-buffer buffer)))
           ((eq type 'debug-request)
            (debug-for-environment
             (assoc-value event :environment)

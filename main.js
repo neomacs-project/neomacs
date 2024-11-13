@@ -62,12 +62,15 @@ Ceramic.buffers = {};
 Ceramic.createFrame = function(id, options) {
     var win = new BaseWindow(options);
     Ceramic.frames[id] = win;
+    win.on('closed',()=>{
+        RemoteJS.send(JSON.stringify({inputEvent: {type:'frame-closed'}, buffer: id}))})
     return win;
 };
 
 Ceramic.closeFrame = function(id) {
-    Ceramic.frames[id].close()
-    Ceramic.frames[id] = null;
+    const win = Ceramic.frames[id];
+    if(!win.isDestroyed()) win.close();
+    delete Ceramic.frames[id];
 };
 
 Ceramic.generateBufferId = function (){

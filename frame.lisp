@@ -148,6 +148,10 @@ fixed in future Electron, our logic may be simplified."
          :global))))
 
 (defmethod on-delete-buffer progn ((buffer frame-root-mode))
+  (when (eql *current-frame-root* buffer)
+    (setf *current-frame-root*
+          (find-if (alex:rcurry #'typep 'frame-root-mode)
+                   (remove buffer (all-buffer-list nil)))))
   (evaluate-javascript
    (ps:ps (ps:chain -ceramic (close-frame (ps:lisp (id (current-buffer))))))
    :global)
