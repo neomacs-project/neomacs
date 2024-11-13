@@ -3,11 +3,19 @@
 (sera:export-always
     '(evaluate-javascript evaluate-javascript-sync))
 
-(defun quote-js (js-code)
-  "Replace each backslash with 2 (unless a \" follows it) and escape backquotes."
-  (ppcre:regex-replace-all "`"
-                           (ppcre:regex-replace-all "\\\\(?!\")" js-code "\\\\\\\\")
-                           "\\\\`"))
+(defun quote-js (string)
+  (with-output-to-string (s)
+    (loop for char across string do
+      (sera:cond-let it
+        ((getf ps::*js-lisp-escaped-chars* char)
+         (write-char #\\ s)
+         (write-char it s))
+        ((or (<= (char-code char) #x1F)
+             (<= #x80 (char-code char) #x9F)
+             (member (char-code char) '(#xA0 #xAD #x200B #x200C)))
+         (format s "\\u~:@(~4,'0x~)" (char-code char)))
+        (t
+         (write-char char s))))))
 
 (defun asset-url (relative-pathname)
   (str:concat
@@ -21,7 +29,7 @@
 (defun send-js-for-buffer (code buffer)
   (cera.d:js
    cera.d:*driver*
-   (format nil "Ceramic.buffers[~S].webContents.executeJavaScript(`~A`,true)" (id buffer) (quote-js code))))
+   (format nil "Ceramic.buffers[~S].webContents.executeJavaScript('~A',true)" (id buffer) (quote-js code))))
 
 (sera:-> evaluate-javascript (string (or buffer (eql :global))) null)
 (defun evaluate-javascript (code buffer)
@@ -52,9 +60,9 @@ BUFFER is NIL."
    cera.d:*driver*
    (etypecase buffer
      (buffer
-      (format nil "return Ceramic.buffers[~S].webContents.executeJavaScript(`~A`,true)" (id buffer) (quote-js code)))
+      (format nil "return Ceramic.buffers[~S].webContents.executeJavaScript('~A',true)" (id buffer) (quote-js code)))
      ((eql :global)
-      (format nil "return eval(`~A`)" (quote-js code))))))
+      (format nil "return eval('~A')" (quote-js code))))))
 
 (defclass driver (ceramic.driver:driver) ())
 
@@ -76,6 +84,21 @@ BUFFER is NIL."
 
 (ceramic.resource:define-resources :neomacs ()
   (assets #p"assets/"))
+
+(defun ceramic.runtime:executable-relative-pathname (pathname)
+  "Return an absolute pathname relative to the executable pathname."
+  (merge-pathnames pathname
+                   (make-pathname
+                    :name nil :type nil :version nil
+                    :defaults
+                    (ceramic.runtime:executable-pathname))))
+
+(defun mount-asset (host path)
+  "Mount files under PATH to neomacs://HOST/."
+  (evaluate-javascript
+   (format nil "Mounts[~s]='~a'"
+           host (quote-js (uiop:native-namestring path)))
+   :global))
 
 (define-command kill-neomacs ()
   "Exit Neomacs."

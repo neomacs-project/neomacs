@@ -240,9 +240,9 @@ Used to detect modification from other processes before saving."))
   (dolist (c (child-nodes (document-root buffer)))
     (do-dom (alex:rcurry #'node-setup buffer) c))
   (evaluate-javascript
-   (format nil "Contents[~s]=`~a`"
+   (format nil "Contents[~s]='~a'"
            (id buffer)
-           (serialize (document-root buffer) nil))
+           (quote-js (serialize (document-root buffer) nil)))
    :global)
   (load-url buffer (format nil "neomacs://contents/~a" (id buffer)))
   (setf (modified buffer) nil

@@ -30,13 +30,28 @@ the following effect:
                       (electron-tools:app-directory
                        (ceramic.file:release-directory)
                        :operating-system ceramic.os:*operating-system*))))
+  (when ceramic.runtime:*releasep*
+    (setf (logical-pathname-translations "sys")
+          `(("SYS:SRC;**;*.*.*"
+             ,(ceramic.runtime:executable-relative-pathname
+               #P"src/sbcl/src/**/*.*"))
+            ("SYS:CONTRIB;**;*.*.*"
+             ,(ceramic.runtime:executable-relative-pathname
+               #P"src/sbcl/contrib/**/*.*"))
+            ("SYS:OUTPUT;**;*.*.*"
+             ,(ceramic.runtime:executable-relative-pathname
+               #P"src/sbcl/output/**/*.*")))))
+  (write-string "!!! If Electron does't start up, it is likely that chrome-sandbox failed
+!!! to start due to permission errors.
+
+Try the following workaround:
+1. sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+2. sudo sysctl kernel.unprivileged_userns_clone=1
+3. sudo chown root electron/chrome-sandbox && sudo chmod 4755 electron/chrome-sandbox
+")
   (ceramic:start)
-  (evaluate-javascript
-   (format nil "Mounts['sys']=`~a`"
-           (quote-js
-            (uiop:native-namestring
-             (ceramic:resource-directory 'assets))))
-   :global)
+  (mount-asset "sys" (ceramic:resource-directory 'assets))
+  (mount-asset "user" (uiop:xdg-config-home "neomacs/assets/"))
   (setf *current-frame-root* (make-frame-root (make-scratch))
         *use-neomacs-debugger* use-neomacs-debugger)
   (start-command-loop))
