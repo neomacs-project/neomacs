@@ -663,7 +663,12 @@ WIDTH and HEIGHT are numbers in pixels."
   (:report
    (lambda (c stream)
      (declare (ignore c))
-     (write-string "User error" stream))))
+     (write-string "User error" stream)))
+  (:documentation
+   "A user generated error.
+
+This is normally treated the same as a `quit' condition and does not
+drop into Neomacs debugger."))
 
 (define-condition simple-user-error (user-error)
   ((message :initform (alex:required-argument :message)
@@ -685,20 +690,26 @@ WIDTH and HEIGHT are numbers in pixels."
   (signal 'not-supported :buffer buffer :operation operation))
 
 (defmacro with-demoted-errors (prompt &body body)
+  "Run BODY and demote any error to simple messages.
+Error messages are prepended with PROMPT.
+
+If `*debug-on-error*' is t, run BODY without catching its errors."
   `(block nil
      (handler-bind
          ((error
             (lambda (c)
               (unless *debug-on-error*
-                (message "~a:~%~a" ,prompt c)
+                (message "~a: ~a" ,prompt c)
                 (return)))))
-         ,@body)))
-
-;;; Read-only state
+       ,@body)))
 
 (defun user-error (control-string &rest format-arguments)
+  "Signal a `simple-user-error' with messages formatted from
+CONTROL-STRING and FORMAT-ARGUMENT."
   (signal 'simple-user-error
           :message (apply #'format nil control-string format-arguments)))
+
+;;; Read-only state
 
 (define-condition read-only-error (user-error)
   ((buffer :initarg :buffer))
