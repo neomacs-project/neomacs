@@ -430,15 +430,13 @@ JSON should have the format like what `+get-body-json-code+' produces:
                     "window-management" "syntax")))
     (with-current-buffer
         (find-file-no-select
-         (asdf:system-relative-pathname
-          "neomacs" "doc/build/toc.html"))
+         (ceramic:resource 'doc "build/toc.html"))
       (erase-buffer)
       (let ((*dom-output*
               (make-element "ol")))
         (iter (for section in sections)
-          (for file = (asdf:system-relative-pathname
-                       "neomacs"
-                       (str:concat "doc/" section ".html")))
+          (for file = (ceramic:resource
+                       'doc (make-pathname :name section :type "html")))
           (for href = (str:concat section ".html"))
           (let ((*dom-output* (append-child
                                *dom-output*
@@ -470,8 +468,7 @@ JSON should have the format like what `+get-body-json-code+' produces:
 (define-command manual ()
   "View Neomacs manual."
   (let ((toc-path
-          (asdf:system-relative-pathname
-           "neomacs" "doc/build/toc.html")))
+          (ceramic:resource 'doc "build/toc.html")))
     (unless (uiop:file-exists-p toc-path)
       (if (read-yes-or-no "Manual seems not built yet, build now? ")
           (build-manual)

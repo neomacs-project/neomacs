@@ -147,7 +147,7 @@ If nil, disable message logging. If t, log messages but don't truncate
 (defun handle-event (buffer event run-command-fn)
   (let ((type (assoc-value event :type)))
     (cond ((equal type "keyDown")
-           (if-let (frame-root (frame-root buffer))
+           (if-let (frame-root (and buffer (frame-root buffer)))
              (setf *current-frame-root* frame-root)
              (warn "~a get Electron focus but does not a frame root" buffer))
            (unless (eql (focused-buffer) buffer)

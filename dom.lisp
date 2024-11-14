@@ -114,23 +114,27 @@ ELEMENT as a single argument."
   (cell-set-function (attribute-cell element attribute)
                      (lambda () (funcall function element))))
 
+(defvar *inhibit-attribute-update* nil
+  "Inhibit pushing attribute changes to renderer.")
+
 (defun add-attribute-observer (cell node attribute)
   "Add an observer to CELL,
 which ensures renderer side ATTRIBUTE of NODE matches value of CELL.
 If ATTRIBUTE is not a string, this is a no-op."
   (labels ((update (cell)
-             (when-let (host (host node))
-               (let ((value (cell-ref cell)))
-                 (evaluate-javascript
-                  (if value
-                      (ps:ps
-                        (ps:chain (js-node-1 node)
-                                  (set-attribute (ps:lisp attribute)
-                                                 (ps:lisp value))))
-                      (ps:ps
-                        (ps:chain (js-node-1 node)
-                                  (remove-attribute (ps:lisp attribute)))))
-                  host)))))
+             (unless *inhibit-attribute-update*
+               (when-let (host (host node))
+                 (let ((value (cell-ref cell)))
+                   (evaluate-javascript
+                    (if value
+                        (ps:ps
+                          (ps:chain (js-node-1 node)
+                                    (set-attribute (ps:lisp attribute)
+                                                   (ps:lisp value))))
+                        (ps:ps
+                          (ps:chain (js-node-1 node)
+                                    (remove-attribute (ps:lisp attribute)))))
+                    host))))))
     (when (stringp attribute)
       (add-observer cell #'update))
     cell))

@@ -1,4 +1,3 @@
-
 (asdf:defsystem neomacs
   :version "0.0.1"
   :author "Qiantan Hong <qhong@alum.mit.edu>"
@@ -61,3 +60,13 @@
                :cl-tld
                :swank
                :swank/exts))
+
+(asdf:defsystem neomacs/app
+  :defsystem-depends-on (:deploy)
+  :depends-on (:neomacs)
+  :build-operation "deploy-op"
+  :build-pathname "neomacs"
+  :entry-point "ceramic-entry::neomacs"
+  :serial t
+  :components ((:file "asdf-bundler")
+               (:file "deploy")))

@@ -234,11 +234,12 @@ Used to detect modification from other processes before saving."))
   ;; just updates Lisp side DOM, and serialize it as a static HTML
   ;; then serve to renderer. This is much better than renderer-side
   ;; DOM manipulation for larger files.
-  (append-children
-   (document-root buffer)
-   (read-dom-from-file (file-path buffer)))
-  (dolist (c (child-nodes (document-root buffer)))
-    (do-dom (alex:rcurry #'node-setup buffer) c))
+  (let ((*inhibit-attribute-update* t))
+    (append-children
+     (document-root buffer)
+     (read-dom-from-file (file-path buffer)))
+   (dolist (c (child-nodes (document-root buffer)))
+     (do-dom (alex:rcurry #'node-setup buffer) c)))
   (evaluate-javascript
    (format nil "Contents[~s]='~a'"
            (id buffer)

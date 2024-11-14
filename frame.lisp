@@ -319,7 +319,10 @@ fixed in future Electron, our logic may be simplified."
   :interactive (lambda () (list t)) (&optional focus)
   (lret ((buffer (make-buffer
                   "*scratch*" :mode '(lisp-mode file-mode)
-                  :file-path (asdf:system-relative-pathname :neomacs #p"scratch.lisp"))))
+                              :file-path
+                              (if ceramic.runtime:*releasep*
+                                  (ceramic.runtime:executable-relative-pathname #p"src/neomacs/scratch.lisp")
+                                  (asdf:system-relative-pathname :neomacs #p"scratch.lisp")))))
     (with-current-buffer buffer
       (revert-buffer)
       (disable 'file-mode))

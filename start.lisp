@@ -23,13 +23,7 @@ the following effect:
   ;; infinite recursion
   (setq *print-level* 50 *print-length* 50)
   (unless ceramic.runtime:*releasep*
-    (ceramic:setup)
-    (copy-directory:copy
-     (asdf:system-relative-pathname "neomacs" "assets/")
-     (merge-pathnames #p"assets/"
-                      (electron-tools:app-directory
-                       (ceramic.file:release-directory)
-                       :operating-system ceramic.os:*operating-system*))))
+    (ceramic:setup))
   (when ceramic.runtime:*releasep*
     (setf (logical-pathname-translations "sys")
           `(("SYS:SRC;**;*.*.*"

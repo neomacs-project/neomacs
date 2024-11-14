@@ -34,7 +34,7 @@
 
 (defvar *web-history-list* nil)
 
-(defvar *web-history-path* (uiop:xdg-data-home "neomacs" "web-history"))
+(defvar *web-history-path* nil)
 
 (define-class history-entry ()
   ((title :initform nil :initarg :title)
@@ -59,6 +59,8 @@
 (defun load-web-history ()
   (message "Loading web history...")
   (setq *web-history-list* nil)
+  (unless *web-history-path*
+    (setq *web-history-path* (uiop:xdg-data-home "neomacs" "web-history")))
   (ensure-directories-exist *web-history-path*)
   (with-open-file (s *web-history-path*
                      :direction :input
@@ -70,6 +72,8 @@
   (message "Loaded web history."))
 
 (defun save-web-history ()
+  (unless *web-history-path*
+    (setq *web-history-path* (uiop:xdg-data-home "neomacs" "web-history")))
   (ensure-directories-exist *web-history-path*)
   (with-open-file (s *web-history-path*
                      :direction :output
