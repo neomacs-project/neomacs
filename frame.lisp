@@ -1,8 +1,7 @@
 (in-package #:neomacs)
 
 (sera:export-always
-    '(focused-buffer current-frame-root
-      replacement-buffer
+    '(focused-buffer replacement-buffer
       get-message-buffer message))
 
 (defun make-window-decoration (buffer)
@@ -417,11 +416,6 @@ BUFFER must be already displayed."
    (ps:ps (let ((win (js-frame frame-root)))
             (when win (ps:chain win (emit "resize")))))
    :global))
-
-(defvar *current-frame-root* nil)
-
-(defun current-frame-root ()
-  *current-frame-root*)
 
 (defun content-node-buffer (node)
   (gethash (parse-integer (attribute node "buffer")) *buffer-table*))

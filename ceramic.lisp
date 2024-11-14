@@ -1,7 +1,8 @@
 (in-package #:neomacs)
 
 (sera:export-always
-    '(evaluate-javascript evaluate-javascript-sync))
+    '(evaluate-javascript evaluate-javascript-sync
+      quote-js kill-neomacs))
 
 (defun quote-js (string)
   (with-output-to-string (s)
@@ -70,6 +71,8 @@ BUFFER is NIL."
       trivial-ws:+default-timeout+ 1000000
       ceramic.setup::+main-javascript+ (asdf:system-relative-pathname :neomacs #p"main.js")
       ceramic.setup::*electron-version* "33.0.2")
+
+(defvar *event-queue* (sb-concurrency:make-mailbox))
 
 (defmethod ceramic.driver::on-message ((driver driver) message)
   (declare (type string message))

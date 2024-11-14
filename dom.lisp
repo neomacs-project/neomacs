@@ -44,6 +44,33 @@
 (defmethod last-child ((_ null)))
 (defmethod tag-name ((_ null)))
 
+(declaim (inline element-p text-node-p make-element
+                 class-p tag-name-p))
+
+(defun element-p (object)
+  (typep object 'element))
+
+(defun text-node-p (object)
+  (typep object 'text-node))
+
+(ps:defpsmacro js-node (node)
+  (cond ((text-node-p node)
+         (if-let (next (next-sibling node))
+           `(ps:chain (js-node ,next) previous-sibling)
+           `(ps:chain (js-node ,(parent node)) last-child)))
+        ((element-p node)
+         (if (equal (tag-name node) "body")
+             `(ps:chain document body)
+             (let ((id (attribute node "neomacs-identifier")))
+               `(ps:chain document
+                          (query-selector
+                           ,(format nil "[neomacs-identifier='~a']" id))))))
+        ((null node) nil)
+        (t (error "Unknown node type ~a." node))))
+
+(ps:defpsmacro js-node-1 (node)
+  `(ps:lisp `(js-node ,,node)))
+
 (defun attribute-cell (element name)
   (or (gethash name (attributes element))
       (setf (gethash name (attributes element))
@@ -87,26 +114,6 @@ ELEMENT as a single argument."
   (cell-set-function (attribute-cell element attribute)
                      (lambda () (funcall function element))))
 
-(defvar *inhibit-dom-update* nil)
-
-(ps:defpsmacro js-node (node)
-  (cond ((text-node-p node)
-         (if-let (next (next-sibling node))
-           `(ps:chain (js-node ,next) previous-sibling)
-           `(ps:chain (js-node ,(parent node)) last-child)))
-        ((element-p node)
-         (if (equal (tag-name node) "body")
-             `(ps:chain document body)
-             (let ((id (attribute node "neomacs-identifier")))
-               `(ps:chain document
-                          (query-selector
-                           ,(format nil "[neomacs-identifier='~a']" id))))))
-        ((null node) nil)
-        (t (error "Unknown node type ~a." node))))
-
-(ps:defpsmacro js-node-1 (node)
-  `(ps:lisp `(js-node ,,node)))
-
 (defun add-attribute-observer (cell node attribute)
   "Add an observer to CELL,
 which ensures renderer side ATTRIBUTE of NODE matches value of CELL.
@@ -127,15 +134,6 @@ If ATTRIBUTE is not a string, this is a no-op."
     (when (stringp attribute)
       (add-observer cell #'update))
     cell))
-
-(declaim (inline element-p text-node-p make-element
-                 class-p tag-name-p))
-
-(defun element-p (object)
-  (typep object 'element))
-
-(defun text-node-p (object)
-  (typep object 'text-node))
 
 (defun make-element (tag-name &rest attributes &key &allow-other-keys)
   (lret ((element (make-instance 'element :tag-name tag-name)))
@@ -239,7 +237,9 @@ DEEP defaults to T.")
                           then (next-sibling c))
                  (while c)
                  (insert-before n (clone-node c) nil)))))
-  (:method ((node string) &optional deep) node))
+  (:method ((node string) &optional deep)
+    (declare (ignore deep))
+    node))
 
 (defun insert-before (parent new-node reference)
   "Insert NEW-NODE under PARENT before REFERENCE.

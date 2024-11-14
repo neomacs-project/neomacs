@@ -1,5 +1,8 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(start))
+
 (defun start (&optional (use-neomacs-debugger t))
   "Start the Neomacs system.
 

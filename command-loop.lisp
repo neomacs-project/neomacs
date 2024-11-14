@@ -4,7 +4,7 @@
     '(top-level exit-recursive-edit quit
       call-with-current-buffer with-current-buffer
       *last-command* *this-command* *this-command-keys*
-      recursive-edit start-command-loop
+      current-frame-root recursive-edit start-command-loop
       *debug-on-error* *message-log-max*
       *quit-hook* *error-hook*
       play-loud-audio do-nothing))
@@ -75,8 +75,6 @@ non-nil HANDLER-P, which would return and signal a `quit' condition."))
            (on-pre-command buffer)
            (funcall thunk)))))
 
-(defvar *event-queue* (sb-concurrency:make-mailbox))
-
 (defvar *last-command* nil
   "Last command run by command loop.")
 
@@ -127,6 +125,11 @@ If nil, disable message logging. If t, log messages but don't truncate
 (define-command toggle-debug-on-error ()
   (setq *debug-on-error* (not *debug-on-error*))
   (message "Debug on error ~:[disabled~;enabled~]" *debug-on-error*))
+
+(defvar *current-frame-root* nil)
+
+(defun current-frame-root ()
+  *current-frame-root*)
 
 (defun run-command (command)
   (if command
