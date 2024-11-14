@@ -59,15 +59,16 @@ If LENGTH is NIL, move everything after SRC-OFFSET."
   (let ((host (host node))
         (parent (parent node))
         (offset (length (text prev))))
-    (evaluate-javascript
-     (ps:ps
-       (let* ((node (js-node-1 node))
-              (prev (ps:chain node previous-sibling))
-              (parent (js-node-1 parent)))
-         (ps:chain prev (append-data (ps:chain node data)))
-         (ps:chain parent (remove-child node))
-         nil))
-     (host node))
+    (unless *inhibit-dom-update*
+      (evaluate-javascript
+       (ps:ps
+         (let* ((node (js-node-1 node))
+                (prev (ps:chain node previous-sibling))
+                (parent (js-node-1 parent)))
+           (ps:chain prev (append-data (ps:chain node data)))
+           (ps:chain parent (remove-child node))
+           nil))
+       (host node)))
 
     (setf (text prev)
           (sera:concat (text prev) (text node)))
@@ -90,10 +91,11 @@ If LENGTH is NIL, move everything after SRC-OFFSET."
 (defun split-text-node (node offset next)
   (let ((parent (parent node))
         (host (host node)))
-    (evaluate-javascript
-     (ps:ps (ps:chain (js-node-1 node)
-                      (split-text (ps:lisp offset))))
-     (host node))
+    (unless *inhibit-dom-update*
+      (evaluate-javascript
+       (ps:ps (ps:chain (js-node-1 node)
+                        (split-text (ps:lisp offset))))
+       (host node)))
     (insert-before parent next (next-sibling node))
     (psetf (text node) (subseq (text node) 0 offset)
            (text next) (subseq (text node) offset))
@@ -121,21 +123,22 @@ Returns the node after the position after this operation."
     (_ (node-after pos))))
 
 (defun insert-nodes-2 (parent nodes reference)
-  (evaluate-javascript
-   (ps:ps
-     (let* ((parent (js-node-1 parent))
-            (reference (js-node-1 reference))
-            (template (ps:chain document (create-element "template"))))
-       (setf (ps:chain template inner-h-t-m-l)
-             (ps:lisp
-              (with-output-to-string (stream)
-                (dolist (c nodes)
-                  (serialize c stream)))))
-       (ps:chain -array
-                 (from (ps:chain template content child-nodes))
-                 (for-each (lambda (c)
-                             (ps:chain parent (insert-before c reference)))))))
-   (host parent))
+  (unless *inhibit-dom-update*
+    (evaluate-javascript
+     (ps:ps
+       (let* ((parent (js-node-1 parent))
+              (reference (js-node-1 reference))
+              (template (ps:chain document (create-element "template"))))
+         (setf (ps:chain template inner-h-t-m-l)
+               (ps:lisp
+                (with-output-to-string (stream)
+                  (dolist (c nodes)
+                    (serialize c stream)))))
+         (ps:chain -array
+                   (from (ps:chain template content child-nodes))
+                   (for-each (lambda (c)
+                               (ps:chain parent (insert-before c reference)))))))
+     (host parent)))
 
   (dolist (c nodes)
     (insert-before parent c reference))
@@ -217,22 +220,23 @@ THINGS can be DOM nodes or strings, which are converted to text nodes."
 (defun delete-nodes-2 (parent beg end)
   (let ((reference (previous-sibling beg))
         (length (count-nodes-between beg end)))
-    (evaluate-javascript
-     (if reference
-         (ps:ps
-           (let ((parent (js-node-1 parent))
-                 (reference (js-node-1 reference)))
-             (dotimes (_ (ps:lisp length))
-               (ps:chain parent (remove-child
-                                 (ps:chain reference next-sibling))))
-             nil))
-         (ps:ps
-           (let ((parent (js-node-1 parent)))
-             (dotimes (_ (ps:lisp length))
-               (ps:chain parent (remove-child
-                                 (ps:chain parent first-child))))
-             nil)))
-     (host parent))
+    (unless *inhibit-dom-update*
+      (evaluate-javascript
+       (if reference
+           (ps:ps
+             (let ((parent (js-node-1 parent))
+                   (reference (js-node-1 reference)))
+               (dotimes (_ (ps:lisp length))
+                 (ps:chain parent (remove-child
+                                   (ps:chain reference next-sibling))))
+               nil))
+           (ps:ps
+             (let ((parent (js-node-1 parent)))
+               (dotimes (_ (ps:lisp length))
+                 (ps:chain parent (remove-child
+                                   (ps:chain parent first-child))))
+               nil)))
+       (host parent)))
     (let ((nodes
             (iter (for node = (if reference (next-sibling reference)
                                   (first-child parent)))
@@ -352,29 +356,30 @@ starting from BEG till the end of its parent."
   (let ((src-reference (previous-sibling beg))
         (length (count-nodes-between beg end)))
 
-    (evaluate-javascript
-     (if src-reference
-         (ps:ps
-           (let ((src-reference (js-node-1 src-reference))
-                 (dst-parent (js-node-1 dst-parent))
-                 (dst-reference (js-node-1 reference)))
-             (dotimes (_ (ps:lisp length))
-               (ps:chain dst-parent
-                         (insert-before
-                          (ps:chain src-reference next-sibling)
-                          dst-reference)))
-             nil))
-         (ps:ps
-           (let ((src-parent (js-node-1 src-parent))
-                 (dst-parent (js-node-1 dst-parent))
-                 (dst-reference (js-node-1 reference)))
-             (dotimes (_ (ps:lisp length))
-               (ps:chain dst-parent
-                         (insert-before
-                          (ps:chain src-parent first-child)
-                          dst-reference)))
-             nil)))
-     (host dst-parent))
+    (unless *inhibit-dom-update*
+      (evaluate-javascript
+       (if src-reference
+           (ps:ps
+             (let ((src-reference (js-node-1 src-reference))
+                   (dst-parent (js-node-1 dst-parent))
+                   (dst-reference (js-node-1 reference)))
+               (dotimes (_ (ps:lisp length))
+                 (ps:chain dst-parent
+                           (insert-before
+                            (ps:chain src-reference next-sibling)
+                            dst-reference)))
+               nil))
+           (ps:ps
+             (let ((src-parent (js-node-1 src-parent))
+                   (dst-parent (js-node-1 dst-parent))
+                   (dst-reference (js-node-1 reference)))
+               (dotimes (_ (ps:lisp length))
+                 (ps:chain dst-parent
+                           (insert-before
+                            (ps:chain src-parent first-child)
+                            dst-reference)))
+               nil)))
+       (host dst-parent)))
 
     (iter (for node = (if src-reference (next-sibling src-reference)
                           (first-child src-parent)))

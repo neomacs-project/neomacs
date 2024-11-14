@@ -234,7 +234,7 @@ Used to detect modification from other processes before saving."))
   ;; just updates Lisp side DOM, and serialize it as a static HTML
   ;; then serve to renderer. This is much better than renderer-side
   ;; DOM manipulation for larger files.
-  (let ((*inhibit-attribute-update* t))
+  (let ((*inhibit-dom-update* t))
     (append-children
      (document-root buffer)
      (read-dom-from-file (file-path buffer)))

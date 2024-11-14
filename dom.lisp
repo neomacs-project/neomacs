@@ -114,15 +114,15 @@ ELEMENT as a single argument."
   (cell-set-function (attribute-cell element attribute)
                      (lambda () (funcall function element))))
 
-(defvar *inhibit-attribute-update* nil
-  "Inhibit pushing attribute changes to renderer.")
+(defvar *inhibit-dom-update* nil
+  "Inhibit pushing changes to renderer.")
 
 (defun add-attribute-observer (cell node attribute)
   "Add an observer to CELL,
 which ensures renderer side ATTRIBUTE of NODE matches value of CELL.
 If ATTRIBUTE is not a string, this is a no-op."
   (labels ((update (cell)
-             (unless *inhibit-attribute-update*
+             (unless *inhibit-dom-update*
                (when-let (host (host node))
                  (let ((value (cell-ref cell)))
                    (evaluate-javascript
