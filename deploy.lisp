@@ -21,6 +21,8 @@
       :name (pathname-name path)
       :type (pathname-type path)
       :defaults (merge-pathnames #p"src/neomacs/" directory))))
+  (copy-directory:copy (asdf:system-relative-pathname "neomacs" "modes/")
+                       (merge-pathnames #p"src/neomacs/modes/" directory))
   (copy-directory:copy (translate-logical-pathname "sys:src;")
                        (merge-pathnames #p"src/sbcl/src/" directory))
   (copy-directory:copy (translate-logical-pathname "sys:contrib;")
