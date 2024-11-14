@@ -701,7 +701,7 @@ If `*debug-on-error*' is t, run BODY without catching its errors."
          ((error
             (lambda (c)
               (unless *debug-on-error*
-                (message "~a: ~a" ,prompt c)
+                (message "~a~a" ,prompt c)
                 (return)))))
        ,@body)))
 

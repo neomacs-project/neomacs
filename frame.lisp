@@ -152,11 +152,15 @@ fixed in future Electron, our logic may be simplified."
     (setf *current-frame-root*
           (find-if (alex:rcurry #'typep 'frame-root-mode)
                    (remove buffer (all-buffer-list nil)))))
-  (evaluate-javascript
-   (ps:ps (ps:chain -ceramic (close-frame (ps:lisp (id (current-buffer))))))
-   :global)
   (setf (frame-root (echo-area buffer)) nil)
   (delete-buffer (echo-area buffer)))
+
+(defvar *inhibit-electron-update-views* nil
+  "Suppress calls to add/removeChildView in Electron.")
+
+(defmethod on-delete-buffer :around ((buffer frame-root-mode))
+  (let ((*inhibit-electron-update-views* t))
+    (call-next-method)))
 
 (defmethod selectable-p-aux ((buffer frame-root-mode) pos)
   (let ((node (node-after pos)))
@@ -193,7 +197,9 @@ fixed in future Electron, our logic may be simplified."
 (define-command delete-frame
     (&optional (frame-root (current-frame-root)))
   "Delete frame managed by FRAME-ROOT, default to currently focused one."
-  (delete-buffer frame-root))
+  (evaluate-javascript
+   (format nil "Ceramic.closeFrame(~s)" (id frame-root))
+   :global))
 
 (define-command other-window ()
   "Focus another buffer in cyclic order in current frame."
@@ -221,20 +227,22 @@ fixed in future Electron, our logic may be simplified."
 
 (defun add-view (id)
   (when-let (buffer (gethash (parse-integer id) *buffer-table*))
-    (evaluate-javascript
-     (ps:ps (ps:chain (js-frame (current-buffer)) content-view
-                      (add-child-view (ps:getprop (ps:chain -ceramic buffers)
-                                                  (ps:lisp id)))))
-     :global)
+    (unless *inhibit-electron-update-views*
+      (evaluate-javascript
+       (ps:ps (ps:chain (js-frame (current-buffer)) content-view
+                        (add-child-view (ps:getprop (ps:chain -ceramic buffers)
+                                                    (ps:lisp id)))))
+       :global))
     (setf (frame-root buffer) (current-buffer))))
 
 (defun remove-view (id)
   (when-let (buffer (gethash (parse-integer id) *buffer-table*))
-    (evaluate-javascript
-     (ps:ps (ps:chain (js-frame (current-buffer)) content-view
-                      (remove-child-view (ps:getprop (ps:chain -ceramic buffers)
-                                                     (ps:lisp id)))))
-     :global)
+    (unless *inhibit-electron-update-views*
+      (evaluate-javascript
+       (ps:ps (ps:chain (js-frame (current-buffer)) content-view
+                        (remove-child-view (ps:getprop (ps:chain -ceramic buffers)
+                                                       (ps:lisp id)))))
+       :global))
     (setf (window-decoration buffer) nil
           (frame-root buffer) nil)))
 
@@ -406,7 +414,8 @@ BUFFER must be already displayed."
     (&optional (frame-root (current-frame-root)))
   "Ask FRAME-ROOT to update its windows."
   (evaluate-javascript
-   (ps:ps (ps:chain (js-frame frame-root) (emit "resize")))
+   (ps:ps (let ((win (js-frame frame-root)))
+            (when win (ps:chain win (emit "resize")))))
    :global))
 
 (defvar *current-frame-root* nil)

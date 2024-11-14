@@ -201,8 +201,7 @@ If nil, disable message logging. If t, log messages but don't truncate
                                :url (assoc-value event :url)
                                :styles nil)))
           ((equal type "frame-closed")
-           (when buffer
-             (delete-buffer buffer)))
+           (delete-buffer buffer))
           ((eq type 'debug-request)
            (debug-for-environment
             (assoc-value event :environment)
@@ -317,7 +316,7 @@ function `command-loop' to take effect."
              :test 'equal :from-end t)))
       (iter (for message in all-messages)
         (with-demoted-errors
-            (format nil "Error in helper ~a" (bt:current-thread))
+            (format nil "Error in helper ~a:~%" (bt:current-thread))
           (apply (car message) (cdr message)))))))
 
 ;; TODO: Make `ensure-helper-thread' itself thread-safe? Is this
