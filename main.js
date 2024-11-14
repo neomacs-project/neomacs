@@ -82,6 +82,7 @@ Ceramic.generateBufferId = function (){
 Ceramic.createBuffer = function(id, url, options) {
     const buf = new WebContentsView(options);
     buf.ignoreKeys = [];
+    buf.webContents.setMaxListeners(100);
     buf.webContents.on('before-input-event', (event, input) => {
         const ignoreIndex = buf.ignoreKeys.findIndex((i) => true);
         if(ignoreIndex >= 0){
