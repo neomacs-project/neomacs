@@ -210,7 +210,8 @@
   ;; need to be recorded, the command which invoked it is responsible for that.
   (if (assoc :initiator details)
       (record-history-maybe buffer (assoc-value details :url))
-      (setf (history-entry buffer) nil)))
+      (setf (history-entry buffer) nil))
+  (setf (url buffer) (assoc-value details :url)))
 
 (define-command web-go-backward
   :mode web-mode ()
