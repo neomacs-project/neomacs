@@ -483,9 +483,10 @@ NODE become the last child of NEW-NODE."
   "Delete all content of current buffer."
   (let ((*inhibit-dom-update* t))
     (delete-nodes (pos-down (document-root (current-buffer))) nil))
-  (evaluate-javascript-sync
-   "document.body.replaceChildren()"
-   (current-buffer)))
+  (unless *inhibit-dom-update*
+    (evaluate-javascript-sync
+     "document.body.replaceChildren()"
+     (current-buffer))))
 
 (defgeneric revert-buffer-aux (buffer)
   (:documentation "Regenerate the content of BUFFER.")

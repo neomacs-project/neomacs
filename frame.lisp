@@ -549,25 +549,26 @@ CONTROL-STRING can also be a list of DOM nodes (`element's or
 `text-node's), which are displayed and logged. FORMAT-ARGUMENTS must
 be nil in this case."
   (if *current-frame-root*
-      (with-current-buffer (echo-area *current-frame-root*)
-        (erase-buffer)
-        (if control-string
-            (let ((message
-                     (if (stringp control-string)
-                         (list (apply #'format nil control-string format-arguments)
-                               (make-new-line-node))
-                         control-string)))
-              (apply #'insert-nodes (end-pos (document-root (current-buffer))) message)
-              (fit-buffer-height (current-buffer) nil)
-              (when *message-log-max*
-                (with-current-buffer (get-message-buffer)
-                  (let ((*inhibit-read-only* t))
-                    (unless (eql *message-log-max* t)
-                      (truncate-node (document-root (current-buffer)) *message-log-max*))
-                    (apply #'insert-nodes
-                           (end-pos (document-root (current-buffer)))
-                           (mapcar #'clone-node message))))))
-            (fit-buffer-height (current-buffer) 0)))
+      (let (*inhibit-dom-update*)
+        (with-current-buffer (echo-area *current-frame-root*)
+          (erase-buffer)
+          (if control-string
+              (let ((message
+                      (if (stringp control-string)
+                          (list (apply #'format nil control-string format-arguments)
+                                (make-new-line-node))
+                          control-string)))
+                (apply #'insert-nodes (end-pos (document-root (current-buffer))) message)
+                (fit-buffer-height (current-buffer) nil)
+                (when *message-log-max*
+                  (with-current-buffer (get-message-buffer)
+                    (let ((*inhibit-read-only* t))
+                      (unless (eql *message-log-max* t)
+                        (truncate-node (document-root (current-buffer)) *message-log-max*))
+                      (apply #'insert-nodes
+                             (end-pos (document-root (current-buffer)))
+                             (mapcar #'clone-node message))))))
+              (fit-buffer-height (current-buffer) 0))))
       (when control-string
         (apply #'format *error-output* control-string format-arguments)
         (terpri))))

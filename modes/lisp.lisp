@@ -408,10 +408,11 @@ Used for resolving source-path to DOM node.")
 
 (defun evaluate-feature-expression-node (node)
   (let ((*package* (find-package :keyword)))
-    (if (stringp node)
-        (sb-int:featurep
-         (find-symbol (string-upcase node) *package*))
-        (sb-int:featurep (node-to-sexp node nil)))))
+    (handler-bind ((warning #'muffle-warning))
+      (if (stringp node)
+          (sb-int:featurep
+           (find-symbol (string-upcase node) *package*))
+          (sb-int:featurep (node-to-sexp node nil))))))
 
 (defun handle-feature-expressions (nodes)
   (iter
