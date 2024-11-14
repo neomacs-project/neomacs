@@ -18,13 +18,6 @@
         (t
          (write-char char s))))))
 
-(defun asset-url (relative-pathname)
-  (str:concat
-   "file://"
-   (uiop:native-namestring
-    (ceramic:resource
-     'assets relative-pathname))))
-
 (defvar *force-sync-evaluate* nil)
 
 (defun send-js-for-buffer (code buffer)
