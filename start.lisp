@@ -66,5 +66,5 @@ Try the following workaround:
   (let ((ceramic.runtime:*releasep* t))
     (neomacs::start)
     (sb-ext:process-wait
-     (slot-value cera.d:*driver* 'cera.d::process))
-    (kill-neomacs)))
+     (slot-value ceramic.driver:*driver* 'ceramic.driver::process))
+    (neomacs::kill-neomacs)))
