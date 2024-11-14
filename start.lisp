@@ -23,7 +23,14 @@ the following effect:
   ;; infinite recursion
   (setq *print-level* 50 *print-length* 50)
   (unless ceramic.runtime:*releasep*
-    (ceramic:setup))
+    (ceramic:setup)
+    (with-open-file
+        (s (merge-pathnames
+            #p"resources/default_app/package.json"
+            (ceramic.file:release-directory))
+           :direction :output
+           :if-exists :supersede)
+      (write-string "{ \"name\": \"Neomacs\", \"version\": \"0.1.0\", \"main\": \"main.js\" }" s)))
   (when ceramic.runtime:*releasep*
     (setf (logical-pathname-translations "sys")
           `(("SYS:SRC;**;*.*.*"

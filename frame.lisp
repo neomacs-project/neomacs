@@ -62,20 +62,22 @@
     ((buffer frame-root-mode) (url t) (err t))
   (redisplay-windows buffer))
 
-(defmethod on-post-command progn ((buffer frame-root-mode))
-  (redisplay-windows buffer)
-  ;; Update focus
-  (when-let (window-node (node-after (focus)))
-    (when-let (buffer (window-buffer window-node))
-      (evaluate-javascript
-       (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
-       :global))))
-
 (ps:defpsmacro js-frame (buffer)
   `(ps:getprop (ps:chain -ceramic frames) (ps:lisp (id ,buffer))))
 
 (ps:defpsmacro js-buffer (buffer)
   `(ps:getprop (ps:chain -ceramic buffers) (ps:lisp (id ,buffer))))
+
+(defmethod on-post-command progn ((buffer frame-root-mode))
+  (redisplay-windows buffer)
+  ;; Update focus
+  (when-let (window-node (node-after (focus)))
+    (when-let (focused-buffer (window-buffer window-node))
+      (evaluate-javascript
+       (ps:ps
+         (ps:chain (js-buffer focused-buffer) web-contents (focus))
+         (ps:chain (js-frame buffer) (set-title (ps:lisp (name focused-buffer)))))
+       :global))))
 
 (defmethod enable-aux ((mode (eql 'frame-root-mode)))
   (evaluate-javascript
@@ -114,7 +116,6 @@
                                     (let ((view (ps:getprop (ps:chain -ceramic buffers) buffer)))
                                       (when view
                                         (ps:chain view (set-bounds (ps:getprop result buffer)))))))))))))
-       (ps:chain frame (set-title "Neomacs"))
        (ps:chain frame (set-menu nil))
        (ps:chain frame (on "resize" resize))
        (ps:chain frame (on "maximize" resize))
