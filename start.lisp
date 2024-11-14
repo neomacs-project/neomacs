@@ -52,8 +52,15 @@ Try the following workaround:
   (ceramic:start)
   (mount-asset "sys" (ceramic:resource-directory 'assets))
   (mount-asset "user" (uiop:xdg-config-home "neomacs/assets/"))
+  (let ((intro-path (ceramic:resource 'doc "build/intro.html")))
+    (when (uiop:file-exists-p intro-path)
+      (make-buffer
+       "*intro*" :mode 'web-mode
+       :url (str:concat "file://"
+                        (uiop:native-namestring intro-path)))))
   (setf *current-frame-root* (make-frame)
         *use-neomacs-debugger* use-neomacs-debugger)
+  (make-scratch)
   (start-command-loop)
   (let ((config-file (uiop:xdg-config-home "neomacs" "init.lisp")))
     (if (uiop:file-exists-p config-file)

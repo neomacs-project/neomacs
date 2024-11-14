@@ -81,6 +81,9 @@ BUFFER is NIL."
 (ceramic.resource:define-resources :neomacs ()
   (assets #p"assets/"))
 
+(ceramic.resource:define-resources :neomacs ()
+  (doc #p"doc/"))
+
 (defun ceramic.runtime:executable-relative-pathname (pathname)
   "Return an absolute pathname relative to the executable pathname."
   (merge-pathnames pathname
