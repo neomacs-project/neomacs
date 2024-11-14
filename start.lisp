@@ -3,6 +3,10 @@
 (defun start (&optional (use-neomacs-debugger t))
   "Start the Neomacs system.
 
+It's not safe to call this function more than once in a Lisp process.
+If Neomacs system has been shut down (all frames are closed), restart
+Lisp process before starting a new session.
+
 If USE-NEOMACS-DEBUGGER is nil, Neomacs assumes it is being started
 from an external Lisp development environment (e.g. SLIME). This has
 the following effect:
@@ -61,4 +65,6 @@ Try the following workaround:
 (defun neomacs ()
   (let ((ceramic.runtime:*releasep* t))
     (neomacs::start)
-    (sb-thread:join-thread neomacs::*command-loop-thread*)))
+    (sb-ext:process-wait
+     (slot-value cera.d:*driver* 'cera.d::process))
+    (kill-neomacs)))

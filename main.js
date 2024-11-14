@@ -120,13 +120,6 @@ Ceramic.quit = function() {
     app.quit();
 };
 
-app.on('window-all-closed', function() {
-    if (process.platform != 'darwin') {
-        // FIXME: signal that everything's closed
-    }
-    app.quit();
-});
-
 /* Start up */
 
 var Contents = {};
