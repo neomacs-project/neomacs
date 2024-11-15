@@ -149,7 +149,7 @@ If nil, disable message logging. If t, log messages but don't truncate
     (cond ((equal type "keyDown")
            (if-let (frame-root (and buffer (frame-root buffer)))
              (setf *current-frame-root* frame-root)
-             (warn "~a get Electron focus but does not a frame root" buffer))
+             (warn "~a got Electron focus but does not belong to a frame root" buffer))
            (unless (eql (focused-buffer) buffer)
              (warn "Neomacs and Electron has different idea of focused buffer:~% ~a vs ~a"
                    (focused-buffer) buffer)
