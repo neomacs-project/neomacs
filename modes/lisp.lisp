@@ -1079,10 +1079,12 @@ sb-introspect:definition-source)'."
      (lambda (stream self &rest noise)
        (declare (ignore noise))
        (cond ((list-node-p self)
-              (pprint-form self stream
-                           (normalize-indent-spec
-                            (symbol-indentation
-                             (compute-symbol (first-child self))))))
+              (if-let (op (first-child self))
+                (pprint-form self stream
+                             (normalize-indent-spec
+                              (symbol-indentation
+                               (compute-symbol op))))
+                (write-string "()" stream)))
              ((new-line-node-p self)
               (pprint-newline :mandatory stream))
              ((symbol-node-p self)
