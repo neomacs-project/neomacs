@@ -398,11 +398,14 @@ nil, the window displaying BUFFER is closed instead."
 (defun focus-buffer (buffer)
   "Give BUFFER focus.
 
-BUFFER must be already displayed."
-  (check-displayed buffer)
-  (with-current-buffer (frame-root buffer)
-    (setf (pos (focus)) (window-decoration buffer))
-    buffer))
+BUFFER must be already displayed.
+
+If BUFFER's window decoration is not focusable, does nothing."
+  (when-let (node (window-decoration buffer))
+    (with-current-buffer (frame-root buffer)
+      (when (selectable-p node)
+        (setf (pos (focus)) node))
+      buffer)))
 
 (define-keys :global
   "C-x o" 'other-window

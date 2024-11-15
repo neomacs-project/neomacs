@@ -151,7 +151,7 @@ If nil, disable message logging. If t, log messages but don't truncate
              (setf *current-frame-root* frame-root)
              (warn "~a got Electron focus but does not belong to a frame root" buffer))
            (unless (eql (focused-buffer) buffer)
-             (warn "Neomacs and Electron has different idea of focused buffer:~% ~a vs ~a"
+             #+nil (warn "Neomacs and Electron has different idea of focused buffer:~% ~a vs ~a"
                    (focused-buffer) buffer)
              (setq buffer (focused-buffer))
              (when (focused-buffer)
@@ -205,6 +205,8 @@ If nil, disable message logging. If t, log messages but don't truncate
                                :styles nil)))
           ((equal type "frame-closed")
            (delete-buffer buffer))
+          ((equal type "focus")
+           (focus-buffer buffer))
           ((eq type 'debug-request)
            (debug-for-environment
             (assoc-value event :environment)
