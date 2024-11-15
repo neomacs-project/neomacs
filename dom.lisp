@@ -179,10 +179,11 @@ If ATTRIBUTE is not a string, this is a no-op."
   (make-instance 'element :tag-name "br"))
 
 (defun new-line-node-p (node)
-  (and (element-p node)
-       (or (equal (attribute node "class")
-                  "newline")
-           (equal (tag-name node) "br"))))
+  (or (and (element-p node)
+           (or (equal (attribute node "class")
+                      "newline")
+               (equal (tag-name node) "br")))
+      (eql node #\Newline)))
 
 (defmethod print-object ((node element) stream)
   (print-unreadable-object (node stream :identity t :type t)

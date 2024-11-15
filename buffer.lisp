@@ -572,18 +572,8 @@ WIDTH and HEIGHT are numbers in pixels."
    (ps:ps
      (clear-class "focus")
      (clear-class "focus-tail")
-     (ps:chain
-      -array
-      (from (ps:chain document (get-elements-by-class-name "newline")))
-      (for-each
-       (lambda (e)
-         (let ((parent (ps:chain e parent-node))
-               (newline (ps:chain document (create-element "br"))))
-           (ps:chain newline
-                     (set-attribute "neomacs-identifier"
-                                    (ps:chain e (get-attribute
-                                                 "neomacs-identifier"))))
-           (ps:chain parent (replace-child newline e))))))
+     (let ((cursor (ps:chain document (get-element-by-id "neomacs-cursor"))))
+       (when cursor (ps:chain cursor (remove))))
      (let ((highlight (ps:chain -c-s-s highlights (get "neomacs"))))
        (when highlight (ps:chain highlight (clear)))))
    buffer))
@@ -607,20 +597,35 @@ WIDTH and HEIGHT are numbers in pixels."
        (scroll-to-focus (ps:chain rect right) (ps:chain rect bottom))))
    (host element)))
 
-(defun render-br-focus (element)
-  (evaluate-javascript
-   (ps:ps
-     (let* ((element (js-node-1 element))
-            (parent (js-node-1 (parent element)))
-            (newline (ps:chain document (create-element "div")))
-            (rect (ps:chain element (get-bounding-client-rect))))
-       (ps:chain newline (set-attribute "class" "newline"))
-       (ps:chain newline
-                 (set-attribute "neomacs-identifier"
-                                (ps:chain element (get-attribute "neomacs-identifier"))))
-       (ps:chain parent (replace-child newline element))
-       (scroll-to-focus (ps:chain rect right) (ps:chain rect bottom))))
-   (host element)))
+(defun render-br-focus (pos)
+  (bind (((x y w h)
+          (or (get-bounding-client-rect pos)
+              (return-from render-br-focus))))
+    (when (zerop h)
+      (when-let ((rect (get-bounding-client-rect (pos-left pos))))
+        (bind (((xx yy ww hh) rect))
+          (setq x (+ xx ww) y yy w 0 h hh))))
+    (evaluate-javascript
+     (ps:ps
+       (let ((cursor (ps:chain document
+                               (get-element-by-id "neomacs-cursor")))
+             (rect (ps:chain document document-element (get-bounding-client-rect))))
+         (unless cursor
+           (setq cursor (ps:chain document (create-element "div")))
+           (setf (ps:chain cursor id) "neomacs-cursor")
+           (ps:chain document document-element (append-child cursor)))
+         (scroll-to-focus (ps:lisp (+ x w)) (ps:lisp (+ y h)))
+         (setf (ps:chain cursor style left)
+               (+ (- (ps:lisp x) (ps:chain rect x))
+                  "px")
+               (ps:chain cursor style top)
+               (+ (- (ps:lisp y) (ps:chain rect y))
+                  "px")
+               (ps:chain cursor style width)
+               (ps:lisp (format nil "~apx" w))
+               (ps:chain cursor style height)
+               (ps:lisp (format nil "~apx" h)))))
+     (host pos))))
 
 (defun render-text-focus
     (text-node start end &optional (highlight "neomacs"))
@@ -655,7 +660,10 @@ WIDTH and HEIGHT are numbers in pixels."
            (render-br-focus pos)
            (render-element-focus pos)))
       ((end-pos node) (render-element-focus-tail node))
-      ((text-pos node offset) (render-text-focus node offset (1+ offset)))))
+      ((text-pos node offset)
+       (if (new-line-node-p (node-after pos))
+           (render-br-focus pos)
+           (render-text-focus node offset (1+ offset))))))
   (:documentation
    "Render focus at POS for BUFFER"))
 
@@ -859,13 +867,6 @@ This is suitable for whitespace-sensitive editing."))
       (".focus" :inherit focus)
       (".focus-tail" :inherit focus-tail)
       (".range-selection" :inherit range-selection)
-      (".newline"
-       :display "inline"
-       :min-width "0.4em"
-       :inherit selection)
-      (".newline::after"
-       :content " \\A"
-       :inherit selection)
       ("code" :inherit monospace)
       (":link" :inherit link)
       (".invisible" :display "none")
