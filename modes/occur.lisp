@@ -78,4 +78,4 @@ is the matched range in text-node."
         (enable 'occur-mode)
         (setf (occur-query (current-buffer)) query))))
 
-(defstyle occur-mode `(("::highlight(occur)" :inherit match)))
+(defsheet occur-mode `(("::highlight(occur)" :inherit match)))

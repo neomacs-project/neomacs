@@ -1218,7 +1218,7 @@ sb-introspect:definition-source)'."
 (defstyle compiler-error
     `(:border-bottom "double 1px rgba(240,0,120,1.0)"))
 
-(defstyle lisp-mode
+(defsheet lisp-mode
     `((".symbol" :inherit symbol-node)
       (".symbol:empty" :inherit empty-symbol-node)
       (".string" :inherit string-node)

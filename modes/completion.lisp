@@ -216,7 +216,7 @@ Return t if it hides completion, nil if it does nothing."
 (defstyle completion-match `(:color "#000"))
 (defstyle completion-annotation `(:text-align "right"
                                   :font-style "italic"))
-(defstyle completion-list-mode
+(defsheet completion-list-mode
     `(("body" :inherit completion-menu)
       (".completion-match" :inherit completion-match)
       (".completion-annotation" :inherit completion-annotation)))

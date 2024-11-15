@@ -636,7 +636,7 @@ This sets up: `*standard-output*', `*standard-input*',
 
 (defstyle frame-float nil)
 
-(defstyle frame-root-mode
+(defsheet frame-root-mode
     `((".vertical"
        :flex "1 0 1em" :display "flex" :flex-flow "row"
        :gap "24px" :width "100%" :height "100%")
@@ -658,7 +658,7 @@ This sets up: `*standard-output*', `*standard-input*',
       (".header-buffer-modes" :inherit header-buffer-modes)
       ("body" :inherit frame-body)))
 
-(defstyle echo-area-mode
+(defsheet echo-area-mode
     `(("body" :inherit default
               :margin-top 0
               :margin-bottom 0

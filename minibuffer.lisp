@@ -147,7 +147,7 @@ when this row is selected.")))
                                 (query t) element)
   (if (class-p element "dummy-row") t (call-next-method)))
 
-(defstyle completion-buffer-mode `(("dummy-row" :display "none")))
+(defsheet completion-buffer-mode `(("dummy-row" :display "none")))
 
 (defmethod selectable-p-aux ((buffer completion-buffer-mode) pos)
   (tag-name-p (node-after pos) "tr"))
@@ -240,4 +240,4 @@ when this row is selected.")))
 
 (defstyle minibuffer-prompt `(:inherit bold))
 
-(defstyle minibuffer `((".prompt" :inherit minibuffer-prompt)))
+(defsheet minibuffer `((".prompt" :inherit minibuffer-prompt)))

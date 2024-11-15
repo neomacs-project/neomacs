@@ -479,7 +479,7 @@ JSON should have the format like what `+get-body-json-code+' produces:
       :url (str:concat
             "file://" (uiop:native-namestring toc-path))))))
 
-(defstyle html-doc-mode
+(defsheet html-doc-mode
     `((":empty::after" :content "_")
       ("li p" :margin 0)
       ("body" :white-space "normal")

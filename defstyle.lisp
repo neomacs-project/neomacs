@@ -72,20 +72,29 @@
      (sera:export-always ',symbol)
      ',symbol))
 
+(defmacro defsheet (symbol spec &optional doc)
+  "Define a style sheet named by SYMBOL."
+  `(progn
+     (setf (get ',symbol 'sheet) t)
+     (defstyle ,symbol ,spec ,doc)))
+
 (defun css-cell (symbol)
-  "Return cell that stores the compiled CSS of the style named by SYMBOL.
+  "Return the cell that stores the compiled CSS of the style sheet named
+by SYMBOL.
 
 Can be `cell-ref'ed to get the up-to-date CSS string for the style
 named by SYMBOL."
+  (unless (get symbol 'sheet)
+    (error "~a does not name a style sheet" symbol))
   (or (get symbol 'css)
       (setf (get symbol 'css)
             (cell (apply #'styled-css (get-style symbol))))))
 
 (defun set-style (&rest bindings)
-  "Set styles according to BINDINGS.
+  "Set styles or style sheets according to BINDINGS.
 
-BINDINGS should be of the form {SYMBOL SPEC}*, and style named by each
-SYMBOL is set to SPEC.
+BINDINGS should be of the form {SYMBOL SPEC}*, and style or style
+sheet named by each SYMBOL is set to SPEC.
 
 Example: (set-style 'default '(:font-family \"sans-serif\")
     'bold '(:font-weight 900))

@@ -132,7 +132,7 @@
                   " is unbound in "
                   ,(print-dom (for-buffer buffer)))))))))
 
-(defstyle describe-mode
+(defsheet describe-mode
     `(("p" :margin-top 0 :margin-bottom 0)
       ("h1" :margin-top 0 :margin-bottom 0
             :font-size "1.2rem")))

@@ -178,7 +178,7 @@
            (current-buffer))
           (remove-hints)))))
 
-(defstyle web-hints `((".neomacs-hint"
+(defsheet web-hints `((".neomacs-hint"
                        :background-color "#fff"
                        :padding "0px 0.3em"
                        :border-radius "2px"

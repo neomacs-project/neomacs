@@ -68,7 +68,7 @@
           (insert-nodes (pos-right path-component) new)
           (setf (pos (focus)) (end-pos new)))))))
 
-(defstyle minibuffer-find-file-mode
+(defsheet minibuffer-find-file-mode
     `((".path-component::before"
        :content "/")))
 

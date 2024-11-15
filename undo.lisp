@@ -266,7 +266,7 @@ This amalgamate the undo entry if `*this-command*' is the same as
                         previous-instance)
   (delete-buffer (undo-buffer previous-instance)))
 
-(defstyle undo-history-mode
+(defsheet undo-history-mode
     `(("body" :whitespace "pre"
               :line-height 0
               :font-family "dejavu sans mono")

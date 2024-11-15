@@ -845,7 +845,7 @@ If it is, should signal a condition of type `read-only-error'."))
       :z-index "-1"
       :inherit selection))
 
-(defstyle common
+(defsheet common
     `((:import (url "neomacs://sys/space-mono/space-mono.css"))
       (:import (url "neomacs://sys/cmu-concrete/cmu-concrete.css"))))
 
@@ -862,9 +862,9 @@ If it is, should signal a condition of type `read-only-error'."))
 
 This is suitable for whitespace-sensitive editing."))
 
-(defstyle doc-mode `(("body" :inherit doc-node)))
+(defsheet doc-mode `(("body" :inherit doc-node)))
 
-(defstyle buffer
+(defsheet buffer
     `(("*" :inherit default)
       (".focus" :inherit focus)
       (".focus-tail" :inherit focus-tail)

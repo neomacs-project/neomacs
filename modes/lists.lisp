@@ -53,7 +53,7 @@
                 (list (string-downcase (symbol-name mode))))))
         c)))))
 
-(defstyle command-list-mode
+(defsheet command-list-mode
     `((".keybinds" :max-width "5em" :overflow "hidden"
        :text-overflow "ellipsis")))
 
@@ -116,7 +116,7 @@
    (get-buffer-create "*buffers*" :mode 'buffer-list-mode
                       :revert t)))
 
-(defstyle list-mode `(("table" :white-space "pre" :width "100%"
+(defsheet list-mode `(("table" :white-space "pre" :width "100%"
                                :border-collapse "collapse")
                       ("tbody:empty::after"
                        :content "<No Item>"
@@ -219,7 +219,7 @@ This should always be a directory pathname (with NIL name and type fields).")
         (with-current-buffer buffer
           (revert-buffer))))))
 
-(defstyle file-list-mode `((".directory::after" :content "/")
+(defsheet file-list-mode `((".directory::after" :content "/")
                            (".header" :inherit bold)))
 
 (define-command file-list-find-file

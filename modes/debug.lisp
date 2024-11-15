@@ -150,7 +150,7 @@
   (declare (ignore hook))
   (invoke-neomacs-debugger c))
 
-(defstyle debugger-mode
+(defsheet debugger-mode
     `(("table" :width "100%"
                :border-collapse "collapse")
       (".restart-table td" :padding-right "1em")
