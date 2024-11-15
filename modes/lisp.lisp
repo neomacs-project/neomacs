@@ -709,8 +709,13 @@ Highlight compiler notes."
                     #P"~/quicklisp/dists/quicklisp/software/"
                     #P"~/quicklisp/local-projects/"))))
 
-(defun translate-relocated-source (pathname from-list to)
-  (iter (for from in from-list)
+(defun translate-relocated-source (pathname)
+  (when (or (not ceramic.runtime:*releasep*)
+            (uiop:file-exists-p pathname))
+    (return-from translate-relocated-source pathname))
+  (iter (for from in *relocated-source-list*)
+    (with to = (ceramic.runtime:executable-relative-pathname
+                #P"src/"))
     (multiple-value-bind (p rest)
         (alex:starts-with-subseq
          (pathname-directory from)
@@ -726,17 +731,7 @@ Highlight compiler notes."
 (defun visit-source (pathname tlf-number form-number plist)
   (with-current-buffer
       (or (get-buffer (getf plist :neomacs-buffer))
-          (when pathname
-            (or (uiop:file-exists-p pathname)
-                (when ceramic.runtime:*releasep*
-                  (setq pathname
-                        (translate-relocated-source
-                         pathname *relocated-source-list*
-                         (ceramic.runtime:executable-relative-pathname
-                          #P"src/")))
-                  (uiop:file-exists-p pathname))
-                (user-error "~a does not exist!" pathname))
-            (find-file pathname))
+          (when pathname (find-file (translate-relocated-source pathname)))
           (user-error "Unknown source location"))
     (setf (pos (focus))
           (find-node-for-source
@@ -776,7 +771,8 @@ DEFINITION should be a `sb-introspect:definition-source'."
           (make-element
            "td" :children
            (list (princ-to-string
-                  (sb-introspect::definition-source-pathname def))))))
+                  (translate-relocated-source
+                   (sb-introspect::definition-source-pathname def)))))))
    def))
 
 (defmethod generate-rows ((buffer xref-list-mode))
