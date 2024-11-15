@@ -1213,13 +1213,13 @@ sb-introspect:definition-source)'."
                            :inherit comment))
 
 (defstyle compiler-note
-    `(:border-bottom "solid 1px rgba(169,151,160,1.0)"))
+    `(:border "solid 1px rgba(169,151,160,1.0)"))
 (defstyle compiler-style-warning
-    `(:border-bottom "dashed 1px rgba(240,0,120,1.0)"))
+    `(:border "dashed 1px rgba(240,0,120,1.0)"))
 (defstyle compiler-warning
-    `(:border-bottom "solid 1px rgba(240,0,120,1.0)"))
+    `(:border "solid 1px rgba(240,0,120,1.0)"))
 (defstyle compiler-error
-    `(:border-bottom "double 1px rgba(240,0,120,1.0)"))
+    `(:border "double 1px rgba(240,0,120,1.0)"))
 
 (defsheet lisp-mode
     `((".symbol" :inherit symbol-node)
