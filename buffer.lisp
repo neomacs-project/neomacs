@@ -861,10 +861,10 @@ This is suitable for whitespace-sensitive editing."))
       (".range-selection" :inherit range-selection)
       (".newline"
        :display "inline"
-       :min-width "0.4em")
+       :min-width "0.4em"
+       :inherit selection)
       (".newline::after"
        :content " \\A"
-       :vertical-align "bottom"
        :inherit selection)
       ("code" :inherit monospace)
       (":link" :inherit link)
