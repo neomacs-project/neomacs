@@ -1242,7 +1242,7 @@ sb-introspect:definition-source)'."
       ("[compiler-note-severity=\"error\"]"
        :inherit compiler-error)))
 
-(defstyle echo-area-autodoc
+(defsheet echo-area-autodoc
     `((".focus-arg" :inherit keyword)
       (".docstring" :inherit comment)))
 
