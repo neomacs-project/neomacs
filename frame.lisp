@@ -579,6 +579,8 @@ be nil in this case."
 
 (defvar *current-standard-input* nil)
 
+(defvar *auto-flush-helper* nil)
+
 (defun setup-stream-indirection ()
   "Redirect standard streams to be handled by Neomacs.
 
@@ -588,7 +590,10 @@ This sets up: `*standard-output*', `*standard-input*',
         (make-instance 'swank/gray::slime-output-stream
                        :data (swank/gray::make-stream-data
                               :output-fn
-                              (lambda (s) (message "~a" s))))
+                              (lambda (s)
+                                (run-in-helper
+                                 '*auto-flush-helper*
+                                 'message "~a" s))))
         *current-standard-input*
         (make-instance 'swank/gray::slime-input-stream
                        :input-fn
