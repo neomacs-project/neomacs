@@ -804,16 +804,6 @@ If it is, should signal a condition of type `read-only-error'."))
     (update-window-decoration-field
      buffer "header-buffer-name" new-val)))
 
-#+nil (progn
-        (defstyle default `(:font-family "Verdana" :color "rgb(169,151,160)"))
- (defstyle focus `(:background-color "#f0f7ff"))
- (defstyle selection `(:background-color "#bde1ff"))
- (defstyle keyword `(:color "#fd79a8"))
- (defstyle macro `(:color "#fd79a8"))
- (defstyle special-operator `(:color "#fd79a8"))
- (defstyle string `(:color "#a29bfe"))
- (defstyle comment `(:color "#777")))
-
 (defstyle default `(:font-family "CMU Concrete"
                     :color "#54454d"))
 (defstyle focus `(:background-color "rgba(169,151,160,0.1)"))

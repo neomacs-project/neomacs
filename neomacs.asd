@@ -22,7 +22,6 @@
                (:file "frame")
                (:file "minibuffer")
                (:file "undo")
-               #+nil (:file "manual")
                (:file "syntax")
                (:file "modes/lists")
                (:file "themes")
