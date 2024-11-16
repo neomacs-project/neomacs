@@ -148,6 +148,7 @@ fixed in future Electron, our logic may be simplified."
          :global))))
 
 (defmethod on-delete-buffer progn ((buffer frame-root-mode))
+  ;; Pass focus to some other frame root
   (when (eql *current-frame-root* buffer)
     (setf *current-frame-root*
           (find-if (alex:rcurry #'typep 'frame-root-mode)
