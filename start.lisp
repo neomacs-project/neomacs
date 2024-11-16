@@ -61,7 +61,7 @@ Try the following workaround:
                         (uiop:native-namestring intro-path)))))
   (setf *current-frame-root* (make-frame)
         *use-neomacs-debugger* use-neomacs-debugger)
-  (make-scratch)
+  (unless (get-buffer "*scratch*") (make-scratch))
   (start-command-loop)
   (let ((config-file (uiop:xdg-config-home "neomacs" "init.lisp")))
     (if (uiop:file-exists-p config-file)
