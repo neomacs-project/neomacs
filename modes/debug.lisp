@@ -148,7 +148,12 @@
 
 (defun neomacs-debugger-hook (c hook)
   (declare (ignore hook))
-  (invoke-neomacs-debugger c))
+  (if *debug-on-error*
+      (invoke-neomacs-debugger c)
+      (progn
+        (funcall *error-hook* c)
+        (message "Error in ~a: ~a" (bt2:current-thread) c)
+        (sb-thread:abort-thread))))
 
 (defsheet debugger-mode
     `(("table" :width "100%"
