@@ -251,7 +251,8 @@
   (splice-node pos))
 
 (define-mode sexp-editing-mode (lisp-mode) ()
-  (:documentation "Editing S-exp."))
+  (:documentation "Editing S-exp.")
+  (:lighter "Sexp"))
 
 (define-keys sexp-editing-mode
   "(" 'open-paren
