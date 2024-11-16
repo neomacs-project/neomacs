@@ -24,11 +24,12 @@
   "C-c C-p" 'eval-print-last-expression)
 
 (defmethod selectable-p-aux ((buffer lisp-mode) pos)
-  (if-let (node (node-after pos))
-    (and (not (symbol-node-p node))
-         (not (and (new-line-node-p node)
-                   (non-empty-symbol-node-p (node-before pos)))))
-    (not (non-empty-symbol-node-p (node-before pos)))))
+  (and (if-let (node (node-after pos))
+         (and (not (symbol-node-p node))
+              (not (and (new-line-node-p node)
+                        (non-empty-symbol-node-p (node-before pos)))))
+         (not (non-empty-symbol-node-p (node-before pos))))
+       (call-next-method)))
 
 (defmethod render-focus-aux ((buffer lisp-mode) pos)
   (match pos
@@ -45,10 +46,6 @@
   (if (equal (tag-name element) "div")
       (not (class-p element "list" "comment"))
       (call-next-method)))
-
-(defmethod check-read-only ((buffer lisp-mode) pos)
-  (when (class-p (node-containing pos) "object")
-    (error 'element-read-only-error :element (node-containing pos))))
 
 (defmethod on-focus-move progn ((buffer lisp-mode) old new)
   (declare (ignore old))
@@ -108,7 +105,9 @@
           (with-output-to-string (s)
             (write-dom-aux buffer node s)))))))
   (when (symbol-node-p node)
-    (set-attribute-function node "symbol-type" 'compute-symbol-type)))
+    (set-attribute-function node "symbol-type" 'compute-symbol-type))
+  (when (class-p node "object")
+    (setf (attribute node 'read-only) t)))
 
 (defun make-list-node (children)
   (lret ((node (make-instance 'element :tag-name "div")))

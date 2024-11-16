@@ -14,11 +14,7 @@
   "C-g" 'exit-recursive-edit)
 
 (defmethod selectable-p-aux ((buffer minibuffer-mode) pos)
-  (class-p (node-containing pos) "input"))
-
-(defmethod check-read-only ((buffer minibuffer-mode) pos)
-  (unless (class-p (node-containing pos) "input")
-    (error 'element-read-only-error :element (node-containing pos))))
+  (pos-up-until pos (alex:rcurry #'class-p "input")))
 
 (defmethod window-decoration-aux ((buffer minibuffer-mode))
   (dom `(:div :class "minibuffer" :selectable ""
@@ -47,9 +43,13 @@ return objects from `read-from-minibuffer', add methods to
 
 (defmethod revert-buffer-aux ((buffer minibuffer-mode))
   (let ((input (dom `(:span :class "input"))))
+    (setf (attribute (document-root (current-buffer))
+                     'read-only)
+          t)
     (insert-nodes (end-pos (document-root (current-buffer)))
-                  (dom `(:span :class "prompt"
-                               ,(prompt buffer)))
+                  (lret ((node (dom `(:span :class "prompt"
+                                            ,(prompt buffer)))))
+                    (setf (attribute node 'read-only) t))
                   input)
     (setf (pos (focus)) (end-pos input))))
 

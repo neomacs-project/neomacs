@@ -734,7 +734,10 @@ CONTROL-STRING and FORMAT-ARGUMENT."
 (defvar *inhibit-read-only* nil)
 
 (defgeneric check-read-only (buffer pos)
-  (:method ((buffer buffer) (pos t)) nil)
+  (:method ((buffer buffer) (pos t))
+    (let ((node (node-containing pos)))
+      (when (attribute node 'read-only)
+        (error 'element-read-only-error :element node ))))
   (:method :around ((buffer buffer) (pos t))
     (unless *inhibit-read-only*
       (restart-case
