@@ -301,10 +301,9 @@ fixed in future Electron, our logic may be simplified."
   :interactive
   (lambda ()
     (list
-     (get-buffer
-      (completing-read
-       "Switch to buffer: " 'buffer-list-mode
-       :exclude-buffers (list (current-buffer))))))
+     (completing-read
+      "Switch to buffer: " 'buffer-list-mode
+      :exclude-buffers (list (current-buffer)))))
   (buffer &optional (victim (focused-buffer)))
   (if (frame-root buffer)
       (focus-buffer buffer)

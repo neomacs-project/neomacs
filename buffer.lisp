@@ -384,9 +384,7 @@ function does nothing."
 (define-command delete-buffer
   :interactive
   (lambda ()
-    (list
-     (get-buffer
-      (completing-read "Delete buffer: " 'buffer-list-mode))))
+    (list (completing-read "Delete buffer: " 'buffer-list-mode)))
   (buffer)
   (cleanup-buffer-display buffer)
   (with-current-buffer buffer

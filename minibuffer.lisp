@@ -73,16 +73,18 @@ ARGS are passed to `make-buffer' to create the minibuffer."
           (t (read-yes-or-no prompt)))))
 
 (defun completing-read (prompt list-mode &rest args)
-  "Read and return a string from minibuffer with completion.
+  "Read and return a presentation from minibuffer with completion.
 
-This is a thin wrapper around `read-from-minibuffer' that creates a completion buffer in LIST-MODE."
-  (read-from-minibuffer
-   prompt
-   :mode 'minibuffer-completion-mode
-   :completion-buffer
-   (apply #'make-completion-buffer
-          (list list-mode 'completion-buffer-mode)
-          args)))
+This is a wrapper around `read-from-minibuffer' that creates a completion buffer in LIST-MODE. The LIST-MODE should attach a presentation for each row, which will be returned by `completing-read'."
+  (nth-value
+   1
+   (read-from-minibuffer
+    prompt
+    :mode 'minibuffer-completion-mode
+    :completion-buffer
+    (apply #'make-completion-buffer
+           (list list-mode 'completion-buffer-mode)
+           args))))
 
 (define-mode completion-mode ()
   ((completion-buffer :initarg :completion-buffer))
@@ -121,6 +123,11 @@ This is a thin wrapper around `read-from-minibuffer' that creates a completion b
 
 (defmethod on-post-command progn ((buffer minibuffer-completion-mode))
   (update-completion-buffer buffer))
+
+(defmethod minibuffer-input ((buffer minibuffer-completion-mode))
+  (values (call-next-method)
+          (attribute (node-after (focus (completion-buffer buffer)))
+                     'presentation)))
 
 (define-mode completion-buffer-mode (occur-mode)
   ((require-match
@@ -207,14 +214,6 @@ when this row is selected.")))
   (apply #'make-buffer " *completion*" :mode modes :revert t
          args))
 
-(defun find-command (name modes)
-  (iter (for mode in (append modes '(:global)))
-    (when-let
-        (cmd (find name (commands mode)
-                   :key (alex:compose #'string-downcase #'symbol-name)
-                   :test 'equal))
-      (return cmd))))
-
 (defun collect-keybindings (keymaps)
   (lret (keys (table (make-hash-table)))
     (iter (for keymap in keymaps)
@@ -226,14 +225,12 @@ when this row is selected.")))
       (push k (gethash (lookup-keybind k keymaps) table)))))
 
 (define-command execute-command ()
-  (let ((name (completing-read
-               "M-x " 'command-list-mode
-               :include-modes (modes (current-buffer))
-               :keybinding-index
-               (collect-keybindings (keymaps (current-buffer))))))
-    (if-let (cmd (find-command name (modes (current-buffer))))
-      (call-interactively cmd)
-      (message "No such command"))))
+  (call-interactively
+   (completing-read
+    "M-x " 'command-list-mode
+    :include-modes (modes (current-buffer))
+    :keybinding-index
+    (collect-keybindings (keymaps (current-buffer))))))
 
 (define-keys :global
   "M-x" 'execute-command)

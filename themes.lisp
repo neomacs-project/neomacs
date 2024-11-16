@@ -27,18 +27,17 @@ BINDINGS are passed as arguments to `set-style' to apply the theme."
   (iter (for theme in *themes*)
     (insert-nodes
      (focus)
-     (dom `(:tr
-            (:td ,(string-downcase (symbol-name theme)))
-            (:td ,@(when-let (doc (documentation theme 'theme))
-                     (list doc))))))))
+     (attach-presentation
+      (dom `(:tr
+             (:td ,(string-downcase (symbol-name theme)))
+             (:td ,@(when-let (doc (documentation theme 'theme))
+                      (list doc)))))
+      theme))))
 
 (define-command apply-theme
   :interactive
   (lambda ()
-    (list (find (completing-read "Apply theme: " 'theme-list-mode)
-                *themes*
-                :key (alex:compose #'string-downcase #'symbol-name)
-                :test 'equal)))
+    (list (completing-read "Apply theme: " 'theme-list-mode)))
   (theme)
   "Apply THEME."
   (cond ((eql theme :default)

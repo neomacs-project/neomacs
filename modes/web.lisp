@@ -239,6 +239,55 @@
        :global)
     (user-error "Can not go forward.")))
 
+(define-mode web-buffer-history-list-mode (list-mode)
+  ((items :initform (alex:required-argument :items)
+          :initarg :items)))
+
+(defmethod generate-rows
+    ((buffer web-buffer-history-list-mode))
+  (iter (for item in (items buffer))
+    (for i from 0)
+    (insert-nodes
+     (focus)
+     (attach-presentation
+      (dom `(:tr (:td ,(or (assoc-value item :title)
+                           "-"))
+                 (:td ,(or (assoc-value item :url)
+                           "-"))))
+      i))))
+
+(define-command web-go-history
+  :mode web-mode
+  :interactive
+  (lambda ()
+    (list
+     (completing-read
+      "Go to history:"
+      'web-buffer-history-list-mode
+      :items
+      (evaluate-javascript-sync
+       (ps:ps
+         (let ((h (ps:chain (js-buffer (current-buffer))
+                            web-contents navigation-history))
+               (result (list)))
+           (dotimes (i (ps:chain h (length)))
+             (ps:chain result (push (ps:chain h (get-entry-at-index i)))))
+           result))
+       :global))))
+  (index)
+  (unless
+      (evaluate-javascript-sync
+       (ps:ps
+         (let ((h (ps:chain (js-buffer (current-buffer))
+                            web-contents navigation-history)))
+           (when (ps:chain h (can-go-to-offset
+                              (- (ps:lisp index)
+                                 (ps:chain h (get-active-index)))))
+             (ps:chain h (go-to-index (ps:lisp index)))
+             t)))
+       :global)
+    (user-error "Can not go to history entry ~a." index)))
+
 
 (defmethod revert-buffer-aux ((buffer web-mode))
   (load-url buffer (url buffer)))
