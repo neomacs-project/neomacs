@@ -159,7 +159,7 @@ otherwise."
                     (npos-prev-until pos #'selectable-p))))
       (if pos
           (setf (pos marker) pos)
-          (warn "Failed to ensure-selectable: ~a"
+          #+nil (warn "Failed to ensure-selectable: ~a"
                 (host marker))))))
 
 (define-command backward-up-node (&optional (marker (focus)))

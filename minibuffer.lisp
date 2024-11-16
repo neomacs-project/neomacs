@@ -76,15 +76,16 @@ ARGS are passed to `make-buffer' to create the minibuffer."
   "Read and return a presentation from minibuffer with completion.
 
 This is a wrapper around `read-from-minibuffer' that creates a completion buffer in LIST-MODE. The LIST-MODE should attach a presentation for each row, which will be returned by `completing-read'."
-  (nth-value
-   1
-   (read-from-minibuffer
-    prompt
-    :mode 'minibuffer-completion-mode
-    :completion-buffer
-    (apply #'make-completion-buffer
-           (list list-mode 'completion-buffer-mode)
-           args))))
+  (bind (((:values _ presentation)
+          (read-from-minibuffer
+           prompt
+           :mode 'minibuffer-completion-mode
+           :completion-buffer
+           (apply #'make-completion-buffer
+                  (list list-mode 'completion-buffer-mode)
+                  args))))
+    (or presentation
+        (user-error "No candidate"))))
 
 (define-mode completion-mode ()
   ((completion-buffer :initarg :completion-buffer))
@@ -116,18 +117,20 @@ This is a wrapper around `read-from-minibuffer' that creates a completion buffer
     (let ((input (only-elt (get-elements-by-class-name
                             (document-root buffer) "input")))
           (selection (node-after (focus (completion-buffer buffer)))))
-      (unless (class-p selection "dummy-row")
-        (delete-nodes (pos-down input) nil)
-        (insert-nodes (pos-down input)
-                      (text-content (first-child selection)))))))
+      (when (selectable-p selection)
+        (unless (class-p selection "dummy-row")
+          (delete-nodes (pos-down input) nil)
+          (insert-nodes (pos-down input)
+                        (text-content (first-child selection))))))))
 
 (defmethod on-post-command progn ((buffer minibuffer-completion-mode))
   (update-completion-buffer buffer))
 
 (defmethod minibuffer-input ((buffer minibuffer-completion-mode))
   (values (call-next-method)
-          (attribute (node-after (focus (completion-buffer buffer)))
-                     'presentation)))
+          (let ((node (node-after (focus (completion-buffer buffer)))))
+            (when (selectable-p node)
+              (attribute node 'presentation)))))
 
 (define-mode completion-buffer-mode (occur-mode)
   ((require-match
