@@ -582,21 +582,17 @@ be nil in this case."
 
 (defvar *current-standard-input* nil)
 
-(defvar *auto-flush-helper* nil)
-
 (defun setup-stream-indirection ()
   "Redirect standard streams to be handled by Neomacs.
 
 This sets up: `*standard-output*', `*standard-input*',
 `*error-output*', `*trace-output*', `*query-io*'."
   (setf *current-standard-output*
-        (make-instance 'swank/gray::slime-output-stream
-                       :data (swank/gray::make-stream-data
+        (make-instance 'neomacs/gray:neomacs-output-stream
+                       :data (neomacs/gray:make-stream-data
                               :output-fn
                               (lambda (s)
-                                (run-in-helper
-                                 '*auto-flush-helper*
-                                 'message "~a" s))))
+                                (message "~a" s))))
         *current-standard-input*
         (make-instance 'swank/gray::slime-input-stream
                        :input-fn
@@ -612,7 +608,7 @@ This sets up: `*standard-output*', `*standard-input*',
         *standard-input* *current-standard-input*
         *query-io* (make-two-way-stream *current-standard-input*
                                         *current-standard-output*))
-  (swank/gray::make-auto-flush-thread *current-standard-output*)
+  (neomacs/gray:make-auto-flush-thread *current-standard-output*)
   nil)
 
 (define-command open-dev-tools ()

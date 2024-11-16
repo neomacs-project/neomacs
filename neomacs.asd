@@ -19,6 +19,7 @@
                (:file "motion")
                (:file "edit")
                (:file "range")
+               (:file "gray")
                (:file "frame")
                (:file "minibuffer")
                (:file "undo")
