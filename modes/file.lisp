@@ -52,7 +52,7 @@
       (merge-pathnames file dir)
       dir)))
 
-(defmethod minibuffer-input ((buffer minibuffer-find-file-mode))
+(defmethod minibuffer-result ((buffer minibuffer-find-file-mode))
   (path-before (end-pos (last-child (minibuffer-input-element buffer)))))
 
 (defmethod complete-minibuffer-aux ((buffer minibuffer-find-file-mode))

@@ -31,8 +31,19 @@
 (defun minibuffer-input-element (buffer)
   (only-elt (get-elements-by-class-name (document-root buffer) "input")))
 
-(defmethod minibuffer-input ((buffer minibuffer-mode))
-  (text-content (minibuffer-input-element buffer)))
+(defgeneric minibuffer-input (buffer)
+  (:method ((buffer minibuffer-mode))
+    (text-content (minibuffer-input-element buffer)))
+  (:documentation "Input text from BUFFER.
+
+This is used for completion and should always return a string. To
+return objects from `read-from-minibuffer', add methods to
+`minibuffer-result'."))
+
+(defgeneric minibuffer-result (buffer)
+  (:method ((buffer minibuffer-mode))
+    (minibuffer-input buffer))
+  (:documentation "Result to be returned by `read-from-minibuffer'."))
 
 (defmethod revert-buffer-aux ((buffer minibuffer-mode))
   (let ((input (dom `(:span :class "input"))))
@@ -58,7 +69,7 @@ ARGS are passed to `make-buffer' to create the minibuffer."
          (with-current-buffer minibuf
            (revert-buffer)
            (recursive-edit (lambda () (not (completed minibuf))))
-           (minibuffer-input minibuf))
+           (minibuffer-result minibuf))
       (focus-buffer saved-focus)
       (close-window minibuf)
       (delete-buffer minibuf))))
@@ -76,16 +87,13 @@ ARGS are passed to `make-buffer' to create the minibuffer."
   "Read and return a presentation from minibuffer with completion.
 
 This is a wrapper around `read-from-minibuffer' that creates a completion buffer in LIST-MODE. The LIST-MODE should attach a presentation for each row, which will be returned by `completing-read'."
-  (bind (((:values _ presentation)
-          (read-from-minibuffer
-           prompt
-           :mode 'minibuffer-completion-mode
-           :completion-buffer
-           (apply #'make-completion-buffer
-                  (list list-mode 'completion-buffer-mode)
-                  args))))
-    (or presentation
-        (user-error "No candidate"))))
+  (read-from-minibuffer
+   prompt
+   :mode 'minibuffer-completion-mode
+   :completion-buffer
+   (apply #'make-completion-buffer
+          (list list-mode 'completion-buffer-mode)
+          args)))
 
 (define-mode completion-mode ()
   ((completion-buffer :initarg :completion-buffer))
@@ -126,11 +134,10 @@ This is a wrapper around `read-from-minibuffer' that creates a completion buffer
 (defmethod on-post-command progn ((buffer minibuffer-completion-mode))
   (update-completion-buffer buffer))
 
-(defmethod minibuffer-input ((buffer minibuffer-completion-mode))
-  (values (call-next-method)
-          (let ((node (node-after (focus (completion-buffer buffer)))))
-            (when (selectable-p node)
-              (attribute node 'presentation)))))
+(defmethod minibuffer-result ((buffer minibuffer-completion-mode))
+  (let ((node (node-after (focus (completion-buffer buffer)))))
+    (when (selectable-p node)
+      (attribute node 'presentation))))
 
 (define-mode completion-buffer-mode (occur-mode)
   ((require-match
