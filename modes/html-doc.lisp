@@ -4,12 +4,12 @@
 
 (define-keys html-doc-mode
   "enter" 'open-paragraph
-  "M-*" 'open-heading
-  "M-`" 'open-code
-  "M-/" 'open-italic
-  "M--" 'insert-description-list
-  "C-u M--" 'insert-description
-  "M-," 'open-comma
+  "C-c h" 'open-heading
+  "C-c c" 'open-code
+  "C-c i" 'open-italic
+  "C-c t" 'insert-description-list
+  "C-c d" 'insert-description
+  "C-c ," 'open-comma
   "C-c C-l"'insert-link)
 
 (defmethod enable-aux ((mode (eql 'html-doc-mode)))
