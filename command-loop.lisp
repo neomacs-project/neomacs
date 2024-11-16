@@ -310,8 +310,13 @@ function `command-loop' to take effect."
 (defvar *helper-mailboxes*
   (make-hash-table :weakness :key))
 
+(defvar *helper-lock*
+  (bt2:make-lock :name "helper register lock"))
+
 (defun helper-thread-loop ()
-  (iter (with mailbox = (gethash (bt:current-thread) *helper-mailboxes*))
+  (iter (with mailbox =
+              (bt2:with-lock-held (*helper-lock*)
+                (gethash (bt:current-thread) *helper-mailboxes*)))
     (for message = (sb-concurrency:receive-message mailbox))
     (let ((all-messages
             (delete-duplicates
@@ -328,16 +333,17 @@ function `command-loop' to take effect."
 ;; needed? If it is only ever called from command loop then it's not
 ;; needed
 (defun ensure-helper-thread (symbol)
-  (let ((thread (symbol-value symbol)))
-    (unless (and thread (bt:thread-alive-p thread))
-      (setq thread
-            (bt:make-thread
-             'helper-thread-loop
-             :name (string-downcase (symbol-name symbol))))
-      (setf (symbol-value symbol) thread
-            (gethash thread *helper-mailboxes*)
-            (sb-concurrency:make-mailbox)))
-    symbol))
+  (bt2:with-lock-held (*helper-lock*)
+    (let ((thread (symbol-value symbol)))
+      (unless (and thread (bt:thread-alive-p thread))
+        (setq thread
+              (bt:make-thread
+               'helper-thread-loop
+               :name (string-downcase (symbol-name symbol))))
+        (setf (symbol-value symbol) thread
+              (gethash thread *helper-mailboxes*)
+              (sb-concurrency:make-mailbox)))
+      symbol)))
 
 (defun run-in-helper (symbol function &rest args)
   (ensure-helper-thread symbol)
