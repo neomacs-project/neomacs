@@ -329,9 +329,6 @@ function `command-loop' to take effect."
             (format nil "Error in helper ~a:~%" (bt:current-thread))
           (apply (car message) (cdr message)))))))
 
-;; TODO: Make `ensure-helper-thread' itself thread-safe? Is this
-;; needed? If it is only ever called from command loop then it's not
-;; needed
 (defun ensure-helper-thread (symbol)
   (bt2:with-lock-held (*helper-lock*)
     (let ((thread (symbol-value symbol)))
