@@ -929,13 +929,15 @@ sb-introspect:definition-source)'."
     (unless (first-child (document-root echo-area))
       (let (*message-log-max*)
         (if (typep (current-buffer) 'active-completion-mode)
-           (message
-            (let ((*package* (current-package (focus)))
-                  (row (node-after (focus (completion-buffer (current-buffer))))))
-              (autodoc-for-thing
-               (ignore-errors
-                (swank::parse-symbol
-                 (text-content (first-child row)))))))
+            (progn
+              (pushnew 'echo-area-autodoc (styles echo-area))
+              (message
+               (let ((*package* (current-package (focus)))
+                     (row (node-after (focus (completion-buffer (current-buffer))))))
+                 (autodoc-for-thing
+                  (ignore-errors
+                   (swank::parse-symbol
+                    (text-content (first-child row))))))))
            (when-let (nodes (compute-autodoc (pos (focus))))
              (pushnew 'echo-area-autodoc (styles echo-area))
              (message nodes)))))))

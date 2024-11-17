@@ -675,8 +675,11 @@ This sets up: `*standard-output*', `*standard-input*',
                    :margin-bottom "8px"
                    :background-color "rgba(169,151,160,0.2)"))
 
-(defstyle header-buffer-name `(:flex "1 0 1em"
-                               :white-space "nowrap"))
+(defstyle header-buffer-name
+    `(:flex "1 0 1em"
+      :white-space "nowrap"
+      :overflow "hidden"
+      :text-overflow "ellipsis"))
 
 (defstyle header-buffer-modes
     `(:flex "1 0 1em"
