@@ -59,7 +59,8 @@
                :trivial-custom-debugger
                :cl-tld
                :swank
-               :swank/exts))
+               :swank/exts
+               :trivial-package-local-nicknames))
 
 (asdf:defsystem neomacs/app
   :defsystem-depends-on (:deploy)
