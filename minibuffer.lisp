@@ -135,9 +135,11 @@ This is a wrapper around `read-from-minibuffer' that creates a completion buffer
   (update-completion-buffer buffer))
 
 (defmethod minibuffer-result ((buffer minibuffer-completion-mode))
-  (let ((node (node-after (focus (completion-buffer buffer)))))
-    (when (selectable-p node)
-      (attribute node 'presentation))))
+  (if (require-match (completion-buffer buffer))
+      (let ((node (node-after (focus (completion-buffer buffer)))))
+        (when (selectable-p node)
+          (attribute node 'presentation)))
+      (minibuffer-input buffer)))
 
 (define-mode completion-buffer-mode (occur-mode)
   ((require-match
