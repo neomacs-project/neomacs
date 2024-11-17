@@ -152,6 +152,7 @@
 
 ;;; Get DOM from renderer
 ;; Initially adapted from Nyxt
+;; Copyright (c) 2017-2024, Atlas Engineer LLC.
 
 (defparameter +get-body-json-code+
   (ps:ps

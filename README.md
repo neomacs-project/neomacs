@@ -1,6 +1,6 @@
 > The fractal flowers and recursive roots:
 > the most lovely hack I've seen.
->                    -- Eternal Flame by Bob Kanefsky and Julia Ecklar
+>                    -- God wrote in Lisp, by Bob Kanefsky and Julia Ecklar
 
 Neomacs is a computing environment based on structural
 editing. Neomacs aims to become the Emacs of trees. Currently, Neomacs

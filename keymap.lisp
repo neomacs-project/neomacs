@@ -8,6 +8,7 @@
     set-key define-keys))
 
 ;; Initially adapted from lem
+;; Copyright (c) 2015 cxxxr
 
 (defstruct (key (:constructor %make-key))
   (ctrl nil :type boolean)

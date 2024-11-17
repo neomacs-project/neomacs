@@ -2,6 +2,7 @@
 
 ;;; Hints
 ;; Initially adapted from Nyxt and my XWWP fork
+;; Copyright (c) 2017-2024, Atlas Engineer LLC.
 
 (define-content-script web-hints
   (defun create-hint-element (hint)
