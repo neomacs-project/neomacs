@@ -601,11 +601,17 @@ Called by `self-insert-command' to get the character for insertion."
           :styles (styles (current-buffer))
           :nodes items))
         (let ((text
-                (with-output-to-string (s)
-                  (dolist (n items)
-                    (write-dom-aux
-                     (current-buffer)
-                     n s)))))
+                (handler-case
+                    (with-output-to-string (s)
+                      (dolist (n items)
+                        (write-dom-aux
+                         (current-buffer)
+                         n s)))
+                  ;; Fallback to plain text
+                  (not-supported ()
+                    (with-output-to-string (s)
+                      (dolist (n items)
+                        (write-string (text-content n) s)))))))
           (evaluate-javascript
            (ps:ps
              (ps:chain clipboard (write-text (ps:lisp text))))

@@ -169,6 +169,8 @@ makes the next character accepted unconditionally."
 ;;; Pretty printer interface
 
 (defgeneric write-dom-aux (buffer node stream)
+  (:method ((buffer buffer) (node t) (stream t))
+    (error 'not-supported :operation 'write-dom :buffer buffer))
   (:documentation
    "Serialize DOM NODE to STREAM for BUFFER.
 
