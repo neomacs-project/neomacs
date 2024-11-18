@@ -158,16 +158,21 @@ If nil, disable message logging. If t, log messages but don't truncate
                (evaluate-javascript
                 (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
                 :global)))
-           (let ((key (make-key :ctrl (assoc-value event :control)
-                                :meta (assoc-value event :alt)
-                                :super (assoc-value event :meta)
-                                :shift (assoc-value event :shift)
-                                :sym (assoc-value event :code))))
+           (let* ((sym (assoc-value event :key))
+                  (key (make-key :ctrl (assoc-value event :control)
+                                 :meta (assoc-value event :alt)
+                                 :super (assoc-value event :meta)
+                                 ;; If it is a single char, discard
+                                 ;; shift modifier because the
+                                 ;; translation has probably taken it
+                                 ;; into account already.
+                                 :shift (and (> (length sym) 1)
+                                             (assoc-value event :shift))
+                                 :sym (if (equal sym " ")
+                                          "Space"
+                                          sym))))
              (unless (member (key-sym key)
-                             '("ControlLeft" "ControlRight"
-                               "MetaLeft" "MetaRight"
-                               "AltLeft" "AltRight"
-                               "ShiftLeft" "ShiftRight")
+                             '("Control" "Meta" "Alt" "Shift")
                              :test 'equal)
                (alex:nconcf *this-command-keys* (list key))
                (if-let (cmd (lookup-keybind *this-command-keys* (keymaps buffer)))

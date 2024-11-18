@@ -111,48 +111,6 @@ Example: (define-keys :global
             (write-char (char-downcase c) s))
           (write-char c s)))))
 
-(defvar *char-to-event* (make-hash-table) "Map character to (event-code . shift-p).")
-(defvar *event-to-char* (make-hash-table :test 'equal) "Map (event-code . shift-p) to character.")
-;; Add character event translations
-(labels ((add (char sym shift-p)
-           (setq sym (string-to-camel-case sym))
-           (setf (gethash char *char-to-event*) (cons sym shift-p)
-                 (gethash (cons sym shift-p) *event-to-char*) char)))
-  (iter (for i from (char-code #\a) to (char-code #\z))
-    (for c = (code-char i))
-    (add c (sera:concat "key-" (string c)) nil))
-  (iter (for i from (char-code #\A) to (char-code #\Z))
-    (for c = (code-char i))
-    (add c (sera:concat "key-" (string c)) t))
-  (iter (for i from (char-code #\0) to (char-code #\9))
-    (for c = (code-char i))
-    (add c (sera:concat "digit-" (string c)) nil))
-  (iter (for c in '(#\) #\! #\@ #\# #\$ #\% #\^ #\& #\* #\())
-    (for i from 0)
-    (add c (format nil "digit-~A" i) t))
-  (add #\; "semicolon" nil)
-  (add #\= "equal" nil)
-  (add #\, "comma" nil)
-  (add #\- "minus" nil)
-  (add #\. "period" nil)
-  (add #\/ "slash" nil)
-  (add #\` "backquote" nil)
-  (add #\\ "backslash" nil)
-  (add #\[ "bracket-left" nil)
-  (add #\] "bracket-right" nil)
-  (add #\' "quote" nil)
-  (add #\: "semicolon" t)
-  (add #\+ "equal" t)
-  (add #\< "comma" t)
-  (add #\_ "minus" t)
-  (add #\> "period" t)
-  (add #\? "slash" t)
-  (add #\~ "backquote" t)
-  (add #\| "backslash" t)
-  (add #\{ "bracket-left" t)
-  (add #\} "bracket-right" t)
-  (add #\" "quote" t))
-
 (defun kbd (string)
   "Parse STRING into a key sequence."
   (labels ((fail ()
@@ -172,11 +130,7 @@ Example: (define-keys :global
                   (fail))
                  (t
                   (if (= (length str) 1)
-                      (if-let (translation (gethash (only-elt str) *char-to-event*))
-                        (setf str (car translation)
-                              shift (cdr translation))
-                        (fail))
-                      (setq str (string-to-camel-case str)))
+                      str (setq str (string-to-camel-case str)))
                   (return (make-key :ctrl ctrl
                                     :meta meta
                                     :super super
@@ -193,8 +147,7 @@ KEY can either by a key or a key sequence.
 If STREAM is nil, return the string representation instead."
   (ematch key
     ((key ctrl meta super hypher shift sym)
-     (if-let (translation (gethash (cons sym shift) *event-to-char*))
-       (setf shift nil sym (string translation))
+     (unless (= (length sym) 1)
        (setq sym (string-from-camel-case sym)))
      (format stream "~:[~;C-~]~:[~;M-~]~:[~;s-~]~:[~;H-~]~:[~;S-~]~A"
              ctrl meta super hypher shift sym))

@@ -292,50 +292,42 @@
 (defmethod revert-buffer-aux ((buffer web-mode))
   (load-url buffer (url buffer)))
 
-(defun key-sym-to-electron (sym shift)
-  (if-let (translation (gethash (cons sym shift) *event-to-char*))
-    (values (string translation) nil)
-    (values sym shift)))
-
 (defun web-send-key (key)
-  (let ((shift (key-shift key)) code)
-    (setf (values code shift)
-          (key-sym-to-electron (key-sym key) shift))
-    (evaluate-javascript
-     (ps:ps
-       (let ((buf (js-buffer (current-buffer)))
-             (code (ps:lisp code))
-             (modes
-               (ps:lisp
-                (let (mods)
-                  (when shift
-                    (push "Shift" mods))
-                  (when (key-ctrl key)
-                    (push "Control" mods))
-                  (when (key-meta key)
-                    (push "Alt" mods))
-                  (when (key-super key)
-                    (push "Meta" mods))
-                  (cons 'list mods)))))
-         (ps:chain buf ignore-keys
-                   (push (ps:create type "keyDown"
-                                    key (ps:lisp (key-sym key)))))
-         (ps:chain
-          buf web-contents
-          (send-input-event
-           (ps:create type "keyDown"
-                      key-code code)))
-         (ps:chain
-          buf web-contents
-          (send-input-event
-           (ps:create type "char"
-                      key-code code)))
-         (ps:chain
-          buf web-contents
-          (send-input-event
-           (ps:create type "keyUp"
-                      key-code code)))))
-     :global)))
+  (evaluate-javascript
+   (ps:ps
+     (let ((buf (js-buffer (current-buffer)))
+           (code (ps:lisp (key-sym key)))
+           (modes
+             (ps:lisp
+              (let (mods)
+                (when (key-shift key)
+                  (push "Shift" mods))
+                (when (key-ctrl key)
+                  (push "Control" mods))
+                (when (key-meta key)
+                  (push "Alt" mods))
+                (when (key-super key)
+                  (push "Meta" mods))
+                (cons 'list mods)))))
+       (ps:chain buf ignore-keys
+                 (push (ps:create type "keyDown"
+                                  key (ps:lisp (key-sym key)))))
+       (ps:chain
+        buf web-contents
+        (send-input-event
+         (ps:create type "keyDown"
+                    key-code code)))
+       (ps:chain
+        buf web-contents
+        (send-input-event
+         (ps:create type "char"
+                    key-code code)))
+       (ps:chain
+        buf web-contents
+        (send-input-event
+         (ps:create type "keyUp"
+                    key-code code)))))
+   :global))
 
 (define-command web-forward-key
   :mode web-mode ()
