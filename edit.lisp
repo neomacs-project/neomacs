@@ -747,3 +747,7 @@ If ERROR-P is t, signal a `user-error' if no such element is found"
   (for char = (code-char i))
   (unless (member char '(#\ ))
     (set-key *global-keymap* (string char) 'self-insert-command)))
+
+(iter (for i from 128 below 255)
+  (for char = (code-char i))
+  (set-key *global-keymap* (string char) 'self-insert-command))
