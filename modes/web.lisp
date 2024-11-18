@@ -139,6 +139,9 @@
   'backward-delete
   (make-web-send-key-command
    (car (kbd "backspace")))
+  'copy-element 'web-copy
+  'cut-element 'web-cut
+  'paste 'web-paste
   "C-c b" 'web-go-backward
   "C-c f" 'web-go-forward)
 
@@ -238,6 +241,17 @@
              t)))
        :global)
     (user-error "Can not go forward.")))
+
+(macrolet ((define-web-command (operation)
+             `(define-command ,(alex:symbolicate "WEB-" operation)
+                :mode web-mode ()
+                (evaluate-javascript
+                 (ps:ps (ps:chain (js-buffer (current-buffer))
+                                  web-contents (,operation)))
+                 :global))))
+  (define-web-command copy)
+  (define-web-command cut)
+  (define-web-command paste))
 
 (define-mode web-buffer-history-list-mode (list-mode)
   ((items :initform (alex:required-argument :items)
