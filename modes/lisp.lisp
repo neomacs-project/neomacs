@@ -374,26 +374,33 @@ found are replaced with a dummy symbol."
                  sexp))))
     (process node)))
 
+(defgeneric current-package-aux (buffer pos)
+  (:method ((buffer buffer) (pos t))
+    (find-package "NEOMACS-USER"))
+  (:method ((buffer lisp-mode) pos)
+    (with-marker (marker pos)
+      (or (find-package
+           (handler-case
+               (iter (beginning-of-defun marker)
+                 (for node = (node-after marker))
+                 (for c = (sexp-children node))
+                 (when (and
+                        (car c)
+                        (equal "IN-PACKAGE"
+                               (string-upcase (text-content (car c)))))
+                   (when-let (name (cadr c))
+                     (return (string-upcase
+                              (str:trim (text-content name)
+                                        :char-bag "#:"))))))
+             (motion-error ())))
+          (call-next-method)))))
+
 (defun current-package (&optional (marker-or-pos (focus)))
   "Return the package in the context of MARKER-OR-POS.
 This is determined by searching for a `in-package' top-level form
 before MARKER-OR-POS."
-  (with-marker (marker marker-or-pos)
-    (or (find-package
-         (handler-case
-             (iter (beginning-of-defun marker)
-               (for node = (node-after marker))
-               (for c = (sexp-children node))
-               (when (and
-                      (car c)
-                      (equal "IN-PACKAGE"
-                             (string-upcase (text-content (car c)))))
-                 (when-let (name (cadr c))
-                   (return (string-upcase
-                            (str:trim (text-content name)
-                                      :char-bag "#:"))))))
-           (motion-error ())))
-        (find-package "NEOMACS-USER"))))
+  (let ((pos (resolve-marker marker-or-pos)))
+    (current-package-aux (host pos) pos)))
 
 ;;; Compiler notes
 

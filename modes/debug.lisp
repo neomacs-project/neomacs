@@ -115,6 +115,18 @@
      (sb-di::code-location-form-number location)
      (sb-c::debug-source-plist source))))
 
+(defmethod current-package-aux ((buffer debugger-mode) pos)
+  (or (when-let* ((call (presentation-at pos 'dissect:call))
+                  (fun (dissect:call call))
+                  (name (typecase fun
+                          (symbol fun)
+                          (function (sb-impl::%fun-name fun)))))
+        (typecase name
+          (symbol (symbol-package name))
+          ((cons (eql setf) (cons symbol))
+           (symbol-package (cadr name)))))
+      (call-next-method)))
+
 (defun debug-for-environment (env mailbox)
   (let ((debugger
           (make-buffer
