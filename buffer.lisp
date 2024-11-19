@@ -1,6 +1,6 @@
 (in-package #:neomacs)
 
-(sera:eval-always
+(sera:export-always
   '(buffer id name url load-status
     generate-buffer-name get-buffer buffer-alive-p
     make-buffer get-buffer-create rename-buffer

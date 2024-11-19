@@ -1,6 +1,6 @@
 (in-package :neomacs)
 
-(sera:eval-always
+(sera:export-always
   '(defstyle css-cell set-style *styles*))
 
 (defun get-style (symbol)
@@ -65,7 +65,9 @@
         (get symbol 'standard-style) (copy-tree spec)))
 
 (defmacro defstyle (symbol spec &optional doc)
-  "Define a style named by SYMBOL."
+  "Define a style named by SYMBOL.
+
+This also exports SYMBOL from current package."
   `(progn
      (initialize-style ',symbol ,spec)
      (setf (documentation ',symbol 'style) ,doc)
@@ -73,7 +75,9 @@
      ',symbol))
 
 (defmacro defsheet (symbol spec &optional doc)
-  "Define a style sheet named by SYMBOL."
+  "Define a style sheet named by SYMBOL.
+
+This also exports SYMBOL from current package."
   `(progn
      (setf (get ',symbol 'sheet) t)
      (defstyle ,symbol ,spec ,doc)))

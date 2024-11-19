@@ -6,7 +6,18 @@
   (:import-from #:trivia #:ematch #:match)
   (:import-from #:alexandria #:if-let #:when-let #:when-let*
                 #:first-elt #:last-elt #:assoc-value))
+(defpackage neomacs-user
+  (:use #:common-lisp #:neomacs))
+
 (in-package #:neomacs)
+(trivial-package-local-nicknames:add-package-local-nickname
+ '#:sera '#:serapeum)
+(trivial-package-local-nicknames:add-package-local-nickname
+ '#:alex '#:alexandria)
+(trivial-package-local-nicknames:add-package-local-nickname
+ '#:cera.d '#:ceramic.driver)
+
+(in-package #:neomacs-user)
 (trivial-package-local-nicknames:add-package-local-nickname
  '#:sera '#:serapeum)
 (trivial-package-local-nicknames:add-package-local-nickname

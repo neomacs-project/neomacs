@@ -390,7 +390,7 @@ before MARKER-OR-POS."
                             (str:trim (text-content name)
                                       :char-bag "#:"))))))
            (motion-error ())))
-        (find-package "NEOMACS"))))
+        (find-package "NEOMACS-USER"))))
 
 ;;; Compiler notes
 
@@ -1113,7 +1113,7 @@ sb-introspect:definition-source)'."
 
 (defmethod write-dom-aux ((buffer lisp-mode) node stream)
   (let ((*print-pprint-dispatch* *lisp-pprint-dispatch*)
-        (*package* (find-package "NEOMACS"))
+        (*package* (current-package node))
         (*print-pretty* t))
     (prin1 node stream)))
 
@@ -1132,11 +1132,12 @@ sb-introspect:definition-source)'."
 
 (define-command eval-expression ()
   "Read a Lisp expression from minibuffer and evaluate it."
-  (let ((*package* (find-package "NEOMACS")))
+  (let ((*package* (current-package)))
     (message
      "~S"
      (eval (read-from-minibuffer
-            "Eval: " :mode 'lisp-minibuffer-mode)))))
+            (format nil "Eval (~a): " (package-name *package*))
+            :mode 'lisp-minibuffer-mode)))))
 
 (define-keys :global
   "M-:" 'eval-expression)

@@ -63,7 +63,8 @@ Try the following workaround:
         *use-neomacs-debugger* use-neomacs-debugger)
   (unless (get-buffer "*scratch*") (make-scratch))
   (start-command-loop)
-  (let ((config-file (uiop:xdg-config-home "neomacs" "init.lisp")))
+  (let ((*package* (find-package "NEOMACS-USER"))
+        (config-file (uiop:xdg-config-home "neomacs" "init.lisp")))
     (if (uiop:file-exists-p config-file)
         (progn
           (format t "Loading ~a.~%" config-file)

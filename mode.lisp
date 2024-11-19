@@ -1,6 +1,6 @@
 (in-package #:neomacs)
 
-(sera:eval-always
+(sera:export-always
   '(mode define-mode))
 
 (defvar *modes* nil)

@@ -1,6 +1,6 @@
 (in-package #:neomacs)
 
-(sera:eval-always
+(sera:export-always
   '(key key-p
     key-ctrl key-meta key-super key-super key-shift key-sym
     kbd key-description
