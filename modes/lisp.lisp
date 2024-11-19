@@ -1118,7 +1118,9 @@ sb-introspect:definition-source)'."
 
 (defmethod write-dom-aux ((buffer lisp-mode) node stream)
   (let ((*print-pprint-dispatch* *lisp-pprint-dispatch*)
-        (*package* (current-package node))
+        (*package* (if (eql (host node) buffer)
+                       (current-package node)
+                       (current-package (focus buffer))))
         (*print-pretty* t))
     (prin1 node stream)))
 
