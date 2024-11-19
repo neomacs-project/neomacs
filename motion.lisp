@@ -299,9 +299,19 @@ Try to keep horizontal location approximately the same."
 
 (defvar *marker-ring* (containers:make-ring-buffer 16 t))
 
-(defvar *marker-ring-index* 0)
+(defvar *marker-ring-index* 0
+  "Index of the marker to be popped by next `pop-global-marker'.")
 
 (defun push-global-marker (&optional (marker (copy-marker (focus))))
+  "Push MARKER onto the global marker ring.
+
+If `*marker-ring-index*' is not 0 when this function is called, that
+many markers are deleted from the top of the marker ring (i.e. if
+there were `pop-global-marker' invocations, the popped markers are
+truly lost).
+
+Mark ring commands will delete MARKER if they no longer use it, so it
+is your responsible to copy the marker if you still need it later."
   (iter (for i below *marker-ring-index*)
     (until (containers:empty-p *marker-ring*))
     (for m = (containers:delete-first *marker-ring*))
@@ -310,11 +320,23 @@ Try to keep horizontal location approximately the same."
   (containers:insert-item *marker-ring* marker))
 
 (define-command pop-global-marker ()
+  "Pop a marker off the global marker ring and goto its position."
   (if-let (marker (iter (for i from *marker-ring-index*
                              below (containers:size *marker-ring*))
                     (for m = (containers:item-at *marker-ring* i))
                     (when (host m)
                       (setf *marker-ring-index* (1+ i))
+                      (return m))))
+    (with-current-buffer (switch-to-buffer (host marker))
+      (setf (pos (focus)) (pos marker)))
+    (user-error "No marker")))
+
+(define-command unpop-global-marker ()
+  "Undo the effect of previous `pop-global-mark'."
+  (if-let (marker (iter (for i from (1- *marker-ring-index*) downto 0)
+                    (for m = (containers:item-at *marker-ring* (1- i)))
+                    (when (host m)
+                      (setf *marker-ring-index* i)
                       (return m))))
     (with-current-buffer (switch-to-buffer (host marker))
       (setf (pos (focus)) (pos marker)))
@@ -351,4 +373,5 @@ Try to keep horizontal location approximately the same."
   "C-p" 'previous-line
   "C-v" 'scroll-down-command
   "M-v" 'scroll-up-command
-  "M-," 'pop-global-marker)
+  "M-," 'pop-global-marker
+  "C-M-," 'unpop-global-marker)
