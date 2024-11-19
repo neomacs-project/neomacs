@@ -29,6 +29,10 @@
   (call-next-method)
   (let ((last (make-element "span" :class "path-component"))
         (input (minibuffer-input-element buffer)))
+    (with-post-command (input 'first-child)
+      (unless (first-child input)
+        (insert-nodes (pos-down input)
+                      (make-element "span" :class "path-component"))))
     (iter (for n in (cdr (pathname-directory
                           (or (file-path (current-buffer))
                               *default-pathname-defaults*))))
@@ -39,7 +43,8 @@
     (setf (pos (focus)) (end-pos last))))
 
 (defun path-before (&optional (pos (focus)))
-  (setq pos (pos-prev-ensure pos #'selectable-p))
+  (setq pos (or (pos-next-ensure pos #'selectable-p)
+                (pos-prev-ensure pos #'selectable-p)))
   (let* ((component (node-containing pos))
          (dir (make-pathname
                :directory
