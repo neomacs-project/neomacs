@@ -19,6 +19,12 @@
 (defmethod selectable-p-aux ((buffer minibuffer-find-file-mode) pos)
   (class-p (node-containing pos) "path-component"))
 
+(defmethod on-node-setup progn ((buffer minibuffer-find-file-mode) node)
+  (with-post-command (node 'first-child 'next-sibling)
+    (unless (or (first-child node)
+                (not (next-sibling node)))
+      (delete-node node))))
+
 (defmethod revert-buffer-aux ((buffer minibuffer-find-file-mode))
   (call-next-method)
   (let ((last (make-element "span" :class "path-component"))
@@ -33,6 +39,7 @@
     (setf (pos (focus)) (end-pos last))))
 
 (defun path-before (&optional (pos (focus)))
+  (setq pos (pos-prev-ensure pos #'selectable-p))
   (let* ((component (node-containing pos))
          (dir (make-pathname
                :directory
