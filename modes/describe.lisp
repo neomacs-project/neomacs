@@ -127,7 +127,7 @@
         (progn
           (insert-nodes
            (end-pos (document-root buffer))
-           (dom `(:p
+           (dom `(:div
                   (:code ,(key-description (for-key buffer)))
                   " is unbound in "
                   ,(print-dom (for-buffer buffer)))))))))
