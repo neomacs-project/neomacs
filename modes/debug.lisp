@@ -10,7 +10,8 @@
   "a" 'debugger-invoke-abort
   "c" 'debugger-invoke-continue
   "enter" 'debugger-invoke-restart
-  "v" 'debugger-show-source)
+  "v" 'debugger-show-source
+  "e" 'debugger-eval-in-frame)
 
 (defmethod revert-buffer-aux ((buffer debugger-mode))
   (erase-buffer)
@@ -126,6 +127,21 @@
           ((cons (eql setf) (cons symbol))
            (symbol-package (cadr name)))))
       (call-next-method)))
+
+(define-command debugger-eval-in-frame
+  :mode debugger-mode ()
+  (let* ((frame (dissect::frame
+                 (presentation-at (focus) 'dissect:call t)))
+         (location (sb-di:frame-code-location frame))
+         (*package* (current-package)))
+    (message
+     "~S"
+     (funcall (sb-di:preprocess-for-eval
+               (read-from-minibuffer
+                (format nil "Eval in frame (~a): " (package-name *package*))
+                :mode 'lisp-minibuffer-mode)
+               location)
+              frame))))
 
 (defun debug-for-environment (env mailbox)
   (let ((debugger
