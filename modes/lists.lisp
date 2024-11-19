@@ -116,7 +116,7 @@
    (get-buffer-create "*buffers*" :mode 'buffer-list-mode
                       :revert t)))
 
-(defsheet list-mode `(("table" :white-space "pre" :width "100%"
+(defsheet list-mode `(("table" :white-space "pre" :width "100vw"
                                :border-collapse "collapse")
                       ("tbody:empty::after"
                        :content "<No Item>"

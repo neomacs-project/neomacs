@@ -18,12 +18,12 @@
   (insert-nodes
    (end-pos (document-root buffer))
    (make-element
-    "p" :children
+    "div" :children
     (list (princ-to-string
            (dissect:environment-condition
             (environment buffer))))))
   (insert-nodes (end-pos (document-root buffer))
-                (make-element "p" :children (list "Restarts:")))
+                (make-element "h1" :children (list "Restarts:")))
   (let ((tbody (make-element "tbody"))
         (*print-case* :downcase))
     (insert-nodes
@@ -43,7 +43,7 @@
         r)))
     (setf (pos (focus)) (pos-down tbody)))
   (insert-nodes (end-pos (document-root buffer))
-                (make-element "p" :children (list "Backtrace:")))
+                (make-element "h1" :children (list "Backtrace:")))
   (let ((tbody (make-element "tbody"))
         (*print-case* :downcase))
     (insert-nodes
@@ -184,11 +184,13 @@
         (sb-thread:abort-thread))))
 
 (defsheet debugger-mode
-    `(("table" :width "100%"
+    `(("table" :width "100vw"
                :border-collapse "collapse")
       (".restart-table td" :padding-right "1em")
       (".locals-table td" :padding-right "1em")
-      ("p" :margin-bottom 0)
+      ("p" :margin-top 0 :margin-bottom 0)
+      ("h1" :margin-top 0 :margin-bottom 0
+            :font-size "1.2rem")
       ("td"
        :white-space "nowrap"
        :vertical-align "top")))
