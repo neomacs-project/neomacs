@@ -75,7 +75,7 @@
   (or (gethash name (attributes element))
       (setf (gethash name (attributes element))
             (add-attribute-observer
-             (make-eager-cell :no-news-p #'equal)
+             (make-lazy-cell :no-news-p #'equal)
              element name))))
 
 (defun (setf attribute-cell) (new-val element name)
