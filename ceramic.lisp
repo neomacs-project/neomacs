@@ -67,6 +67,22 @@ BUFFER is NIL."
 
 (defvar *event-queue* (sb-concurrency:make-mailbox))
 
+(defvar *last-quit-time* nil)
+
+(defvar *quit-interrupt-threshold* 0.2
+  "Duration in seconds to trigger a quit interrupt.
+
+Interrupt the command loop if it has not responded to a quit event for
+this long.")
+
+(defun quit-event-p (message)
+  (let ((event (assoc-value message :input-event)))
+    (and (equal (assoc-value event :type) "keyDown")
+         (equal (assoc-value event :key) "g")
+         (assoc-value event :control)
+         (not (assoc-value event :alt))
+         (not (assoc-value event :meta)))))
+
 (defmethod ceramic.driver::on-message ((driver driver) message)
   (declare (type string message))
   (let ((data (cl-json:decode-json-from-string message)))
@@ -76,7 +92,17 @@ BUFFER is NIL."
           (setf (gethash id cera.d::responses)
                 (assoc-value data :result))
           (bt2:condition-broadcast cera.d::js-cond))
-        (sb-concurrency:send-message *event-queue* data)))))
+        (progn
+          (when (quit-event-p data)
+            (let ((interrupt-p
+                    (and *last-quit-time*
+                         (> (- (get-internal-real-time) *last-quit-time*)
+                            (* internal-time-units-per-second *quit-interrupt-threshold*)))))
+              (setf *last-quit-time* (get-internal-real-time))
+              (when interrupt-p
+                (sb-thread:interrupt-thread
+                 *command-loop-thread* (lambda () (signal 'quit))))))
+          (sb-concurrency:send-message *event-queue* data))))))
 
 (ceramic.resource:define-resources :neomacs ()
   (assets #p"assets/"))
