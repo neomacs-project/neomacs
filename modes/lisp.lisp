@@ -12,6 +12,7 @@
   "M-;" 'wrap-comment
   "M-r" 'lisp-raise
   "M-s" 'lisp-splice
+  ";" 'open-comment
 
   "C-M-x" 'eval-defun
   "C-c C-c" 'compile-defun
@@ -51,8 +52,7 @@
   (declare (ignore old))
   (let ((node (node-containing new)))
     (if (or (class-p node "list" "symbol")
-            (tag-name-p node "body")
-            (class-p (pos-prev new) "comment"))
+            (tag-name-p node "body"))
         (enable 'sexp-editing-mode)
         (disable 'sexp-editing-mode))))
 
@@ -218,8 +218,8 @@
                (message "Comment Level -> ~a" n))))
     (if-let
         (node (find-if (alex:rcurry #'class-p "comment")
-                       (list (node-after marker)
-                             (node-containing marker))))
+                       (list (pos marker)
+                             (pos-prev marker))))
       (setf (attribute node "comment-level")
             (prin1-to-string
              (cycle-level
@@ -256,8 +256,7 @@
 (define-keys sexp-editing-mode
   "(" 'open-paren
   "\"" 'open-string
-  "space" 'open-space
-  ";" 'open-comment)
+  "space" 'open-space)
 
 (defmethod insert-text-aux
     ((buffer sexp-editing-mode) text-node parent)
