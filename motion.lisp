@@ -4,7 +4,8 @@
     '(selectable-p-aux selectable-p ensure-selectable
       word-character-p word-start-p word-end-p
       block-element-p block-element-p-aux
-      line-start-p line-end-p))
+      line-start-p line-end-p
+      push-global-marker *marker-ring* *marker-ring-index*))
 
 (defgeneric selectable-p-aux (buffer pos)
   (:method ((buffer buffer) (pos t))

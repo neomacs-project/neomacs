@@ -56,7 +56,7 @@
    (name :type string)
    (url :initarg :url :type quri:uri)
    (load-status :initform :loading)
-   (word-boundary-list :default (list #\  #\-))
+   (word-boundary-list :default (list #\  #\- #\:))
    (focus-marker)
    (selection-marker)
    (selection-active :initform nil :type boolean)
