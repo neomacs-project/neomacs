@@ -150,10 +150,11 @@ X and Y are numbers in pixels."
 
 Return t if it hides completion, nil if it does nothing."
   (let ((buffer (current-buffer)))
-    (unless (inside-range-inclusive-p
-             (focus) (replace-range buffer))
-      (hide-completions)
-      t)))
+    (when (typep buffer 'active-completion-mode)
+      (unless (inside-range-inclusive-p
+               (focus) (replace-range buffer))
+        (hide-completions)
+        t))))
 
 (define-command hide-completions ()
   (disable 'active-completion-mode))
