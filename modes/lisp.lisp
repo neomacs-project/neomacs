@@ -1083,9 +1083,14 @@ sb-introspect:definition-source)'."
        (cond ((list-node-p self)
               (if-let (op (first-child self))
                 (pprint-form self stream
-                             (normalize-indent-spec
-                              (symbol-indentation
-                               (compute-symbol op))))
+                             (if (when-let (prev (previous-sibling self))
+                                   (and (class-p prev "symbol")
+                                        (sera:string-suffix-p
+                                         "'" (text-content prev))))
+                                 '(&rest 1)
+                                 (normalize-indent-spec
+                                  (symbol-indentation
+                                   (compute-symbol op)))))
                 (write-string "()" stream)))
              ((new-line-node-p self)
               (pprint-newline :mandatory stream))
