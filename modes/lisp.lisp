@@ -897,7 +897,7 @@ sb-introspect:definition-source)'."
               (sb-introspect:function-lambda-list symbol)
             (unless unavailable
               (setq arglist l operator symbol
-                    form (node-to-sexp cur nil))
+                    form (ignore-errors (node-to-sexp cur nil)))
               (return)))))
       (when operator
         (let ((arglist (swank::decode-arglist arglist)))
