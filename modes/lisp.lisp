@@ -182,7 +182,10 @@
   (make-atom-node "symbol" (prin1-to-string obj)))
 
 (defmethod print-dom ((obj t) &key)
-  (make-presentation-node (prin1-to-string obj) obj))
+  ;; Turn of CL's pretty printer because it introduces
+  ;; unnecessary line breaks
+  (let (*print-pretty*)
+    (make-presentation-node (prin1-to-string obj) obj)))
 
 (define-command open-paren :mode lisp-mode
   (&optional (marker (focus)))
