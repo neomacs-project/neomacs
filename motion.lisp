@@ -160,7 +160,7 @@ otherwise."
       (if pos
           (setf (pos marker) pos)
           #+nil (warn "Failed to ensure-selectable: ~a"
-                (host marker))))))
+                      (host marker))))))
 
 (define-command backward-up-node (&optional (marker (focus)))
   "Move to closest selectable parent."
@@ -303,7 +303,9 @@ Try to keep horizontal location approximately the same."
   "arrow-down" 'next-line
   "arrow-up" 'previous-line
   "end" 'end-of-line
-  "home" 'beginning-of-line)
+  "home" 'beginning-of-line
+  "page-up" 'scroll-up-command
+  "page-down" 'scroll-down-command)
 
 (define-keys :global
   "C-f" 'forward-node
