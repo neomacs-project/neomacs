@@ -220,7 +220,7 @@ STREAM can also be
                            (collect (process c) result-type 'vector)))))
                 (text-node
                  (make-instance 'plump:text-node :parent nil
-                                :text (text node))))))
+                                                 :text (text node))))))
      (process node))
    stream))
 
