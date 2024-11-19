@@ -295,6 +295,33 @@ Try to keep horizontal location approximately the same."
   "Move down `scroll-lines'."
   (next-line (scroll-lines (current-buffer))))
 
+;;; Marker ring
+
+(defvar *marker-ring* (containers:make-ring-buffer 16 t))
+
+(defvar *marker-ring-index* 0)
+
+(defun push-global-marker (&optional (marker (copy-marker (focus))))
+  (iter (for i below *marker-ring-index*)
+    (until (containers:empty-p *marker-ring*))
+    (for m = (containers:delete-first *marker-ring*))
+    (when (host m) (delete-marker m)))
+  (setq *marker-ring-index* 0)
+  (containers:insert-item *marker-ring* marker))
+
+(define-command pop-global-marker ()
+  (if-let (marker (iter (for i from *marker-ring-index*
+                             below (containers:size *marker-ring*))
+                    (for m = (containers:item-at *marker-ring* i))
+                    (when (host m)
+                      (setf *marker-ring-index* (1+ i))
+                      (return m))))
+    (with-current-buffer (switch-to-buffer (host marker))
+      (setf (pos (focus)) (pos marker)))
+    (user-error "No marker")))
+
+;;; Key bindings
+
 (define-keys :global
   "arrow-right" 'forward-node
   "arrow-left" 'backward-node
@@ -323,4 +350,5 @@ Try to keep horizontal location approximately the same."
   "C-n" 'next-line
   "C-p" 'previous-line
   "C-v" 'scroll-down-command
-  "M-v" 'scroll-up-command)
+  "M-v" 'scroll-up-command
+  "M-," 'pop-global-marker)

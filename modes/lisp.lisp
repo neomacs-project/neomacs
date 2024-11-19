@@ -818,12 +818,15 @@ sb-introspect:definition-source)'."
         (let ((*package* (current-package)))
           (if-let (symbol (swank::parse-symbol name (current-package)))
             (let ((definitions (find-definitions symbol)))
-              (if (= (length definitions) 1)
-                  (visit-definition (cadr (car definitions)))
-                  (pop-to-buffer
-                   (make-buffer
-                    "*xref*" :mode 'xref-list-mode
-                             :symbol symbol :revert t))))
+              (case (length definitions)
+                (0 (user-error "No known definition for ~a" symbol))
+                (1 (push-global-marker)
+                 (visit-definition (cadr (car definitions))))
+                (t (push-global-marker)
+                 (pop-to-buffer
+                  (make-buffer
+                   "*xref*" :mode 'xref-list-mode
+                   :symbol symbol :revert t)))))
             (user-error "No symbol named ~a" name)))))
     (user-error "No symbol under focus")))
 
