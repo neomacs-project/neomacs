@@ -58,6 +58,7 @@
                :dissect
                :trivial-custom-debugger
                :cl-tld
+               :osicat
                :swank
                :swank/exts
                :trivial-package-local-nicknames))
