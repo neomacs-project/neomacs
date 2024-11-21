@@ -208,8 +208,9 @@ If nil, disable message logging. If t, log messages but don't truncate
                                :styles nil)))
           ((equal type "frame-closed")
            (delete-buffer buffer))
-          ((equal type "focus")
-           (focus-buffer buffer))
+          ((equal type "frame-focused")
+           (with-current-buffer buffer nil))
+          ((equal type "focus") (focus-buffer buffer))
           ((eq type 'debug-request)
            (debug-for-environment
             (assoc-value event :environment)

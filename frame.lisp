@@ -82,50 +82,7 @@
 
 (defmethod enable-aux ((mode (eql 'frame-root-mode)))
   (evaluate-javascript
-   (ps:ps
-     (let ((frame (ps:chain -ceramic (create-frame (ps:lisp (id (current-buffer))) (ps:create))))
-           (root (js-buffer (current-buffer))))
-       (ps:chain frame content-view (add-child-view root))
-       (let ((resize
-               (lambda ()
-                 (let ((bounds (ps:chain frame (get-content-bounds))))
-                   (ps:chain root (set-bounds
-                                   (ps:create :x 0 :y 0
-                                              :width (ps:chain bounds width)
-                                              :height (ps:chain bounds height)))))
-                 (ps:chain root web-contents
-                           (execute-java-script
-                            (ps:lisp
-                             (ps:ps
-                               (ps:new (-promise
-                                        (lambda (resolve)
-                                          (set-timeout
-                                           (lambda ()
-                                             (let ((result (ps:create)))
-                                               (dolist (c (ps:chain document (get-elements-by-class-name "content")))
-                                                 (let ((rect (ps:chain c (get-bounding-client-rect)))))
-                                                 (setf (ps:getprop result (ps:chain c (get-attribute "buffer")))
-                                                       (ps:create :x (ps:chain rect :x)
-                                                                  :y (ps:chain rect :y)
-                                                                  :width (ps:chain rect :width)
-                                                                  :height (ps:chain rect :height))))
-                                               (funcall resolve result)))
-                                           0)))))))
-                           (then (lambda (result)
-                                   (ps:for-in
-                                    (buffer result)
-                                    (let ((view (ps:getprop (ps:chain -ceramic buffers) buffer)))
-                                      (when view
-                                        (ps:chain view (set-bounds (ps:getprop result buffer)))))))))))))
-       (ps:chain frame (set-menu nil))
-       (ps:chain frame (on "resize" resize))
-       (ps:chain frame (on "maximize" resize))
-       (ps:chain frame (on "unmaximize" resize))
-       (ps:chain frame (on "enter-full-screen" resize))
-       (ps:chain frame (on "leave-full-screen" resize))
-       (ps:chain frame (on "show" resize))
-       (ps:chain frame (on "restore" resize))
-       (ps:chain frame (on "focus" resize))))
+   (format nil "Ceramic.createFrame(~S,{})" (id (current-buffer)))
    :global))
 
 (defun cleanup-buffer-display (buffer)

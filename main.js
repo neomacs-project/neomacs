@@ -60,10 +60,32 @@ Ceramic.frames = {};
 Ceramic.buffers = {};
 
 Ceramic.createFrame = function(id, options) {
-    var win = new BaseWindow(options);
+    const win = new BaseWindow(options);
     Ceramic.frames[id] = win;
+    const root = Ceramic.buffers[id];
+    win.contentView.addChildView(root);
     win.on('closed',()=>{
         RemoteJS.send(JSON.stringify({inputEvent: {type:'frame-closed'}, buffer: id}))})
+    const resize = function (){
+        const bounds = win.getContentBounds();
+        root.setBounds({x:0,y:0,width:bounds.width,height:bounds.height});
+        root.webContents.executeJavaScript(`{const result={};
+Array.from(document.getElementsByClassName("content")).forEach((c)=>{
+    const rect = c.getBoundingClientRect();
+    result[c.getAttribute("buffer")]={x:rect.x,y:rect.y,width:rect.width,height:rect.height}});
+result}`).then((result)=>{
+            for (buffer in result){
+                const view = Ceramic.buffers[buffer];
+                if(view) view.setBounds(result[buffer]);}})};
+    win.setMenu(null);
+    win.on("resize",resize);
+    win.on("maximize",resize);
+    win.on("unmaximize",resize);
+    win.on("enter-full-screen",resize);
+    win.on("leave-full-screen",resize);
+    win.on("show",resize);
+    win.on("restore",resize);
+    win.on("focus",resize);
     return win;
 };
 
