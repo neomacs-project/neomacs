@@ -9,6 +9,7 @@
   "C-c i" 'open-italic
   "C-c t" 'insert-description-list
   "C-c d" 'insert-description
+  "C-c u" 'insert-unordered-list
   "C-c ," 'open-comma
   "C-c C-l"'insert-link)
 
@@ -61,13 +62,12 @@
 
 (define-command open-paragraph
   :mode html-doc-mode (&optional (marker (focus)))
-  (let* ((pos (resolve-marker marker))
-         (new-node (make-element "p"))
-         (dst (pos-right (pos-up pos))))
-    (check-valid-parent (node-containing dst) "p")
-    (insert-nodes dst new-node)
-    (move-nodes pos nil (end-pos new-node))
-    (setf (pos marker) (pos-down new-node))))
+  (let ((pos (resolve-marker marker)))
+    (if (tag-name-p (node-containing pos) "body")
+        (let ((new-node (make-element "p")))
+          (insert-nodes pos new-node)
+          (setf (pos marker) (pos-down new-node)))
+        (split-node pos))))
 
 (define-command open-heading
   :mode html-doc-mode (&optional (marker (focus)))
