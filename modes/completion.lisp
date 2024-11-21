@@ -99,12 +99,11 @@ Returns a list: (X Y)
 X and Y are numbers in pixels."
   (bind (((x y w h) rect))
     (list
-     (if (< (+ x w width) max-width)
-         (+ x w)
-         (- (+ x w) width))
-     (if (< (+ y h height) max-height)
-         (+ y h)
-         (- y height)))))
+     (max 0 (min (+ x w) (- max-width width)))
+     (if (and (> (- y height) 0)
+              (> (+ y h height) max-height))
+         (- y height)
+         (+ y h)))))
 
 (defun update-completion-menu-position (buffer)
   (when-let*
