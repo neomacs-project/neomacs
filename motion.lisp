@@ -144,11 +144,15 @@ Test if POS is selectable in BUFFER."))
   (setf (adjust-marker-direction (current-buffer)) 'backward)
   (setf (pos marker) (end-pos (restriction (host marker)))))
 
-(defun ensure-selectable (marker &optional backward)
+(defun ensure-selectable
+    (marker &optional (backward
+                       (eql (adjust-marker-direction (host marker))
+                            'backward)))
   "Move MARKER to nearest selectable position.
 
 Prefer going forward if BACKWARD is nil. Prefer going backward
-otherwise."
+otherwise. Default behavior depends on MARKER's host buffer's
+`adjust-marker-direction' slot."
   (let ((pos (pos marker)))
     (unless (selectable-p pos)
       (setq pos

@@ -10,6 +10,7 @@
   "/" 'split-node)
 
 (defmethod update-completion-buffer ((buffer minibuffer-find-file-mode))
+  (ensure-selectable (focus))
   (let ((path (path-before (focus))))
     (setf (file-path (completion-buffer buffer))
           (make-pathname :name nil :type nil :defaults path)
@@ -44,8 +45,6 @@
     (setf (pos (focus)) (end-pos last))))
 
 (defun path-before (&optional (pos (focus)))
-  (setq pos (or (pos-next-ensure pos #'selectable-p)
-                (pos-prev-ensure pos #'selectable-p)))
   (let* ((component (node-containing pos))
          (dir (make-pathname
                :directory
