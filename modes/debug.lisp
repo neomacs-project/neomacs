@@ -17,11 +17,13 @@
   (erase-buffer)
   (insert-nodes
    (end-pos (document-root buffer))
-   (make-element
-    "div" :children
-    (list (princ-to-string
-           (dissect:environment-condition
-            (environment buffer))))))
+   (dom `(:dl
+          (:dt ,(print-dom
+                 (dissect:environment-condition
+                  (environment buffer))))
+          (:dd ,(princ-to-string
+                 (dissect:environment-condition
+                  (environment buffer)))))))
   (insert-nodes (end-pos (document-root buffer))
                 (make-element "h1" :children (list "Restarts:")))
   (let ((tbody (make-element "tbody"))

@@ -2,7 +2,7 @@
 
 (sera:export-always
     '(focused-buffer replacement-buffer
-      get-message-buffer message))
+      get-message-buffer message current-buffer))
 
 (defun make-window-decoration (buffer)
   (check-displayable buffer)
