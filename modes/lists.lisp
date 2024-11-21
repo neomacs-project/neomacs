@@ -197,6 +197,7 @@ This should always be a directory pathname (with NIL name and type fields).")
              ,@ (if stat
                     `((:td ,@ (unless (uiop:directory-pathname-p path)
                                 (list (file-size-readable (osicat-posix:stat-size stat)))))
+                      #-windows
                       (:td ,(osicat-posix:getpwuid
                              (osicat-posix:stat-uid stat)))
                       (:td ,(file-date-readable
