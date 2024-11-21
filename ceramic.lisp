@@ -103,7 +103,7 @@ this long.")
               (setf *last-quit-time* (get-internal-real-time))
               (when interrupt-p
                 (sb-thread:interrupt-thread
-                 *command-loop-thread* (lambda () (signal 'quit))))))
+                 *command-loop-thread* (lambda () (signal 'async-quit))))))
           (sb-concurrency:send-message *event-queue* data))))))
 
 (ceramic.resource:define-resources :neomacs ()

@@ -23,6 +23,9 @@ non-nil HANDLER-P, which would return and signal a `quit' condition."))
 (define-condition quit () ()
   (:report "Quit"))
 
+(define-condition async-quit (quit) ()
+  (:report "Quit (async interrupt)"))
+
 (defvar *locked-buffers* nil)
 
 (defvar *post-command-buffers* nil)
@@ -235,11 +238,7 @@ If nil, disable message logging. If t, log messages but don't truncate
       (if handlers-p
           (restart-case
               (handler-bind
-                  ((quit (lambda (c)
-                           (funcall *quit-hook* c)
-                           (message "Quit")
-                           (next-iteration)))
-                   (user-error
+                  (((or quit user-error)
                      (lambda (c)
                        (funcall *quit-hook* c)
                        (message "~a" c)
