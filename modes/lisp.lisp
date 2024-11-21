@@ -25,12 +25,14 @@
   "C-c C-p" 'eval-print-last-expression)
 
 (defmethod selectable-p-aux ((buffer lisp-mode) pos)
-  (and (if-let (node (node-after pos))
-         (and (not (symbol-node-p node))
-              (not (and (new-line-node-p node)
-                        (non-empty-symbol-node-p (node-before pos)))))
-         (not (non-empty-symbol-node-p (node-before pos))))
-       (call-next-method)))
+  (and (if (eql *this-command* 'self-insert-command)
+           (characterp (node-before pos))
+           (if-let (node (node-after pos))
+             (and (not (symbol-node-p node))
+                  (not (and (new-line-node-p node)
+                            (non-empty-symbol-node-p (node-before pos)))))
+             (not (non-empty-symbol-node-p (node-before pos)))))
+   (call-next-method)))
 
 (defmethod render-focus-aux ((buffer lisp-mode) pos)
   (match pos
@@ -48,11 +50,13 @@
       (not (class-p element "list" "comment"))
       (call-next-method)))
 
-(defmethod on-focus-move progn ((buffer lisp-mode) old new)
-  (declare (ignore old))
-  (let ((node (node-containing new)))
-    (if (or (class-p node "list" "symbol")
-            (tag-name-p node "body"))
+(defgeneric sexp-parent-p (buffer node)
+  (:method ((buffer lisp-mode) node)
+    (or (class-p node "list") (tag-name-p node "body"))))
+
+(defmethod on-post-command progn ((buffer lisp-mode))
+  (let ((node (node-containing (focus))))
+    (if (or (sexp-parent-p buffer node) (class-p node "symbol"))
         (enable 'sexp-editing-mode)
         (disable 'sexp-editing-mode))))
 
@@ -81,7 +85,7 @@
           ((keywordp symbol) "keyword")
           (t ""))))
 
-(defmethod on-node-setup progn ((buffer lisp-mode) node)
+(defmethod on-node-setup progn ((buffer lisp-mode) (node element))
   (set-attribute-function node "operator" 'compute-operator)
   (with-post-command (node 'parent)
     (let ((parent (parent node)))
@@ -108,6 +112,17 @@
     (set-attribute-function node "symbol-type" 'compute-symbol-type))
   (when (class-p node "object")
     (setf (attribute node 'read-only) t)))
+
+(defmethod on-node-setup progn ((buffer lisp-mode) (node text-node))
+  (with-post-command (node 'parent)
+    (let ((parent (parent node)))
+      (when (sexp-parent-p buffer parent)
+        (let ((nodes (read-dom-from-string (text node))))
+          ;; Assume NODES are non-empty and does not contain text-nodes
+          (apply #'insert-nodes (or (next-sibling node)
+                                    (end-pos parent))
+                 nodes)
+          (delete-nodes (text-pos node 0) (car nodes)))))))
 
 (defun make-list-node (children)
   (lret ((node (make-instance 'element :tag-name "div")))
@@ -260,15 +275,6 @@
   "(" 'open-paren
   "\"" 'open-string
   "space" 'open-space)
-
-(defmethod insert-text-aux
-    ((buffer sexp-editing-mode) text-node parent)
-  (let ((nodes (read-dom-from-string (text text-node))))
-    (if (and (single nodes)
-             (symbol-node-p (car nodes))
-             (symbol-node-p parent))
-        (list text-node)
-        nodes)))
 
 ;;; DOM to Sexp parser
 
@@ -1141,11 +1147,8 @@ sb-introspect:definition-source)'."
 
 (define-mode lisp-minibuffer-mode (lisp-mode minibuffer-mode) ())
 
-(defmethod on-focus-move :around ((buffer lisp-minibuffer-mode) old new)
-  (declare (ignore old))
-  (if (class-p (node-containing new) "input")
-      (enable 'sexp-editing-mode)
-      (call-next-method)))
+(defmethod sexp-parent-p ((buffer lisp-minibuffer-mode) node)
+  (or (class-p node "list") (tag-name-p node "input")))
 
 (defmethod minibuffer-input ((buffer lisp-minibuffer-mode))
   (node-to-sexp (first-child (minibuffer-input-element buffer))))

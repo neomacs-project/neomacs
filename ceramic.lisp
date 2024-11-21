@@ -67,6 +67,8 @@ BUFFER is NIL."
 
 (defvar *event-queue* (sb-concurrency:make-mailbox))
 
+(defvar *command-loop-thread* nil)
+
 (defvar *last-quit-time* nil)
 
 (defvar *quit-interrupt-threshold* 0.2

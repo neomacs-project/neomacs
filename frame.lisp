@@ -255,7 +255,8 @@ fixed in future Electron, our logic may be simplified."
       (mapc #'remove-view *frame-remove-views*)
       (mapc #'add-view *frame-add-views*))))
 
-(defmethod on-node-setup progn ((buffer frame-root-mode) node)
+(defmethod on-node-setup progn ((buffer frame-root-mode)
+                                (node element))
   (when (class-p node "content")
     (when-let (id (attribute node "buffer"))
       (if *delay-frame-update-views*

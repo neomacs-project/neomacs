@@ -22,6 +22,9 @@
                  (tag-name-p (node-before pos) "p")))
        (call-next-method)))
 
+(defmethod sexp-parent-p ((buffer html-doc-mode) node)
+  (class-p node "list"))
+
 (defmethod revert-buffer-aux ((buffer html-doc-mode))
   (erase-buffer)
   (load-url buffer (str:concat "file://" (uiop:native-namestring (file-path buffer))))
@@ -38,17 +41,14 @@
       (setf (pos (focus buffer))
             (pos-down (document-root buffer))))))
 
-(defmethod insert-text-aux
-    ((buffer html-doc-mode) text-node parent)
-  (cond ((member (tag-name parent) '("body") :test 'equal)
-         (list (make-element "p" :children (list (text text-node)))))
-        (t (call-next-method))))
-
-(defmethod on-focus-move :around ((buffer html-doc-mode) old new)
-  (declare (ignore old))
-  (if (tag-name-p (node-containing new) "body")
-      (disable 'sexp-editing-mode)
-      (call-next-method)))
+(defmethod on-node-setup progn ((buffer html-doc-mode) (node text-node))
+  (with-post-command (node 'parent)
+    (let ((parent (parent node)))
+      (when (tag-name-p parent "body")
+        (let ((new-node (make-element "p")))
+          (insert-nodes (text-pos node 0) new-node)
+          (move-nodes (text-pos node 0) (next-sibling node)
+                      (end-pos new-node)))))))
 
 (defun allow-block-element-p (parent)
   (member (tag-name parent)
@@ -142,13 +142,6 @@
          (a (make-element "a" :href href)))
     (insert-nodes marker a)
     (setf (pos marker) (end-pos a))))
-
-(defmethod on-focus-move progn ((buffer html-doc-mode) old new)
-  (declare (ignore old))
-  (let ((node (node-containing new)))
-    (if (class-p node "list" "symbol")
-        (enable 'sexp-editing-mode)
-        (disable 'sexp-editing-mode))))
 
 ;;; Get DOM from renderer
 ;; Initially adapted from Nyxt

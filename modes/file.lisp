@@ -19,7 +19,8 @@
 (defmethod selectable-p-aux ((buffer minibuffer-find-file-mode) pos)
   (class-p (node-containing pos) "path-component"))
 
-(defmethod on-node-setup progn ((buffer minibuffer-find-file-mode) node)
+(defmethod on-node-setup progn ((buffer minibuffer-find-file-mode)
+                                (node element))
   (with-post-command (node 'first-child 'next-sibling)
     (unless (or (first-child node)
                 (not (next-sibling node)))

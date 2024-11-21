@@ -5,14 +5,14 @@
     generate-buffer-name get-buffer buffer-alive-p
     make-buffer get-buffer-create rename-buffer
     modes keymaps
-    focus on-focus-move adjust-marker-direction
+    focus adjust-marker-direction
     document-root restriction
     clear-focus render-focus render-focus-aux
     selection-marker selection-active
     on-buffer-loaded on-delete-buffer on-buffer-title-updated
     on-buffer-dom-ready on-buffer-did-start-navigation
     on-post-command on-pre-command with-post-command
-    on-node-setup insert-text-aux on-node-cleanup
+    on-node-setup on-node-cleanup
     enable disable toggle enable-aux disable-aux
     window-decoration frame-root
     window-decoration-aux update-window-decoration-field
@@ -317,17 +317,7 @@ succeeded, ERR is nil."))
   (:documentation
    "Run some action when NODE is inserted into BUFFER.
 
-This runs only when NODE is an element (i.e. not a text node)."))
-
-(defgeneric insert-text-aux (buffer text-node parent)
-  (:method ((buffer buffer) text-node (parent t))
-    (list text-node))
-  (:documentation
-   "Transform TEXT-NODE when inserting into BUFFER under PARENT.
-
-Must return one node (`text-node' or `element'), which is then
-actually inserted. This runs before `on-node-setup', so that if an
-`element' is returned it will be processed by `on-node-setup'."))
+NODE can be either an `element' or a `text-node'."))
 
 (defgeneric on-node-cleanup (buffer node)
   (:method-combination progn)
@@ -335,13 +325,7 @@ actually inserted. This runs before `on-node-setup', so that if an
   (:documentation
    "Run some action when NODE is removed from BUFFER.
 
-This runs only when NODE is an element (i.e. not a text node)."))
-
-(defgeneric on-focus-move (buffer saved new)
-  (:method-combination progn :most-specific-last)
-  (:method progn ((buffer buffer) (saved t) (new t)))
-  (:documentation
-   "Run when BUFFER's focus is moved from SAVED to NEW."))
+NODE can be either an `element' or a `text-node'."))
 
 (defgeneric window-decoration-aux (buffer)
   (:method ((buffer buffer))

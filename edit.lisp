@@ -51,9 +51,7 @@ If LENGTH is NIL, move everything after SRC-OFFSET."
           ((and (text-pos) pos)
            (process-text-pos pos))
           ((%after-pos before)
-           (process-text-pos before)))
-        (when (eq m (focus-marker (host m)))
-          (on-focus-move (host m) (pos m) (pos m)))))))
+           (process-text-pos before)))))))
 
 (defun merge-text-nodes (prev node)
   (let ((host (host node))
@@ -73,6 +71,7 @@ If LENGTH is NIL, move everything after SRC-OFFSET."
     (setf (text prev)
           (sera:concat (text prev) (text node)))
     (remove-node node)
+    (node-cleanup node)
     (move-text-markers
      host node 0 prev offset nil)
     (record-undo
@@ -96,6 +95,7 @@ If LENGTH is NIL, move everything after SRC-OFFSET."
        (ps:ps (ps:chain (js-node-1 node)
                         (split-text (ps:lisp offset))))
        (host node)))
+    (node-setup next host)
     (insert-before parent next (next-sibling node))
     (psetf (text node) (subseq (text node) 0 offset)
            (text next) (subseq (text node) offset))
@@ -168,8 +168,8 @@ This function should be called on all nodes entering HOST's DOM
 tree (which is usually taken care of by `insert-nodes')."
   (setf (host node) host)
   (when (element-p node)
-    (assign-neomacs-id node)
-    (on-node-setup host node)))
+    (assign-neomacs-id node))
+  (on-node-setup host node))
 
 (defun insert-nodes (marker-or-pos &rest things)
   "Insert THINGS at MARKER-OR-POS.
@@ -187,10 +187,7 @@ THINGS can be DOM nodes or strings, which are converted to text nodes."
                   (if (> (length n) 0)
                       (setq n (make-instance 'text-node :text n))
                       (setq n nil)))
-                (cond
-                  ((text-node-p n)
-                   (appending (insert-text-aux host n (node-containing pos))))
-                  (n (collect n))))))
+                (when n (collect n)))))
         ;; Normalize text nodes, merge adjacent ones and remove empty ones.
         (setq nodes
               (iter (with last = nil)
@@ -309,14 +306,15 @@ This function should be called on all nodes leaving HOST's DOM
 tree (which is usually taken care of by `delete-nodes' and
 `extract-nodes')."
   (on-node-cleanup (host node) node)
-  (when (element-p node)
-    (iter (for s in '(parent next-sibling previous-sibling
-                      first-child last-child))
-      (for c = (slot-value node s))
-      (iter
-        (for o in (lwcells::cell-outs c))
-        (when (observer-cell-p o)
-          (cell-set-function o nil)))))
+  (iter (for s in (if (element-p node)
+                      '(parent next-sibling previous-sibling
+                        first-child last-child)
+                      '(parent next-sibling previous-sibling)))
+    (for c = (slot-value node s))
+    (iter
+      (for o in (lwcells::cell-outs c))
+      (when (observer-cell-p o)
+        (cell-set-function o nil))))
   (setf (host node) nil))
 
 (defun delete-nodes-0 (beg end)
@@ -514,10 +512,6 @@ Called by `self-insert-command' to get the character for insertion."
   "Insert the last typed character into current buffer."
   (undo-auto-amalgamate)
   (insert-nodes (focus) (string (self-insert-char)))
-  ;; If `insert-text-aux' did some wrapping, try to make focus move to
-  ;; end of wrapped element
-  (unless (characterp (node-before (focus)))
-    (setf (pos (focus)) (pos-prev (pos (focus)))))
   (setf (adjust-marker-direction (current-buffer)) 'backward))
 
 (define-command new-line (&optional (marker (focus)))

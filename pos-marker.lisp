@@ -353,9 +353,6 @@ Return that buffer or nil otherwise."
                         (cons marker *atomic-motion-markers*)))
                   (funcall thunk))
               (setq success t))
-          (when success
-            (when-let (host (focus-marker-p marker))
-              (on-focus-move host (pos saved) (pos marker))))
           (unless success
             (setf (slot-value marker 'pos) (slot-value saved 'pos)))
           (delete-marker saved)))))
@@ -365,9 +362,6 @@ Return that buffer or nil otherwise."
 
 (defmethod (setf pos) (new-val (m marker))
   (setq new-val (copy-pos new-val))
-  (when-let (host (focus-marker-p m))
-    (unless (member m *atomic-motion-markers*)
-      (on-focus-move host (pos m) new-val)))
   (setf (slot-value m 'pos) (pos-to-advance-p new-val (advance-p m)))
   new-val)
 

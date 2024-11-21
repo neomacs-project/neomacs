@@ -282,8 +282,6 @@ and restart handlers."
       (bt:acquire-lock (lock buffer))))
   nil)
 
-(defvar *command-loop-thread* nil)
-
 (defun start-command-loop ()
   "Start Neomacs command loop.
 
