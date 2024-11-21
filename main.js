@@ -77,6 +77,8 @@ result}`).then((result)=>{
             for (buffer in result){
                 const view = Ceramic.buffers[buffer];
                 if(view) view.setBounds(result[buffer]);}})};
+    const focus = function (){
+        RemoteJS.send(JSON.stringify({inputEvent: {type: "frame-focused"}, buffer: id}))};
     win.setMenu(null);
     win.on("resize",resize);
     win.on("maximize",resize);
@@ -84,8 +86,11 @@ result}`).then((result)=>{
     win.on("enter-full-screen",resize);
     win.on("leave-full-screen",resize);
     win.on("show",resize);
+    win.on("show",focus);
     win.on("restore",resize);
+    win.on("restore",focus);
     win.on("focus",resize);
+    win.on("focus",focus);
     return win;
 };
 

@@ -75,9 +75,11 @@
   (when-let (window-node (node-after (focus)))
     (when-let (focused-buffer (window-buffer window-node))
       (evaluate-javascript
-       (ps:ps
-         (ps:chain (js-buffer focused-buffer) web-contents (focus))
-         (ps:chain (js-frame buffer) (set-title (ps:lisp (name focused-buffer)))))
+       (format nil "{const frame = Ceramic.frames[~S];
+if(frame){Ceramic.buffers[~S].webContents.focus();
+Ceramic.frames[~S].setTitle(~S);}}"
+               (id buffer) (id focused-buffer)
+               (id buffer) (name focused-buffer))
        :global))))
 
 (defmethod enable-aux ((mode (eql 'frame-root-mode)))
