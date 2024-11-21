@@ -71,6 +71,8 @@
 (defmethod on-post-command progn ((buffer frame-root-mode))
   (redisplay-windows buffer)
   ;; Update focus
+  (ensure-selectable (focus buffer)
+                     (eql (adjust-marker-direction buffer) 'backward))
   (when-let (window-node (node-after (focus)))
     (when-let (focused-buffer (window-buffer window-node))
       (evaluate-javascript
