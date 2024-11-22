@@ -101,7 +101,7 @@
 
 (iter (for i from (char-code #\a) to (char-code #\z))
   (for char = (code-char i))
-  (set-key (keymap 'active-web-hint-mode)
+  (set-key (find-keymap 'active-web-hint-mode)
            (string char) 'narrow-hint))
 
 (define-keys web-mode

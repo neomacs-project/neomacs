@@ -473,7 +473,12 @@ If an existing buffer is found, it is reinitialized with ARGS."
       (collect (class-name c)))))
 
 (defun keymaps (buffer)
-  (let ((keymaps))
+  (let (keymaps)
+    (iter (for node first (node-containing (focus buffer))
+               then (parent node))
+      (while node)
+      (when-let (keymap (attribute node 'keymap))
+        (push keymap keymaps)))
     (iter (for c in (sb-mop:class-precedence-list (class-of buffer)))
       (when-let (keymap (keymap c))
         (push keymap keymaps)))
@@ -709,7 +714,7 @@ CONTROL-STRING and FORMAT-ARGUMENT."
    (lambda (c stream)
      (format stream "~a is read only." (slot-value c 'buffer)))))
 
-(define-condition element-read-only-error (error)
+(define-condition element-read-only-error (user-error)
   ((element :initarg :element))
   (:report
    (lambda (c stream)
@@ -721,7 +726,7 @@ CONTROL-STRING and FORMAT-ARGUMENT."
   (:method ((buffer buffer) (pos t))
     (let ((node (node-containing pos)))
       (when (attribute node 'read-only)
-        (error 'element-read-only-error :element node ))))
+        (error 'element-read-only-error :element node))))
   (:method :around ((buffer buffer) (pos t))
     (unless *inhibit-read-only*
       (restart-case

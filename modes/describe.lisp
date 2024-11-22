@@ -42,16 +42,12 @@
 
 (defun lookup-keybind-trace (key buffer)
   (let (cmd trace)
-    (iter (for mode in
-               (cons :global
-                     (reverse (sb-mop:class-precedence-list
-                               (class-of buffer)))))
-      (for keymap = (keymap mode))
+    (iter (for keymap in (keymaps buffer))
       (unless keymap (next-iteration))
       (multiple-value-bind (next bind-type)
           (keymap-find-keybind keymap key cmd)
         (when bind-type
-          (push (list next mode bind-type) trace))
+          (push (list next (keymap-name keymap) bind-type) trace))
         (setq cmd next)))
     (values cmd trace)))
 
@@ -74,7 +70,7 @@
            (end-pos (document-root buffer))
            (make-element "h1" :children (list "Bindings:"))
            (dom
-            (cons :div (iter (for (cmd mode bind-type) in trace)
+            (cons :div (iter (for (cmd name bind-type) in trace)
                         (ecase bind-type
                           ((:key)
                            (collect
@@ -82,22 +78,14 @@
                                  "bound to "
                                  ,(print-dom cmd)
                                  " by "
-                                 ,(print-dom
-                                   (if (eql mode :global)
-                                       '*global-keymap*
-                                       (or (class-name mode)
-                                           mode))))))
+                                 ,(print-dom name))))
                           ((:function)
                            (collect
                                `(:p
                                  "translated to "
                                  ,(print-dom cmd)
                                  " by "
-                                 ,(print-dom
-                                   (if (eql mode :global)
-                                       '*global-keymap*
-                                       (or (class-name mode)
-                                           mode)))))))))))
+                                 ,(print-dom name)))))))))
           (insert-nodes
            (end-pos (document-root buffer))
            (make-element "h1" :children (list "Definitions:"))

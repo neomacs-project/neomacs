@@ -31,6 +31,7 @@
 
 (defstruct (keymap (:constructor %make-keymap))
   undef-hook
+  (name (alex:required-argument :name) :type symbol)
   (table (make-hash-table :test 'eq))
   (function-table (make-hash-table :test 'eq)))
 
@@ -58,20 +59,24 @@ Example: (set-key *global-keymap* \"C-x b\" 'switch-to-buffer)"
        (define-key-internal keymap keys command))))
   (values))
 
-(defmacro define-keys (mode-name &body bindings)
-  "Define key BINDINGS for MODE-NAME.
-
-If MODE-NAME is `:global', define global key bindings instead.
+(defmacro define-keys (keymap-name &body bindings)
+  "Define key BINDINGS for KEYMAP-NAME.
 
 Example: (define-keys :global
     \"C-x b\" 'switch-to-buffer
     \"C-x k\" 'delete-buffer)"
   `(progn
      ,@ (iter (for (k v) on bindings by #'cddr)
-          (collect `(set-key (keymap ',mode-name) ,k ,v)))))
+          (collect `(set-key (find-keymap ',keymap-name) ,k ,v)))))
 
-(defun make-keymap (&rest bindings)
-  (lret ((keymap (%make-keymap)))
+(defvar *keymap-table* (make-hash-table))
+
+(defun find-keymap (name)
+  (gethash name *keymap-table*))
+
+(defun make-keymap (name &rest bindings)
+  (lret ((keymap (%make-keymap :name name)))
+    (setf (gethash name *keymap-table*) keymap)
     (iter (for (k v) on bindings by #'cddr)
       (set-key keymap k v))))
 
@@ -212,10 +217,7 @@ KEYMAPS default to the keymaps of current buffer."
                          (push kseq bindings))))
     (nreverse bindings)))
 
-(defvar *global-keymap* (make-keymap))
-
-(defmethod keymap ((name (eql :global)))
-  *global-keymap*)
+(defvar *global-keymap* (make-keymap :global))
 
 (define-keys :global
   "s-u" 'revert-buffer

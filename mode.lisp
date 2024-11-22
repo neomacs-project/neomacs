@@ -7,7 +7,7 @@
 
 (defclass mode (standard-class)
   ((commands :initform nil :accessor commands)
-   (keymap :initform (make-keymap) :accessor keymap)
+   (keymap :accessor keymap)
    (lighter
     :accessor lighter :type string
     :documentation
@@ -28,9 +28,10 @@
                     (new-val (name symbol))
                   (setf (,accessor (find-class name)) new-val)))))
   (define-symbol-accessors commands)
-  (define-symbol-accessors keymap)
   (define-symbol-accessors lighter)
   (define-symbol-accessors hooks))
+
+(defmethod keymap ((object t)))
 
 (defmethod sb-mop:validate-superclass
     ((class mode) (super standard-class))
@@ -64,7 +65,9 @@
                           (toggle ',(class-name class)))))))
     (setf (lighter class)
           (or (safe-car lighter)
-              (default-lighter class)))))
+              (default-lighter class))
+          (keymap class)
+          (make-keymap (class-name class)))))
 
 (defmacro define-mode
     (name super-modes slots &rest options)
