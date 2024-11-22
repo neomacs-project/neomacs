@@ -37,6 +37,11 @@
    "\"" 'self-insert-command
    "space" 'self-insert-command))
 
+(defvar *object-presentation-keymap*
+  (make-keymap
+   'object-presentation
+   "enter" 'inspect-presentation))
+
 (defmethod selectable-p-aux ((buffer lisp-mode) pos)
   (and (if (eql *this-command* 'self-insert-command)
            (characterp (node-before pos))
@@ -125,7 +130,8 @@
   (when (class-p node "comment" "string")
     (setf (attribute node 'keymap) *plaintext-node-keymap*))
   (when (class-p node "object")
-    (setf (attribute node 'read-only) t)))
+    (setf (attribute node 'read-only) t)
+    (setf (attribute node 'keymap) *object-presentation-keymap*)))
 
 (defmethod on-node-setup progn ((buffer lisp-mode) (node text-node))
   (with-post-command (node 'parent)
