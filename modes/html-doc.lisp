@@ -7,6 +7,7 @@
   "C-c h" 'open-heading
   "C-c c" 'open-code
   "C-c i" 'open-italic
+  "C-c U" 'open-underline
   "C-c t" 'insert-description-list
   "C-c d" 'insert-description
   "C-c u" 'insert-unordered-list
@@ -102,6 +103,12 @@
 (define-command open-italic
   :mode html-doc-mode (&optional (marker (focus)))
   (let ((node (make-element "i")))
+    (insert-nodes marker node)
+    (setf (pos marker) (end-pos node))))
+
+(define-command open-underline
+  :mode html-doc-mode (&optional (marker (focus)))
+  (let ((node (make-element "u")))
     (insert-nodes marker node)
     (setf (pos marker) (end-pos node))))
 

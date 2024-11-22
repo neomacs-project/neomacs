@@ -29,9 +29,11 @@
                   (setf (,accessor (find-class name)) new-val)))))
   (define-symbol-accessors commands)
   (define-symbol-accessors lighter)
+  (define-symbol-accessors keymap)
   (define-symbol-accessors hooks))
 
-(defmethod keymap ((object t)))
+(defmethod keymap ((mode-name (eql :global)))
+  *global-keymap*)
 
 (defmethod sb-mop:validate-superclass
     ((class mode) (super standard-class))
