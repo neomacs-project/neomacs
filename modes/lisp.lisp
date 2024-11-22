@@ -7,13 +7,6 @@
   (:hooks auto-completion-mode))
 
 (define-keys lisp-mode
-  "tab" 'show-completions
-  "M-(" 'wrap-paren
-  "M-;" 'wrap-comment
-  "M-r" 'lisp-raise
-  "M-s" 'lisp-splice
-  ";" 'open-comment
-
   "C-M-x" 'eval-defun
   "C-c C-c" 'compile-defun
   "C-c C-k" 'lisp-compile-file
@@ -23,6 +16,26 @@
   "tab" 'show-completions
   "C-x C-e" 'eval-last-expression
   "C-c C-p" 'eval-print-last-expression)
+
+(defvar *sexp-node-keymap*
+  (make-keymap
+   'sexp-node
+   "tab" 'show-completions
+   "M-(" 'wrap-paren
+   "M-;" 'wrap-comment
+   "M-r" 'lisp-raise
+   "M-s" 'lisp-splice
+   ";" 'open-comment
+   "(" 'open-paren
+   "\"" 'open-string
+   "space" 'open-space))
+
+(defvar *plaintext-node-keymap*
+  (make-keymap
+   'plaintext-node
+   "(" 'self-insert-command
+   "\"" 'self-insert-command
+   "space" 'self-insert-command))
 
 (defmethod selectable-p-aux ((buffer lisp-mode) pos)
   (and (if (eql *this-command* 'self-insert-command)
@@ -54,12 +67,6 @@
   (:method ((buffer lisp-mode) node)
     (or (class-p node "list") (tag-name-p node "body"))))
 
-(defmethod on-post-command progn ((buffer lisp-mode))
-  (let ((node (node-containing (focus))))
-    (if (or (sexp-parent-p buffer node) (class-p node "symbol"))
-        (enable 'sexp-editing-mode)
-        (disable 'sexp-editing-mode))))
-
 (defvar *current-level-in-print* 0)
 
 (defgeneric print-dom (object &key &allow-other-keys))
@@ -84,6 +91,11 @@
           ((macro-function symbol) "macro")
           ((keywordp symbol) "keyword")
           (t ""))))
+
+(defmethod revert-buffer-aux :after ((buffer lisp-mode))
+  (when (sexp-parent-p buffer (document-root buffer))
+    (setf (attribute (document-root buffer) 'keymap)
+          *sexp-node-keymap*)))
 
 (defmethod on-node-setup progn ((buffer lisp-mode) (node element))
   (set-attribute-function node "operator" 'compute-operator)
@@ -110,6 +122,8 @@
             (write-dom-aux buffer node s)))))))
   (when (symbol-node-p node)
     (set-attribute-function node "symbol-type" 'compute-symbol-type))
+  (when (class-p node "comment" "string")
+    (setf (attribute node 'keymap) *plaintext-node-keymap*))
   (when (class-p node "object")
     (setf (attribute node 'read-only) t)))
 
@@ -266,15 +280,6 @@
   (setq pos (or (pos-up-until pos #'list-node-p)
                 (error 'top-of-subtree)))
   (splice-node pos))
-
-(define-mode sexp-editing-mode (lisp-mode) ()
-  (:documentation "Editing S-exp.")
-  (:lighter "Sexp"))
-
-(define-keys sexp-editing-mode
-  "(" 'open-paren
-  "\"" 'open-string
-  "space" 'open-space)
 
 ;;; DOM to Sexp parser
 

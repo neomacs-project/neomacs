@@ -13,9 +13,6 @@
   "C-c ," 'open-comma
   "C-c C-l"'insert-link)
 
-(defmethod enable-aux ((mode (eql 'html-doc-mode)))
-  (pushnew 'lisp-mode (styles (current-buffer))))
-
 (defmethod selectable-p-aux ((buffer html-doc-mode) pos)
   (and (not (and (member (node-after pos) '(#\Space #\Newline #\Tab))
                  (member (node-before pos) '(nil #\Space #\Newline #\Tab))))
@@ -39,8 +36,14 @@
   (when (equal url (str:concat "file://" (uiop:native-namestring (file-path buffer))))
     (unless err
       (update-document-model buffer)
+      (mapc (alex:curry #'do-dom (alex:curry #'on-node-setup buffer))
+            (child-nodes (document-root buffer)))
       (setf (pos (focus buffer))
             (pos-down (document-root buffer))))))
+
+(defmethod on-node-setup progn ((buffer html-doc-mode) (node element))
+  (when (class-p node "comma-expr")
+    (setf (attribute node 'keymap) *sexp-node-keymap*)))
 
 (defmethod on-node-setup progn ((buffer html-doc-mode) (node text-node))
   (with-post-command (node 'parent)
