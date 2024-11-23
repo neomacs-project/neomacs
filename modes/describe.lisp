@@ -10,15 +10,6 @@
 (define-keys describe-mode
   "q" 'quit-buffer)
 
-(defun read-key-sequence (prompt)
-  (message "~a" prompt)
-  (recursive-edit
-   (constantly t) nil
-   (lambda (cmd)
-     (declare (ignore cmd))
-     (message nil)
-     (return-from read-key-sequence *this-command-keys*))))
-
 (define-mode describe-key-mode
     (describe-mode)
   ((for-key :initform (alex:required-argument :key)

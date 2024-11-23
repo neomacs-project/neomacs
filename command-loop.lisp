@@ -280,6 +280,27 @@ and restart handlers."
       (bt:acquire-lock (lock buffer))))
   nil)
 
+(defun read-key-sequence (prompt)
+  (message "~a" prompt)
+  (recursive-edit
+   (constantly t) nil
+   (lambda (cmd)
+     (declare (ignore cmd))
+     (message nil)
+     (return-from read-key-sequence *this-command-keys*))))
+
+(defun read-key (prompt)
+  (message "~a" prompt)
+  (recursive-edit
+   (lambda ()
+     (when *this-command-keys*
+       (return-from read-key (lastcar *this-command-keys*))))
+   nil
+   (lambda (cmd)
+     (declare (ignore cmd))
+     (message nil)
+     (return-from read-key (lastcar *this-command-keys*)))))
+
 (defun start-command-loop ()
   "Start Neomacs command loop.
 
