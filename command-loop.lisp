@@ -282,7 +282,8 @@ and restart handlers."
   nil)
 
 (defun read-key-sequence (prompt)
-  (message "~a" prompt)
+  (let (*message-log-max*)
+    (message "~a" prompt))
   (recursive-edit
    (constantly t) nil
    (lambda (cmd)
@@ -291,7 +292,8 @@ and restart handlers."
      (return-from read-key-sequence *this-command-keys*))))
 
 (defun read-key (prompt)
-  (message "~a" prompt)
+  (let (*message-log-max*)
+    (message "~a" prompt))
   (recursive-edit
    (lambda ()
      (when *this-command-keys*
