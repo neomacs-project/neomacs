@@ -65,7 +65,8 @@
 
 (asdf:defsystem neomacs/app
   :defsystem-depends-on (:deploy)
-  :depends-on (:neomacs)
+  :depends-on (:neomacs
+               (:feature (:not :windows) :neomacs/term))
   :build-operation "deploy-op"
   :build-pathname "neomacs"
   :entry-point "ceramic-entry::neomacs"
