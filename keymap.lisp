@@ -5,7 +5,7 @@
     key-ctrl key-meta key-super key-super key-shift key-sym
     kbd key-description
     lookup-keybind find-keybind collect-command-keybindings
-    set-key define-keys))
+    find-keymap set-key define-keys))
 
 ;; Initially adapted from lem
 ;; Copyright (c) 2015 cxxxr

@@ -5,14 +5,14 @@
       text-node text
       element first-child last-child tag-name
       attributes invisible-p
-      element-p text-node-p tag-name-p
+      element-p text-node-p tag-name-p new-line-node-p
       clone-node child-nodes children text-content
       get-elements-by-class-name
       do-dom do-elements next-node previous-node
       attribute set-attribute-function *record-attribute-undo*
       add-class remove-class class-p
       insert-before append-child append-children
-      remove-node dom))
+      remove-node dom make-element make-new-line-node))
 
 (eval-always
   (defmodel node ()

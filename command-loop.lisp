@@ -7,7 +7,8 @@
       current-frame-root recursive-edit start-command-loop
       *debug-on-error* *message-log-max*
       *quit-hook* *error-hook*
-      play-loud-audio do-nothing))
+      play-loud-audio do-nothing
+      read-key read-key-sequence))
 
 (define-condition top-level () ()
   (:report "Return to top-level command loop"))
