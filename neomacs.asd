@@ -72,3 +72,15 @@
   :serial t
   :components ((:file "asdf-bundler")
                (:file "deploy")))
+
+(asdf:defsystem neomacs/term
+  :defsystem-depends-on (:cffi-toolchain)
+  :license "GPLv3+"
+  :components
+  ((:module "term"
+    :serial t
+    :components
+    ((:file "package")
+     (:file "term")
+     (:c-file "term-helper"))))
+  :depends-on (:neomacs :3bst))

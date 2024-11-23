@@ -10,7 +10,11 @@ is a usable Lisp IDE and keyboard-driven browser.
 
 Prebuilt binary for x64 Linux: https://github.com/neomacs-project/neomacs/releases/
 
+Documentation: `M-x manual`. There is also an online version at https://neomacs-project.github.io/doc/toc.html
+
 To build locally, make sure you have SBCL, quicklisp, and the Ultralisp dist (if you haven't done so, `(ql-dist:install-dist "http://dist.ultralisp.org/" :prompt nil)`). Clone this repo and `https://github.com/ceramic/ceramic` under `~/quicklisp/local-projects/`. Then `(ql:quickload "neomacs")` and `(neomacs:start)`.
+
+To build the terminal emulator (currently Linux only), clone `https://github.com/neomacs-project/3bst` under `~/quicklisp/local-projects/` then `(ql:quickload "neomacs/term")`.
 
 Neomacs relies on Electron which has known permission issues on some Linux distros. Try the following workaround:
 
