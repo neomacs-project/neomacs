@@ -42,7 +42,7 @@
 
 (defun lookup-keybind-trace (key buffer)
   (let (cmd trace)
-    (iter (for keymap in (keymaps buffer))
+    (iter (for keymap in (reverse (keymaps buffer)))
       (unless keymap (next-iteration))
       (multiple-value-bind (next bind-type)
           (keymap-find-keybind keymap key cmd)
