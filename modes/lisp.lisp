@@ -974,16 +974,15 @@ sb-introspect:definition-source)'."
 (defvar *autodoc-wait-seconds* 0.5
   "Seconds to wait before updating autodocs echo area.")
 
-(defvar *autodoc-turn* (gensym))
+(defvar *autodoc-turn* 0)
 
 (defmethod on-post-command progn ((buffer autodoc-mode))
   (if (or (not *autodoc-wait-seconds*) (zerop *autodoc-wait-seconds*))
       (maybe-show-autodoc)
-      (let ((my-turn (gensym)))
-        (setf *autodoc-turn* my-turn)
+      (let ((my-turn (incf *autodoc-turn*)))
         (sb-ext:schedule-timer
          (sb-ext:make-timer (lambda ()
-                              (when (eq my-turn *autodoc-turn*)
+                              (when (= my-turn *autodoc-turn*)
                                 (maybe-show-autodoc))))
          *autodoc-wait-seconds*))))
 
