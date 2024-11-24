@@ -957,7 +957,7 @@ sb-introspect:definition-source)'."
 
 (defvar *autodoc-helper* nil)
 
-(defvar *autodoc-delay* 0
+(defvar *autodoc-delay* 0.2
   "Time to wait before displaying autodoc.")
 
 (defun maybe-show-autodoc (buffer)
