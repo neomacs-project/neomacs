@@ -113,3 +113,5 @@ SYMBOL is allowed to take some special value:
         (format nil "nativeTheme.themeSource = ~S" spec)
         :global))
       (t (setf (cell-ref (get symbol 'style)) spec)))))
+
+(setf (get :native-theme 'standard-style) "light")

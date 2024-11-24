@@ -13,7 +13,11 @@
 (defmacro define-theme (name doc &body bindings)
   "Define a theme with NAME.
 
-BINDINGS are passed as arguments to `set-style' to apply the theme."
+BINDINGS are passed as arguments to `set-style' to apply the theme,
+except the following special kinds of bindings:
+
+:inherit PARENT: PARENT is a symbol which names another theme. Styles
+not defined in this theme are inherited from PARENT."
   `(progn
      (setf (get ',name 'theme) (list ,@bindings))
      (pushnew ',name *themes*)
@@ -40,14 +44,18 @@ BINDINGS are passed as arguments to `set-style' to apply the theme."
     (list (completing-read "Apply theme: " 'theme-list-mode)))
   (theme)
   "Apply THEME."
-  (cond ((eql theme :default)
-         (set-style :native-theme "light")
-         (iter (for symbol in *styles*)
-           (set-style symbol (get symbol 'standard-style))))
-        (t (let ((bindings (get theme 'theme)))
-             (set-style :native-theme (getf bindings :native-theme "light"))
-             (iter (for symbol in *styles*)
-               (set-style symbol (getf bindings symbol (get symbol 'standard-style))))))))
+  (let ((bindings (make-hash-table)))
+    (iter (with th = theme)
+      (for plist = (get th 'theme))
+      (iter (for (k v) on plist by #'cddr)
+        (unless (nth-value 1 (gethash k bindings))
+          (setf (gethash k bindings) v)))
+      (setf th (gethash :inherit bindings))
+      (setf (gethash :inherit bindings) nil)
+      (while th))
+    (iter (for symbol in (cons :native-theme *styles*))
+      (set-style symbol (gethash symbol bindings
+                                 (get symbol 'standard-style))))))
 
 ;;; Built-in themes
 
@@ -179,6 +187,7 @@ BINDINGS are passed as arguments to `set-style' to apply the theme."
 
 (define-theme anti-matrix
     "Variant of `matrix', a mostly-monochrome light theme."
+  :inherit 'matrix
   'frame-body
   `(:background "#fff"
     :inherit default
@@ -208,20 +217,8 @@ BINDINGS are passed as arguments to `set-style' to apply the theme."
   `(:outline "solid 1px #ccc")
   'selection
   `(:background-color "#ccc")
-  'monospace
-  `(:inherit default
-    :inherit comment)
 
   ;; Frame
-  'header
-  `(:padding "8px"
-    :display "flex" :flex-flow "row"
-    :margin-bottom "8px"
-    :inherit comment)
-  'header-focus
-  nil
-  'header-buffer-name
-  `(:inherit default)
   'completion-menu
   `(:white-space "nowrap"
     :font-size "0.8em"
@@ -243,46 +240,15 @@ BINDINGS are passed as arguments to `set-style' to apply the theme."
   `(:border-left "0.3rem solid #777"
     :padding-left "0.3rem"
     :inherit comment)
-  'comment-node-3
-  `(((:append "::before")
-     :content ""
-     :display "list-item"
-     :list-style-type "square"
-     :list-style-position "inside"
-     :font-size "1.2rem"
-     :margin-left "-0.6rem"
-     :position "absolute")
-    :padding-left "0.6rem"
-    :font-size "1.2em"
-    :inherit comment)
-  'comment-node-4
-  `(((:append "::before")
-     :content ""
-     :display "list-item"
-     :list-style-type "square"
-     :list-style-position "inside"
-     :font-size "1.2rem"
-     :margin-left "-0.6rem"
-     :position "absolute")
-    :padding-left "0.6rem"
-    :font-size "1.1em"
-    :inherit comment)
   'compiler-note
   `(:color "#07c")
-  'compiler-style-warning
-  `(:color "#f70")
-  'compiler-warning
-  `(:color "#f00")
-  'compiler-error
-  `(:color "#f00")
 
-  ;; Lists
-  'list-mode
-  `(("body" :margin 0)
-    ("table" :white-space "pre" :width "100%"
-             :border-collapse "collapse")
-    ("tbody:empty::after"
-     :content "<No Item>"
-     :display "inline")
-    ("td" :padding-right "1em")
-    ("td:first-child" :padding-left "0.5rem")))
+  ;; Web
+  'web-hints
+  `((".neomacs-hint"
+     :background-color "#fff"
+     :padding "0px 0.3em"
+     :border-radius "2px"
+     :border-width "2px"
+     :border-style "solid"
+     :z-index #.(1- (expt 2 31)))))
