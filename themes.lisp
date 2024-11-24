@@ -247,6 +247,7 @@ not defined in this theme are inherited from PARENT."
   'web-hints
   `((".neomacs-hint"
      :background-color "#fff"
+     :color "#000"
      :padding "0px 0.3em"
      :border-radius "2px"
      :border-width "2px"
