@@ -962,6 +962,9 @@ sb-introspect:definition-source)'."
 
 (defun maybe-show-autodoc (buffer)
   (sleep *autodoc-delay*)
+  (unless (sb-concurrency:mailbox-empty-p
+           (gethash (bt:current-thread) *helper-mailboxes*))
+    (return-from maybe-show-autodoc))
   (with-current-buffer buffer
     (when-let* ((frame-root (current-frame-root))
                 (echo-area (echo-area frame-root)))
