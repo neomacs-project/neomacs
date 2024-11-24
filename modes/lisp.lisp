@@ -979,7 +979,7 @@ sb-introspect:definition-source)'."
 (defmethod on-post-command progn ((buffer autodoc-mode))
   (if (or (not *autodoc-wait-seconds*) (zerop *autodoc-wait-seconds*))
       (maybe-show-autodoc)
-      (let ((my-turn (incf *autodoc-turn*)))
+      (let ((my-turn (setf *autodoc-turn* (mod (1+ *autodoc-turn*) 100))))
         (sb-ext:schedule-timer
          (sb-ext:make-timer (lambda ()
                               (when (= my-turn *autodoc-turn*)
