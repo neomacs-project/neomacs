@@ -6,6 +6,7 @@
   "enter" 'open-paragraph
   "C-c h" 'open-heading
   "C-c c" 'open-code
+  "C-c b" 'open-bold
   "C-c i" 'open-italic
   "C-c U" 'open-underline
   "C-c t" 'insert-description-list
@@ -103,6 +104,12 @@
 (define-command open-italic
   :mode html-doc-mode (&optional (marker (focus)))
   (let ((node (make-element "i")))
+    (insert-nodes marker node)
+    (setf (pos marker) (end-pos node))))
+
+(define-command open-bold
+  :mode html-doc-mode (&optional (marker (focus)))
+  (let ((node (make-element "b")))
     (insert-nodes marker node)
     (setf (pos marker) (end-pos node))))
 
