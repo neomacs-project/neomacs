@@ -176,8 +176,27 @@
   (:toggler t)
   (:documentation "Forward most keys to terminal."))
 
+(defvar *terminfo-installed-p* nil
+  "Whether we know that st terminfo entry are already installed.")
+
 (define-command term ()
   "Start terminal emulator."
+  (unless *terminfo-installed-p*
+    (handler-case
+        (progn
+          (uiop:run-program (list "infocmp" "st-256color"))
+          (setq *terminfo-installed-p* t))
+      (uiop:subprocess-error (c)
+        (when (neomacs::read-yes-or-no
+               (if (eql (uiop:subprocess-error-code c) 1)
+                   "Terminfo for st seems not installed yet. Install now? "
+                   (format nil "Probe terminfo entry failed (~a). Install terminfo for st now? "
+                           (uiop:subprocess-error-code c))))
+          (uiop:run-program
+           (list "tic" "-sx"
+                 (uiop:native-namestring
+                  (neomacs::translate-relocated-source
+                   #P"~/quicklisp/local-projects/neomacs/term/st.info"))))))))
   (multiple-value-bind (pid fd)
       (run-shell 25 80 "/bin/bash" nil "st-256color")
     (switch-to-buffer
