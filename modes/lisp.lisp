@@ -1114,6 +1114,10 @@ sb-introspect:definition-source)'."
             (incf i))
           (setq prev c)))))
 
+(defun quote-ghost-symbol-p (node)
+  (and (ghost-symbol-p node)
+       (member (last-elt (text-content node)) '(#\' #\`))))
+
 (defvar *lisp-pprint-dispatch*
   (lret ((*print-pprint-dispatch*
           (copy-pprint-dispatch *print-pprint-dispatch*)))
@@ -1124,10 +1128,8 @@ sb-introspect:definition-source)'."
        (cond ((list-node-p self)
               (if-let (op (first-child self))
                 (pprint-form self stream
-                             (if (when-let (prev (previous-sibling self))
-                                   (and (class-p prev "symbol")
-                                        (sera:string-suffix-p
-                                         "'" (text-content prev))))
+                             (if (quote-ghost-symbol-p
+                                  (previous-sibling self))
                                  '(&rest 1)
                                  (normalize-indent-spec
                                   (symbol-indentation
