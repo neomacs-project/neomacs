@@ -73,25 +73,49 @@
   (sb-posix:kill (pid buffer) sb-unix:sighup)
   (sb-posix:waitpid (pid buffer) 0))
 
+(defconstant +ansi-colors+
+  '("ansi-black" "ansi-red" "ansi-green" "ansi-yellow"
+    "ansi-blue" "ansi-magenta" "ansi-cyan" "ansi-white"
+    "ansi-bright-black" "ansi-bright-red" "ansi-bright-green" "ansi-bright-yellow"
+    "ansi-bright-blue" "ansi-bright-magenta" "ansi-bright-cyan" "ansi-bright-white"))
+
+(defun apply-fg-color (node color)
+  (labels ((c (r g b)
+             (setf (attribute node "style")
+                   (format nil "color:#~2,'0x~2,'0x~2,'0x;" r g b)))
+           (c6 (x)
+             (let ((b (mod x 6))
+                   (g (mod (floor x 6) 6))
+                   (r (mod (floor x 36) 6)))
+               (c (* r 51) (* g 51) (* b 51))))
+           (g (x)
+             (c (* x 16) (* x 16) (* x 16))))
+    (cond ((logbitp 24 color)
+           (c (ldb (byte 8 16) color)
+              (ldb (byte 8 8) color)
+              (ldb (byte 8 0) color)))
+          ((< color 16)
+           (setf (attribute node "class") (nth color +ansi-colors+)))
+          (t (let ((c (- color 16)))
+               (if (< c 216)
+                   (c6 c)
+                   (g (- c 216))))))
+    node))
+
 (defun render-line (line)
   (let ((stream (make-string-output-stream))
         last-color)
     (flet ((emit ()
              (let ((output (get-output-stream-string stream)))
                (when (plusp (length output))
-                 (list (neomacs::make-element
-                        "span"
-                        :style (format nil "color:#~{~2,'0x~};"
-                                       (mapcar
-                                        (lambda (c)
-                                          (floor
-                                           (* c 255)))
-                                        last-color))
-                        :children (list output)))))))
+                 (list (apply-fg-color
+                        (neomacs::make-element
+                         "span" :children (list output))
+                        last-color))))))
       (nconc
        (iter (for c in-vector line)
-         (for color = (3bst:color-rgb (3bst:fg c)))
-         (unless (or (not last-color) (equal color last-color))
+         (for color = (3bst:fg c))
+         (unless (or (not last-color) (eql color last-color))
            (nconcing (emit)))
          (write-char (3bst:c c) stream)
          (setq last-color color))
@@ -219,4 +243,29 @@
   "Send the next key to terminal."
   (term-send-key (read-key "Send to terminal: ")))
 
-(defsheet term-mode `(("body" :font-family "monospace")))
+(defstyle term '(:font-family "monospace"))
+
+(defstyle ansi-black '(:color "#ccc"))
+(defstyle ansi-red '(:color "#c00"))
+(defstyle ansi-green '(:color "#0c0"))
+(defstyle ansi-yellow '(:color "#cc0"))
+(defstyle ansi-blue '(:color "#00c"))
+(defstyle ansi-magenta '(:color "#c0c"))
+(defstyle ansi-cyan '(:color "#0cc"))
+(defstyle ansi-white '(:color "#000"))
+(defstyle ansi-bright-black '(:color "#fff"))
+(defstyle ansi-bright-red '(:color "#f00"))
+(defstyle ansi-bright-green '(:color "#0f0"))
+(defstyle ansi-bright-yellow '(:color "#ff0"))
+(defstyle ansi-bright-blue '(:color "#00f"))
+(defstyle ansi-bright-magenta '(:color "#f0f"))
+(defstyle ansi-bright-cyan '(:color "#0ff"))
+(defstyle ansi-bright-white '(:color "#777"))
+
+(defsheet term-mode
+    `(("body" :inherit term)
+      ,@(iter (for color in +ansi-colors+)
+         (collect `(,(str:concat "." color)
+                    :inherit ,(find-symbol
+                               (string-upcase color)
+                               (find-package "NEOMACS/TERM")))))))
