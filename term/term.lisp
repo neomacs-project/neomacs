@@ -73,7 +73,7 @@
   (sb-posix:kill (pid buffer) sb-unix:sighup)
   (sb-posix:waitpid (pid buffer) 0))
 
-(defconstant +ansi-colors+
+(defvar +ansi-colors+
   '("ansi-black" "ansi-red" "ansi-green" "ansi-yellow"
     "ansi-blue" "ansi-magenta" "ansi-cyan" "ansi-white"
     "ansi-bright-black" "ansi-bright-red" "ansi-bright-green" "ansi-bright-yellow"
