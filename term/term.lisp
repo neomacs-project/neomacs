@@ -117,7 +117,8 @@
          (for color = (3bst:fg c))
          (unless (or (not last-color) (eql color last-color))
            (nconcing (emit)))
-         (write-char (3bst:c c) stream)
+         (unless (eql (3bst:c c) #\Nul)
+           (write-char (3bst:c c) stream))
          (setq last-color color))
        (emit)))))
 
@@ -142,8 +143,9 @@
          (x (3bst::x cursor))
          (y (3bst::y cursor))
          (pos (pos-right (nth y (line-starts buffer)))))
-    (iter (for _ to x)
-      (setf pos (or (npos-next-until pos #'text-pos-p) pos)))
+    (iter (for i to x)
+      (unless (eql (3bst:c (3bst:glyph-at (3bst::screen term) y i)) #\Nul)
+        (setf pos (or (npos-next-until pos #'text-pos-p) pos))))
     (setf (pos (focus buffer)) pos)))
 
 (defun insert-scrollback (line)

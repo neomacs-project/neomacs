@@ -636,8 +636,9 @@ WIDTH and HEIGHT are numbers in pixels."
 (defun render-focus (pos)
   (setq pos (resolve-marker pos))
   (assert (eq (host pos) (current-buffer)))
-  (clear-focus (host pos))
-  (render-focus-aux (host pos) pos))
+  (with-amalgamate-js (current-buffer)
+    (clear-focus (host pos))
+    (render-focus-aux (host pos) pos)))
 
 (defgeneric render-focus-aux (buffer pos)
   (:method ((buffer buffer) pos)
