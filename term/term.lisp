@@ -213,7 +213,8 @@
   (term-send-seq string))
 
 (define-keys term-mode
-  "C-c C-k" 'term-insert-mode)
+  "C-c C-k" 'term-insert-mode
+  "C-c C-l" 'term-clear-scrollback)
 
 (define-keys term-insert-mode
   'self-insert-command 'term-forward-key
@@ -255,6 +256,13 @@
     (when (key-meta key)
       (setf seq (str:concat "" seq)))
     (term-send-seq seq)))
+
+(define-command term-clear-scrollback
+  :mode term-mode ()
+  "Delete scrollback content."
+  (let ((*inhibit-read-only* t))
+    (delete-nodes (pos-down (document-root (current-buffer)))
+                  (car (line-starts (current-buffer))))))
 
 (define-command term-forward-key
   :mode term-mode ()
