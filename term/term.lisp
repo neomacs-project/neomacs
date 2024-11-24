@@ -57,7 +57,7 @@
                                                 (3bst:dirty (for-term buffer)))
                                    (redisplay-term (for-term buffer) buffer))
                                  (redisplay-focus (for-term buffer) buffer))))
-                           (sleep 0.05))))
+                           (sleep 0.02))))
                  (stream-error ()))
                (with-current-buffer buffer
                  (when (buffer-alive-p buffer)
@@ -276,7 +276,7 @@
 
 (defstyle term '(:font-family "monospace"))
 
-(defstyle ansi-black '(:color "#ccc"))
+(defstyle ansi-black '(:color "#fff"))
 (defstyle ansi-red '(:color "#c00"))
 (defstyle ansi-green '(:color "#0c0"))
 (defstyle ansi-yellow '(:color "#cc0"))
@@ -284,7 +284,7 @@
 (defstyle ansi-magenta '(:color "#c0c"))
 (defstyle ansi-cyan '(:color "#0cc"))
 (defstyle ansi-white '(:color "#000"))
-(defstyle ansi-bright-black '(:color "#fff"))
+(defstyle ansi-bright-black '(:color "#ccc"))
 (defstyle ansi-bright-red '(:color "#f00"))
 (defstyle ansi-bright-green '(:color "#0f0"))
 (defstyle ansi-bright-yellow '(:color "#ff0"))
