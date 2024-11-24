@@ -961,8 +961,7 @@ sb-introspect:definition-source)'."
   "Time to wait before displaying autodoc.")
 
 (defun maybe-show-autodoc (buffer)
-  (when (plusp *autodoc-delay*)
-    (sleep *autodoc-delay*))
+  (sleep *autodoc-delay*)
   (with-current-buffer buffer
     (when-let* ((frame-root (current-frame-root))
                 (echo-area (echo-area frame-root)))
