@@ -184,7 +184,8 @@
   (unless *terminfo-installed-p*
     (handler-case
         (progn
-          (uiop:run-program (list "infocmp" "st-256color"))
+          (uiop:run-program (list "infocmp" "st-256color")
+                            :error-output t)
           (setq *terminfo-installed-p* t))
       (uiop:subprocess-error (c)
         (when (neomacs::read-yes-or-no
@@ -196,7 +197,8 @@
            (list "tic" "-sx"
                  (uiop:native-namestring
                   (neomacs::translate-relocated-source
-                   #P"~/quicklisp/local-projects/neomacs/term/st.info"))))))))
+                   #P"~/quicklisp/local-projects/neomacs/term/st.info"))
+                 :output t :error-output t))))))
   (multiple-value-bind (pid fd)
       (run-shell 25 80 "/bin/bash" nil "st-256color")
     (switch-to-buffer
