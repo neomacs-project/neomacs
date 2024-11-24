@@ -1,5 +1,8 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(*autodoc-delay*))
+
 ;;; Lisp mode
 
 (define-mode lisp-mode (prog-mode) ()
@@ -952,27 +955,36 @@ sb-introspect:definition-source)'."
            (when doc ": ")))))
      doc)))
 
-(defun maybe-show-autodoc ()
-  (when-let* ((frame-root (current-frame-root))
-              (echo-area (echo-area frame-root)))
-    (unless (first-child (document-root echo-area))
-      (let (*message-log-max*)
-        (if (typep (current-buffer) 'active-completion-mode)
-            (progn
-              (pushnew 'echo-area-autodoc (styles echo-area))
-              (message
-               (let ((*package* (current-package (focus)))
-                     (row (node-after (focus (completion-buffer (current-buffer))))))
-                 (autodoc-for-thing
-                  (ignore-errors
-                   (swank::parse-symbol
-                    (text-content (first-child row))))))))
-           (when-let (nodes (compute-autodoc (pos (focus))))
-             (pushnew 'echo-area-autodoc (styles echo-area))
-             (message nodes)))))))
+(defvar *autodoc-helper* nil)
+
+(defvar *autodoc-delay* 0
+  "Time to wait before displaying autodoc.")
+
+(defun maybe-show-autodoc (buffer)
+  (when (plusp *autodoc-delay*)
+    (sleep *autodoc-delay*))
+  (with-current-buffer buffer
+    (when-let* ((frame-root (current-frame-root))
+                (echo-area (echo-area frame-root)))
+      (unless (first-child (document-root echo-area))
+        (let (*message-log-max*)
+          (if (typep (current-buffer) 'active-completion-mode)
+              (progn
+                (pushnew 'echo-area-autodoc (styles echo-area))
+                (message
+                 (let ((*package* (current-package (focus)))
+                       (row (node-after (focus (completion-buffer (current-buffer))))))
+                   (autodoc-for-thing
+                    (ignore-errors
+                     (swank::parse-symbol
+                      (text-content (first-child row))))))))
+              (when-let (nodes (compute-autodoc (pos (focus))))
+                (pushnew 'echo-area-autodoc (styles echo-area))
+                (message nodes))))))))
 
 (defmethod on-post-command progn ((buffer autodoc-mode))
-  (maybe-show-autodoc))
+  (when *this-command*
+    (run-in-helper '*autodoc-helper* 'maybe-show-autodoc buffer)))
 
 ;;; Parser
 
