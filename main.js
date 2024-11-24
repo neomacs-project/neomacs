@@ -67,6 +67,7 @@ Ceramic.createFrame = function(id, options) {
     win.on('closed',()=>{
         RemoteJS.send(JSON.stringify({inputEvent: {type:'frame-closed'}, buffer: id}))})
     const resize = function (){
+        setTimeout(function(){
         const bounds = win.getContentBounds();
         root.setBounds({x:0,y:0,width:bounds.width,height:bounds.height});
         root.webContents.executeJavaScript(`{const result={};
@@ -74,9 +75,9 @@ Array.from(document.getElementsByClassName("content")).forEach((c)=>{
     const rect = c.getBoundingClientRect();
     result[c.getAttribute("buffer")]={x:rect.x,y:rect.y,width:rect.width,height:rect.height}});
 result}`).then((result)=>{
-            for (buffer in result){
-                const view = Ceramic.buffers[buffer];
-                if(view) view.setBounds(result[buffer]);}})};
+    for (buffer in result){
+        const view = Ceramic.buffers[buffer];
+        if(view) view.setBounds(result[buffer]);}})})};
     const focus = function (){
         RemoteJS.send(JSON.stringify({inputEvent: {type: "frame-focused"}, buffer: id}))};
     win.setMenu(null);
