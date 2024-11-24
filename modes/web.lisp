@@ -211,13 +211,13 @@
   ;; Events caused by history navigation and loadURL doesn't have
   ;; initiator property. We don't record them here. If some loadURL
   ;; need to be recorded, the command which invoked it is responsible for that.
-  (if (assoc :initiator details)
-      (record-history-maybe buffer (assoc-value details :url))
-      (setf (history-entry buffer) nil))
+  (when (assoc :initiator details)
+    (record-history-maybe buffer (assoc-value details :url)))
   (setf (url buffer) (assoc-value details :url)))
 
 (define-command web-go-backward
   :mode web-mode ()
+  (setf (history-entry (current-buffer)) nil)
   (unless
       (evaluate-javascript-sync
        (ps:ps
@@ -231,6 +231,7 @@
 
 (define-command web-go-forward
   :mode web-mode ()
+  (setf (history-entry (current-buffer)) nil)
   (unless
       (evaluate-javascript-sync
        (ps:ps
