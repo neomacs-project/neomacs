@@ -215,6 +215,13 @@ If nil, disable message logging. If t, log messages but don't truncate
           ((equal type "frame-focused")
            (with-current-buffer buffer nil))
           ((equal type "focus") (focus-buffer buffer))
+          ((equal type "enter-html-full-screen")
+           (with-current-buffer (frame-root buffer)
+             (delete-other-windows buffer)
+             (enable 'fullscreen-mode)))
+          ((equal type "leave-html-full-screen")
+           (with-current-buffer (frame-root buffer)
+             (disable 'fullscreen-mode)))
           ((eq type 'debug-request)
            (debug-for-environment
             (assoc-value event :environment)

@@ -577,7 +577,21 @@ This sets up: `*standard-output*', `*standard-input*',
    (ps:ps (ps:chain (js-buffer (current-buffer)) web-contents (open-dev-tools)))
    :global))
 
+(define-mode fullscreen-mode () ()
+  (:documentation "Mode for frame root to disable most decorations.
+
+If the frame root has only one buffer, enabling this mode effectively
+makes the buffer displayed fullscreen."))
+
+(defmethod disable-aux ((mode-name (eql 'fullscreen-mode)) (prev t))
+  (alex:deletef (styles (current-buffer)) 'fullscreen-mode))
+
 ;;; Style
+
+(defsheet fullscreen-mode
+    `(("body" :margin 0 :padding 0)
+      (".minibuffer" :display "none")
+      (".header" :display "none")))
 
 (defstyle frame-body
     `(:padding "32px"
