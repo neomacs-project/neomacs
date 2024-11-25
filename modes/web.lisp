@@ -136,6 +136,7 @@
   'self-insert-command 'web-forward-key
   "escape" 'web-forward-key
   "enter" 'web-forward-key
+  "tab" 'web-forward-key
   'backward-delete
   (make-web-send-key-command
    (car (kbd "backspace")))
