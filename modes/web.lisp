@@ -146,6 +146,7 @@
   'paste 'web-paste
   "C-c b" 'web-go-backward
   "C-c f" 'web-go-forward
+  "C-c w" 'web-copy-url
   "C-c C-f" 'toggle-fullscreen
   "C-+" 'zoom-increase
   "C--" 'zoom-decrease
@@ -249,6 +250,13 @@
              t)))
        :global)
     (user-error "Can not go forward.")))
+
+(define-command web-copy-url
+  :mode web-mode ()
+  "Copy URL of current page into clipboard."
+  (let ((url (url (current-buffer))))
+    (clipboard-insert (list (make-instance 'text-node :text url)))
+    (message "Copied ~a" url)))
 
 ;; These commands are web-mode only for now, because Chromium zoom is
 ;; shared for same-origin documents, and currently using them on
