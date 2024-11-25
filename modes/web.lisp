@@ -214,12 +214,13 @@
 
 (defmethod on-buffer-did-start-navigation progn
     ((buffer web-mode) details)
-  ;; Events caused by history navigation and loadURL doesn't have
-  ;; initiator property. We don't record them here. If some loadURL
-  ;; need to be recorded, the command which invoked it is responsible for that.
-  (when (assoc :initiator details)
-    (record-history-maybe buffer (assoc-value details :url)))
-  (setf (url buffer) (assoc-value details :url)))
+  (when (assoc-value details :is-main-frame)
+    ;; Events caused by history navigation and loadURL doesn't have
+    ;; initiator property. We don't record them here. If some loadURL
+    ;; need to be recorded, the command which invoked it is responsible for that.
+    (when (assoc :initiator details)
+      (record-history-maybe buffer (assoc-value details :url)))
+    (setf (url buffer) (assoc-value details :url))))
 
 (define-command web-go-backward
   :mode web-mode ()
