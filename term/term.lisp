@@ -18,7 +18,7 @@
   ((for-term
     :initform (make-instance
                '3bst:term
-               :rows 24
+               :rows 25
                :columns 80))
    (pid :initarg :pid)
    (pty :initarg :pty)
