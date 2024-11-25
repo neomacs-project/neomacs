@@ -836,7 +836,8 @@ If it is, should signal a condition of type `read-only-error'."))
 
 (defsheet common
     `((:import (url "neomacs://sys/space-mono/space-mono.css"))
-      (:import (url "neomacs://sys/cmu-concrete/cmu-concrete.css"))))
+      (:import (url "neomacs://sys/cmu-concrete/cmu-concrete.css"))
+      (:import (url "neomacs://sys/dejavu-sans-mono/dejavu-sans-mono.css"))))
 
 (defstyle doc-node `(((:append ".focus-tail::after")
                       :content "  "

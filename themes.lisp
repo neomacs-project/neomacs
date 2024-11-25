@@ -259,8 +259,7 @@ not defined in this theme are inherited from PARENT."
   'frame-body
   `(:background "white"
     :inherit default
-    :background-size "10px 10px"
-                )
+    :background-size "10px 10px")
   'frame-buffer
   `(:flex "1 0 1em"
     :min-width "1em"
@@ -269,8 +268,7 @@ not defined in this theme are inherited from PARENT."
     :outline "solid 1px #ccc")
   'frame-minibuffer
   `(:flex "0 0 2em"
-    :display "flex" :flex-flow "column"
-          )
+    :display "flex" :flex-flow "column")
   'frame-buffer-focus
   `(:outline "solid 1px darkblue")
   'default
@@ -296,7 +294,7 @@ not defined in this theme are inherited from PARENT."
     :display "flex" :flex-flow "row"
     :margin-bottom "8px"
     :border-bottom "1px solid lightgray"
-             ;;:background-color "whitesmoke"
+    ;; :background-color "whitesmoke"
     :inherit comment)
   'header-focus
   '(:inherit header :background-color "lavender")
