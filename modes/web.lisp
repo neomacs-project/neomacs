@@ -146,7 +146,10 @@
   'paste 'web-paste
   "C-c b" 'web-go-backward
   "C-c f" 'web-go-forward
-  "C-c C-f" 'toggle-fullscreen)
+  "C-c C-f" 'toggle-fullscreen
+  "C-+" 'zoom-increase
+  "C--" 'zoom-decrease
+  "C-0" 'zoom-reset)
 
 (define-command web-next-line
   :mode web-mode ()
@@ -245,6 +248,34 @@
              t)))
        :global)
     (user-error "Can not go forward.")))
+
+;; These commands are web-mode only for now, because Chromium zoom is
+;; shared for same-origin documents, and currently using them on
+;; Neomacs's buffers affects all of them, causing funny.
+
+(define-command zoom-increase
+  :mode web-mode ()
+  (evaluate-javascript
+   (format nil "{const wc = Ceramic.buffers[~s].webContents;
+wc.setZoomFactor(wc.getZoomFactor()*1.2)}"
+           (id (current-buffer)))
+   :global))
+
+(define-command zoom-decrease
+  :mode web-mode ()
+  (evaluate-javascript
+   (format nil "{const wc = Ceramic.buffers[~s].webContents;
+wc.setZoomFactor(wc.getZoomFactor()/1.2)}"
+           (id (current-buffer)))
+   :global))
+
+(define-command zoom-reset
+  :mode web-mode ()
+  (evaluate-javascript
+   (format nil "{const wc = Ceramic.buffers[~s].webContents;
+wc.setZoomFactor(1.0)}"
+           (id (current-buffer)))
+   :global))
 
 (macrolet ((define-web-command (operation)
              `(define-command ,(alex:symbolicate "WEB-" operation)
