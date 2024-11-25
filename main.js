@@ -68,6 +68,7 @@ Ceramic.createFrame = function(id, options) {
         RemoteJS.send(JSON.stringify({inputEvent: {type:'frame-closed'}, buffer: id}))})
     const resize = function (){
         setTimeout(function(){
+        if(win.isDestroyed()) return;
         const bounds = win.getContentBounds();
         root.setBounds({x:0,y:0,width:bounds.width,height:bounds.height});
         root.webContents.executeJavaScript(`{const result={};
@@ -138,8 +139,12 @@ Ceramic.createBuffer = function(id, url, options) {
             outlivesOpener: true,
             createWindow: (options) =>{
                 const newId = Ceramic.generateBufferId();
+                const newOptions = {}; // Have to filter out junk in options
+                if(options.webContents) newOptions.webContents = options.webContents;
+                if(options.webPreferences) newOptions.webPreferences = options.webPreferences;
+                const newBuffer = Ceramic.createBuffer(newId, details.url, newOptions);
                 RemoteJS.send(JSON.stringify({inputEvent: {type: "new-buffer", newId: newId, url: details.url}, buffer: id}));
-                return Ceramic.createBuffer(newId, details.url, {});}}});
+                return newBuffer;}}});
     Ceramic.buffers[id] = buf;
     return buf;
 };

@@ -137,6 +137,7 @@
   "escape" 'web-forward-key
   "enter" 'web-forward-key
   "tab" 'web-forward-key
+  "S-tab" 'web-forward-key
   'backward-delete
   (make-web-send-key-command
    (car (kbd "backspace")))
@@ -144,7 +145,8 @@
   'cut-element 'web-cut
   'paste 'web-paste
   "C-c b" 'web-go-backward
-  "C-c f" 'web-go-forward)
+  "C-c f" 'web-go-forward
+  "C-c C-f" 'toggle-fullscreen)
 
 (define-command web-next-line
   :mode web-mode ()

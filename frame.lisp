@@ -586,6 +586,10 @@ makes the buffer displayed fullscreen."))
 (defmethod disable-aux ((mode-name (eql 'fullscreen-mode)) (prev t))
   (alex:deletef (styles (current-buffer)) 'fullscreen-mode))
 
+(define-command toggle-fullscreen ()
+  (with-current-buffer (current-frame-root)
+    (toggle 'fullscreen-mode)))
+
 ;;; Style
 
 (defsheet fullscreen-mode

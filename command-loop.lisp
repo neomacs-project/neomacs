@@ -202,8 +202,9 @@ If nil, disable message logging. If t, log messages but don't truncate
               buffer (assoc-value event :title))))
           ((equal type "keyUp"))
           ((equal type "did-start-navigation")
-           (with-current-buffer buffer
-             (on-buffer-did-start-navigation buffer event)))
+           (when buffer
+             (with-current-buffer buffer
+               (on-buffer-did-start-navigation buffer event))))
           ((equal type "new-buffer")
            (switch-to-buffer
             (make-buffer "Web" :mode 'web-mode
