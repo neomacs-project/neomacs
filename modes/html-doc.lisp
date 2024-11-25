@@ -4,14 +4,15 @@
 
 (define-keys html-doc-mode
   "enter" 'open-paragraph
-  "C-c h" 'open-heading
+  "C-c h" 'cycle-heading
+  "C-c j" 'toggle-heading
   "C-c c" 'open-code
   "C-c b" 'open-bold
   "C-c i" 'open-italic
-  "C-c U" 'open-underline
+  "C-c u" 'open-underline
   "C-c t" 'insert-description-list
   "C-c d" 'insert-description
-  "C-c u" 'insert-unordered-list
+  "C-c C-u" 'insert-unordered-list
   "C-c ," 'open-comma
   "C-c C-l"'insert-link)
 
@@ -74,23 +75,35 @@
           (setf (pos marker) (pos-down new-node)))
         (split-node pos))))
 
-(define-command open-heading
-  :mode html-doc-mode (&optional (marker (focus)))
-  (labels ((cycle-level (n)
-             (lret ((n (mod (1+ n) 7)))
-               (message "Heading Level -> ~a" n)))
-           (tag-level (tag)
-             (cond ((equal tag "p") 0)
-                   ((ppcre:all-matches "^h[123456]$" tag)
-                    (parse-integer (subseq tag 1)))))
-           (level-tag (level)
-             (if (= level 0) "p"
-                 (format nil "h~a" level))))
+(labels ((cycle-level (n)
+           (lret ((n (mod (1+ n) 7)))
+             (message "Heading Level -> ~a" n)))
+         (tag-level (tag)
+           (cond ((equal tag "p") 0)
+                 ((ppcre:all-matches "^h[123456]$" tag)
+                  (parse-integer (subseq tag 1)))))
+         (level-tag (level)
+           (if (= level 0) "p"
+               (format nil "h~a" level))))
+
+  (define-command cycle-heading
+    :mode html-doc-mode (&optional (marker (focus)))
     (let* ((node (node-containing marker))
            (new-node (make-element
                       (level-tag
                        (cycle-level
                         (tag-level (tag-name node)))))))
+      (insert-nodes (pos-right node) new-node)
+      (move-nodes (pos-down node) nil (end-pos new-node))
+      (delete-node node)))
+
+  (define-command toggle-heading
+    :mode html-doc-mode (&optional (marker (focus)))
+    (let* ((node (node-containing marker))
+           (new-node (make-element
+                      (level-tag
+                       (if (plusp (tag-level (tag-name node)))
+                           0 1)))))
       (insert-nodes (pos-right node) new-node)
       (move-nodes (pos-down node) nil (end-pos new-node))
       (delete-node node))))
