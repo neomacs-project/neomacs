@@ -1,5 +1,5 @@
 (asdf:defsystem neomacs
-  :version "0.0.1"
+  :version "0.1.1"
   :author "Qiantan Hong <qhong@alum.mit.edu>"
   :maintainer "Qiantan Hong <qhong@alum.mit.edu>"
   :license "GPLv3+"
