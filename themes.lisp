@@ -253,3 +253,130 @@ not defined in this theme are inherited from PARENT."
      :border-width "2px"
      :border-style "solid"
      :z-index #.(1- (expt 2 31)))))
+
+(define-theme light-blue
+  "A light and blue theme."
+  'frame-body
+  `(:background "white"
+    :inherit default
+    :background-size "10px 10px"
+                )
+  'frame-buffer
+  `(:flex "1 0 1em"
+    :min-width "1em"
+    :min-height "1em"
+    :display "flex" :flex-flow "column"
+    :outline "solid 1px #ccc")
+  'frame-minibuffer
+  `(:flex "0 0 2em"
+    :display "flex" :flex-flow "column"
+          )
+  'frame-buffer-focus
+  `(:outline "solid 1px darkblue")
+  'default
+  `(:font-family "DejaVu Sans Mono"
+    :font-variant-ligatures "none"
+    :color "#2E3436"
+    :font-size "0.9em")
+  'keyword
+  `(:color "#204A87")
+  'comment
+  `(:color "#777")
+  'focus
+  `(:outline "solid 1px #ccc")
+  'selection
+  `(:background-color "#ccc")
+  'monospace
+  `(:inherit default
+    :inherit comment)
+
+  ;;        Frame
+  'header
+  `(:padding "8px"
+    :display "flex" :flex-flow "row"
+    :margin-bottom "8px"
+    :border-bottom "1px solid lightgray"
+             ;;:background-color "whitesmoke"
+    :inherit comment)
+  'header-focus
+  '(:inherit header :background-color "lavender")
+  'header-buffer-name
+  `(:inherit default)
+  'completion-menu
+  `(:white-space "nowrap"
+    :font-size "0.5em"
+    :overflow-x "hidden"
+    :overflow-y "scroll"
+    :background "#fff"
+    :border-collapse "collapse")
+  'frame-float
+  `(:outline "solid 1px #777")
+
+  ;;        Lisp
+  'string-node
+  '(((:append "::before") :content "\"")
+    ((:append "::after") :content "\"")
+    ((:append ":not(:last-child)")
+     :margin-right "0.4em")
+    ((:append ".focus::before")
+     :inherit selection)
+    ((:append ".focus-tail::after")
+     :content "\""
+     :width "auto"
+     :inherit selection)
+    :inherit (sexp-node string)
+    :color "green")
+  'comment-node-1
+  `(:position "sticky"
+    :left "20em"
+    :border-left "0.3rem solid #777"
+    :padding-left "0.3rem"
+    :inherit comment)
+  'comment-node-2
+  `(:border-left "0.3rem solid #777"
+    :padding-left "0.3rem"
+    :inherit comment)
+  'comment-node-3
+  `(((:append "::before")
+     :content ""
+     :display "list-item"
+     :list-style-type "square"
+     :list-style-position "inside"
+     :font-size "1.2rem"
+     :margin-left "-0.6rem"
+     :position "absolute")
+    :padding-left "0.6rem"
+    :font-size "1.2em"
+    :inherit comment)
+  'comment-node-4
+  `(((:append "::before")
+     :content ""
+     :display "list-item"
+     :list-style-type "square"
+     :list-style-position "inside"
+     :font-size "1.2rem"
+     :margin-left "-0.6rem"
+     :position "absolute")
+    :padding-left "0.6rem"
+    :font-size "1.1em"
+    :inherit comment)
+  'compiler-note
+  `(:color "blue")
+  'compiler-style-warning
+  `(:color "lightorange")
+  'compiler-warning
+  `(:color "orange")
+  'compiler-error
+  `(:color "red")
+
+  ;;        Lists
+  'list-mode
+  `(("body" :margin 0)
+    ("table" :white-space "pre" :width "100%"
+             :border-collapse "collapse")
+    ("tbody:empty::after"
+     :content "<No Item>"
+     :display "inline")
+    ("td" :padding-right "1em")
+    ("td:first-child" :padding-left "0.5rem")))
+
