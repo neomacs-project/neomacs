@@ -1,6 +1,6 @@
 const electron = require('electron');
 const {app,net,WebContentsView,BaseWindow,
-       protocol,clipboard,nativeTheme} = electron;
+       protocol,clipboard,nativeTheme,ipcMain} = electron;
 const WebSocket = require('ws');
 const dialog = require('electron').dialog;
 const { pathToFileURL } = require('url')
@@ -111,6 +111,7 @@ Ceramic.generateBufferId = function (){
 Ceramic.createBuffer = function(id, url, options) {
     const buf = new WebContentsView(options);
     buf.ignoreKeys = [];
+    buf.webContents.neomacsId = id;
     buf.webContents.setMaxListeners(100);
     buf.webContents.on('before-input-event', (event, input) => {
         const ignoreIndex = buf.ignoreKeys.findIndex((i) => true);
@@ -169,6 +170,8 @@ app.on('ready', function() {
     // Start the WebSockets server
     Ceramic.startWebSockets(process.argv[2],
                             parseInt(process.argv[3]));
+    ipcMain.on('click',(event, details) => {
+        RemoteJS.send(JSON.stringify({inputEvent: {type: "click", ...details}, buffer: event.sender.neomacsId}));})
     protocol.handle('neomacs', (req) => {
         const {host, pathname} = new URL(req.url);
         p = pathname.substring(1);

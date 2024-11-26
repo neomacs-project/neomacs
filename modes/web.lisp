@@ -30,7 +30,8 @@
     "Web" :mode 'web-mode
     :url (or (look-like-url-p url-or-query)
              (str:concat *search-prefix* url-or-query))
-    :styles nil)))
+    :styles nil
+    :content-scripts nil)))
 
 (defvar *web-history-list* nil)
 

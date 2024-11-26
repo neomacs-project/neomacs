@@ -370,6 +370,14 @@ This includes `element's and `text-node's. Returns NODE."
      node)
     (nreverse nodes)))
 
+;; TODO: make this more efficient with hash table index?
+(defun get-element-by-neomacs-id (root id)
+  (do-elements
+      (lambda (child)
+        (when (equal (attribute child "neomacs-identifier") id)
+          (return-from get-element-by-neomacs-id child)))
+    root))
+
 (defun dom (sexp)
   (labels ((process (sexp)
              (etypecase sexp

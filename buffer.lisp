@@ -76,7 +76,7 @@ Can be either `forward' or `backward'.")
     :documentation "With value s, try to keep cursor within [s,1-s] portion of the viewport.")
    (scroll-lines :default 10 :type (integer 1))
    (styles :default (list 'buffer) :initarg :styles)
-   (content-scripts :default nil)
+   (content-scripts :default (list 'mouse-select) :initarg :content-scripts)
    (lock :initform (bt:make-recursive-lock) :reader lock)
    (post-command-thunks
     :initform nil
@@ -192,9 +192,12 @@ for which MODE-NAME is being disabled."))
     (setf (gethash (slot-value buffer 'id) *buffer-table*) buffer))
   (unless (< (slot-value buffer 'id) 0)
     (cera.d:js cera.d:*driver*
-               (format nil "Ceramic.createBuffer(~S, ~S, {});
+               (format nil "Ceramic.createBuffer(~S, ~S,
+{webPreferences:{preload:~s}});
 Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
                        (id buffer) (url buffer)
+                       (uiop:native-namestring
+                        (ceramic:resource 'assets "preload.js"))
                        (id buffer))))
   (setf (document-root buffer)
         (make-instance 'element :tag-name "body" :host buffer)
@@ -745,6 +748,66 @@ If it is, should signal a condition of type `read-only-error'."))
 
 (defmethod check-read-only ((buffer read-only-mode) (pos t))
   (error 'read-only-error :buffer buffer))
+
+;;; Mouse support
+
+(setf (get 'mouse-select 'content-script)
+      "document.body.addEventListener('click',function (event){
+    const pos = document.caretPositionFromPoint(event.clientX,
+                                                event.clientY);
+    if(!pos) return;
+    const {offsetNode,offset} = pos;
+    const clickTextNode = function (node, offset){
+        const next = node.nextSibling;
+        if(next){
+            electronAPI.send('click',
+                             {next:next.getAttribute('neomacs-identifier'),
+                              offset:offset})}
+        else{
+            electronAPI.send('click',
+                             {parent:node.parentNode.getAttribute(
+                                 'neomacs-identifier'),
+                              offset:offset})}
+    }
+    if(offsetNode.nodeType === 3){
+        clickTextNode(offsetNode,offset);
+    }
+    else if(offsetNode.nodeType === 1){
+        const child = offsetNode.childNodes[offset];
+        if(!child) return;
+        if(child.nodeType === 3) {clickTextNode(child,0)}
+        else if(child.nodeType === 1) {
+        electronAPI.send('click',
+                         {element:child.getAttribute(
+                             'neomacs-identifier')})}}})")
+
+(defun handle-mouse-select (buffer event)
+  (when buffer
+    (with-current-buffer buffer
+      (sera:cond-let x
+        ((assoc-value event :next)
+         (when-let* ((next (get-element-by-neomacs-id
+                            (document-root (current-buffer))
+                            x))
+                     (text-node (previous-sibling next))
+                     (offset (assoc-value event :offset)))
+           (if (< offset (length (text text-node)))
+               (setf (pos (focus)) (text-pos text-node offset))
+               (setf (pos (focus)) next))))
+        ((assoc-value event :parent)
+         (when-let* ((parent (get-element-by-neomacs-id
+                              (document-root (current-buffer))
+                              x))
+                     (text-node (last-child parent))
+                     (offset (assoc-value event :offset)))
+           (if (< offset (length (text text-node)))
+               (setf (pos (focus)) (text-pos text-node offset))
+               (setf (pos (focus)) (end-pos parent)))))
+        ((assoc-value event :element)
+         (when-let* ((element (get-element-by-neomacs-id
+                               (document-root (current-buffer))
+                               x)))
+           (setf (pos (focus)) element)))))))
 
 ;;; Styles
 
