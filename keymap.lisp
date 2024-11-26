@@ -49,7 +49,6 @@ H (Hyper), s (Super), M (Meta), C (Ctrl), S (Shift)
 
 Example: (set-key *global-keymap* \"C-x b\" 'switch-to-buffer)"
   (check-type keyspec (or symbol string))
-  (check-type command (or symbol function keymap))
   (typecase keyspec
     (symbol
      (setf (gethash keyspec (keymap-function-table keymap))

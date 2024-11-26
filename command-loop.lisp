@@ -92,6 +92,12 @@ loop.")
 The value is bound to nil outside command invocation made by command
 loop.")
 
+(defvar *input-method-function* #'list
+  "Function that implements the current input method.
+
+It's called with each key received by the command loop, and should
+return a list of keys which are then used for command dispatch.")
+
 (defvar *debug-on-error* nil)
 
 (defvar *use-neomacs-debugger* nil)
@@ -146,6 +152,15 @@ If nil, disable message logging. If t, log messages but don't truncate
         (message "~a is undefined" (key-description *this-command-keys*))
         (setq *this-command-keys* nil))))
 
+(defun handle-key (buffer key run-command-fn)
+  (alex:nconcf *this-command-keys* (list key))
+  (if-let (cmd (lookup-keybind *this-command-keys* (keymaps buffer)))
+    (if (prefix-command-p cmd)
+        (let ((*message-log-max* nil))
+          (message "~a-" (key-description *this-command-keys*)))
+        (funcall run-command-fn cmd))
+    (funcall run-command-fn nil)))
+
 (defun handle-event (buffer event run-command-fn)
   (let ((type (assoc-value event :type)))
     (cond ((equal type "keyDown")
@@ -170,19 +185,15 @@ If nil, disable message logging. If t, log messages but don't truncate
                                  ;; into account already.
                                  :shift (and (> (length sym) 1)
                                              (assoc-value event :shift))
-                                 :sym (if (equal sym " ")
-                                          "Space"
-                                          sym))))
+                                 :sym (cond ((equal sym " ") "Space")
+                                            ((equal sym "Dead")
+                                             (str:concat sym (assoc-value event :code)))
+                                            (t sym)))))
              (unless (member (key-sym key)
                              '("Control" "Meta" "Alt" "Shift")
                              :test 'equal)
-               (alex:nconcf *this-command-keys* (list key))
-               (if-let (cmd (lookup-keybind *this-command-keys* (keymaps buffer)))
-                 (if (prefix-command-p cmd)
-                     (let ((*message-log-max* nil))
-                       (message "~a-" (key-description *this-command-keys*)))
-                     (funcall run-command-fn cmd))
-                 (funcall run-command-fn nil)))))
+               (dolist (key (funcall *input-method-function* key))
+                 (handle-key buffer key run-command-fn)))))
           ((equal type "load")
            (with-current-buffer buffer
              (on-buffer-loaded

@@ -1024,6 +1024,7 @@ sb-introspect:definition-source)'."
 (defvar *lisp-syntax-table*
   (lret ((table (make-syntax-table)))
     (set-syntax-range table 33 127 'read-symbol)
+    (set-syntax-range table 160 255 'read-symbol)
     (setf (get-syntax-table #\( table) (make-read-delimited #\)))
     (setf (get-syntax-table #\) table) nil)
     (setf (get-syntax-table #\  table) 'read-ignore)
