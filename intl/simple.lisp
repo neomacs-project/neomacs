@@ -1,5 +1,9 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(simple-input-method *simple-input-method-map*
+      simple-input-method-latin))
+
 (defvar *simple-input-method-map*
   (make-keymap 'simple-input-method-latin)
   "The keymap `simple-input-method' uses for translating key sequences.

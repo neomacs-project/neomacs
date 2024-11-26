@@ -4,6 +4,7 @@
     '(top-level exit-recursive-edit quit
       call-with-current-buffer with-current-buffer
       *last-command* *this-command* *this-command-keys*
+      *input-method-function*
       current-frame-root recursive-edit start-command-loop
       *debug-on-error* *message-log-max*
       *quit-hook* *error-hook*
