@@ -594,8 +594,8 @@ makes the buffer displayed fullscreen."))
 
 (defsheet fullscreen-mode
     `(("body" :margin 0 :padding 0)
-      (".minibuffer" :display "none")
-      (".header" :display "none")))
+      (".minibuffer" :display "none !important")
+      (".header" :display "none !important")))
 
 (defstyle frame-body
     `(:padding "32px"
