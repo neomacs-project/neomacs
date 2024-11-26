@@ -168,10 +168,16 @@
 
 (define-command insert-link
   :mode html-doc-mode (&optional (marker (focus)))
-  (let* ((href (read-from-minibuffer "Href: "))
-         (a (make-element "a" :href href)))
-    (insert-nodes marker a)
-    (setf (pos marker) (end-pos a))))
+  "Insert link, or edit link target under focus."
+  (if-let (node (pos-up-ensure (pos marker)
+                               (alex:rcurry #'tag-name-p "a")))
+    (let* ((href (read-from-minibuffer "Edit Href: " :initial
+                                       (attribute node "href"))))
+      (setf (attribute node "href") href))
+    (let* ((href (read-from-minibuffer "Href: "))
+           (a (make-element "a" :href href)))
+      (insert-nodes marker a)
+      (setf (pos marker) (end-pos a)))))
 
 ;;; Get DOM from renderer
 ;; Initially adapted from Nyxt

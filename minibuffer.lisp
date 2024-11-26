@@ -7,6 +7,7 @@
 
 (define-mode minibuffer-mode ()
   ((prompt :initarg :prompt)
+   (initial :initform nil :initarg :initial)
    (completed :initform nil)))
 
 (define-keys minibuffer-mode
@@ -42,7 +43,9 @@ return objects from `read-from-minibuffer', add methods to
   (:documentation "Result to be returned by `read-from-minibuffer'."))
 
 (defmethod revert-buffer-aux ((buffer minibuffer-mode))
-  (let ((input (dom `(:span :class "input"))))
+  (let ((input (dom `(:span :class "input"
+                            ,@ (when (initial buffer)
+                                 (list (initial buffer)))))))
     (setf (attribute (document-root (current-buffer))
                      'read-only)
           t)
