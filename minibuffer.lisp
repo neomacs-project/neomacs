@@ -171,6 +171,10 @@ when this row is selected.")))
 (defmethod selectable-p-aux ((buffer completion-buffer-mode) pos)
   (tag-name-p (node-after pos) "tr"))
 
+(defmethod on-mouse-click progn ((buffer completion-buffer-mode)
+                                 (x t) (y t))
+  (setf (adjust-marker-direction buffer) 'backward))
+
 (defmethod window-decoration-aux ((buffer minibuffer-completion-mode))
   (dom `(:div :class "buffer" :selectable ""
               (:div :class "main content" :style "flex:0 0 2em;"
