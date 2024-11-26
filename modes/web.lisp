@@ -349,6 +349,8 @@ wc.setZoomFactor(1.0)}"
 
 
 (defmethod revert-buffer-aux ((buffer web-mode))
+  (when (typep buffer 'file-mode)
+    (setf (url buffer) (str:concat "file://" (uiop:native-namestring (file-path buffer)))))
   (load-url buffer (url buffer)))
 
 (defun web-send-key (key)

@@ -82,7 +82,14 @@
 ;;; Find-file
 
 (defvar *file-type-hooks* '(("lisp" lisp-mode)
-                            ("html" html-doc-mode))
+                            ("html" html-doc-mode)
+                            ("png" web-mode)
+                            ("jpg" web-mode)
+                            ("jpeg" web-mode)
+                            ("gif" web-mode)
+                            ("bmp" web-mode)
+                            ("webp" web-mode)
+                            ("svg" web-mode))
   "Automatically enable modes for file with specific types.
 
 Items should be of the form (FILE-TYPE MODE-NAME).")
