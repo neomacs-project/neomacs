@@ -201,7 +201,11 @@ If nil, disable message logging. If t, log messages but don't truncate
              (on-buffer-title-updated
               buffer (assoc-value event :title))))
           ((equal type "keyUp"))
-          ((equal type "click") (handle-mouse-select buffer event))
+          ((equal type "click")
+           (when buffer
+             (with-current-buffer buffer
+               (on-mouse-click buffer (assoc-value event :x)
+                               (assoc-value event :y)))))
           ((equal type "did-start-navigation")
            (when buffer
              (with-current-buffer buffer

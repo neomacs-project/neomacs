@@ -752,62 +752,67 @@ If it is, should signal a condition of type `read-only-error'."))
 ;;; Mouse support
 
 (setf (get 'mouse-select 'content-script)
-      "document.body.addEventListener('click',function (event){
-    const pos = document.caretPositionFromPoint(event.clientX,
-                                                event.clientY);
+      "function resolveMousePos(x,y){
+    const pos = document.caretPositionFromPoint(x,y);
     if(!pos) return;
     const {offsetNode,offset} = pos;
     const clickTextNode = function (node, offset){
         const next = node.nextSibling;
         if(next){
-            electronAPI.send('click',
-                             {next:next.getAttribute('neomacs-identifier'),
-                              offset:offset})}
+            return {next:next.getAttribute('neomacs-identifier'),
+                    offset:offset}}
         else{
-            electronAPI.send('click',
-                             {parent:node.parentNode.getAttribute(
-                                 'neomacs-identifier'),
-                              offset:offset})}
+            return {parent:node.parentNode.getAttribute(
+                'neomacs-identifier'),
+                    offset:offset}}
     }
     if(offsetNode.nodeType === 3){
-        clickTextNode(offsetNode,offset);
+        return clickTextNode(offsetNode,offset);
     }
     else if(offsetNode.nodeType === 1){
         const child = offsetNode.childNodes[offset];
         if(!child) return;
-        if(child.nodeType === 3) {clickTextNode(child,0)}
+        if(child.nodeType === 3) {return clickTextNode(child,0)}
         else if(child.nodeType === 1) {
-        electronAPI.send('click',
-                         {element:child.getAttribute(
-                             'neomacs-identifier')})}}})")
+            return {element:child.getAttribute('neomacs-identifier')}}}
+}
+document.body.addEventListener('click',function (event){
+    electronAPI.send('click',{x:event.clientX, y:event.clientY})})")
 
-(defun handle-mouse-select (buffer event)
-  (when buffer
-    (with-current-buffer buffer
-      (sera:cond-let x
-        ((assoc-value event :next)
-         (when-let* ((next (get-element-by-neomacs-id
+(defun resolve-mouse-pos (x y)
+  (let ((data (evaluate-javascript-sync
+               (format nil "resolveMousePos(~s,~s)" x y)
+               (current-buffer))))
+    (sera:cond-let x
+      ((assoc-value data :next)
+       (when-let* ((next (get-element-by-neomacs-id
+                          (document-root (current-buffer))
+                          x))
+                   (text-node (previous-sibling next))
+                   (offset (assoc-value data :offset)))
+         (if (< offset (length (text text-node)))
+             (text-pos text-node offset)
+             next)))
+      ((assoc-value data :parent)
+       (when-let* ((parent (get-element-by-neomacs-id
                             (document-root (current-buffer))
                             x))
-                     (text-node (previous-sibling next))
-                     (offset (assoc-value event :offset)))
-           (if (< offset (length (text text-node)))
-               (setf (pos (focus)) (text-pos text-node offset))
-               (setf (pos (focus)) next))))
-        ((assoc-value event :parent)
-         (when-let* ((parent (get-element-by-neomacs-id
-                              (document-root (current-buffer))
-                              x))
-                     (text-node (last-child parent))
-                     (offset (assoc-value event :offset)))
-           (if (< offset (length (text text-node)))
-               (setf (pos (focus)) (text-pos text-node offset))
-               (setf (pos (focus)) (end-pos parent)))))
-        ((assoc-value event :element)
-         (when-let* ((element (get-element-by-neomacs-id
-                               (document-root (current-buffer))
-                               x)))
-           (setf (pos (focus)) element)))))))
+                   (text-node (last-child parent))
+                   (offset (assoc-value data :offset)))
+         (if (< offset (length (text text-node)))
+             (text-pos text-node offset)
+             (end-pos parent))))
+      ((assoc-value data :element)
+       (when-let* ((element (get-element-by-neomacs-id
+                             (document-root (current-buffer))
+                             x)))
+         element)))))
+
+(defgeneric on-mouse-click (buffer x y)
+  (:method-combination progn)
+  (:method progn ((buffer buffer) x y)
+    (when-let (pos (resolve-mouse-pos x y))
+      (setf (pos (focus)) pos))))
 
 ;;; Styles
 
