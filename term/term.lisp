@@ -45,6 +45,7 @@
                    (iter (for c = (read-char-no-hang (pty buffer)
                                                      nil 'eof))
                      (until (eql c 'eof))
+                     (with last-cursor)
                      (if c
                          (let ((3bst:*term* (for-term buffer))
                                (neomacs::*current-buffer* buffer))
@@ -53,10 +54,19 @@
                            (when (typep buffer 'term-insert-mode)
                              (with-current-buffer buffer
                                (when (buffer-alive-p buffer)
-                                 (when (find-if #'plusp
-                                                (3bst:dirty (for-term buffer)))
-                                   (redisplay-term (for-term buffer) buffer))
-                                 (redisplay-focus (for-term buffer) buffer))))
+                                 (cond ((find-if #'plusp
+                                                 (3bst:dirty (for-term buffer)))
+                                        (redisplay-term (for-term buffer) buffer)
+                                        (redisplay-focus (for-term buffer) buffer)
+                                        (setf last-cursor
+                                              (3bst::copy-cursor
+                                               (3bst::cursor 3bst:*term*))))
+                                       ((not (equalp last-cursor
+                                                     (3bst::cursor 3bst:*term*)))
+                                        (redisplay-focus (for-term buffer) buffer)
+                                        (setf last-cursor
+                                              (3bst::copy-cursor
+                                               (3bst::cursor 3bst:*term*))))))))
                            (sleep 0.02))))
                  (stream-error ()))
                (with-current-buffer buffer
