@@ -376,5 +376,6 @@ not defined in this theme are inherited from PARENT."
      :content "<No Item>"
      :display "inline")
     ("td" :padding-right "1em")
-    ("td:first-child" :padding-left "0.5rem")))
+    ("td:first-child" :padding-left "0.5rem")
+    (".focus" :background-color "lavender")))
 
