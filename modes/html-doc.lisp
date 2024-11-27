@@ -5,7 +5,7 @@
 (define-keys html-doc-mode
   "enter" 'open-paragraph
   "C-c h" 'increase-heading
-  "C-c j" 'decrease-heading
+  "C-c C-h" 'decrease-heading
   "C-c c" 'open-code
   "C-c b" 'open-bold
   "C-c i" 'open-italic
