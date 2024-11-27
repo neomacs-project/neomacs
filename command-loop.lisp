@@ -101,7 +101,11 @@ return a list of keys which are then used for command dispatch.")
 
 (defvar *debug-on-error* nil)
 
-(defvar *use-neomacs-debugger* nil)
+(defvar *no-debugger* nil)
+
+(defvar *no-redirect-stream* nil)
+
+(defvar *no-init* nil)
 
 (defvar *message-log-max* 1000
   "Maximum number of lines to keep in the `*Messages*' buffer.
@@ -251,10 +255,11 @@ If nil, disable message logging. If t, log messages but don't truncate
                        (handlers-p t)
                        (run-command-fn #'run-command))
   (unless recursive-p
-    (when *use-neomacs-debugger*
+    (unless *no-debugger*
      (trivial-custom-debugger:install-debugger
-      #'neomacs-debugger-hook)
-     (setup-stream-indirection)))
+      #'neomacs-debugger-hook))
+    (unless *no-redirect-stream*
+      (setup-stream-indirection)))
   (let (*this-command-keys*)
     (iter (setq *last-quit-time* nil)
       (for data = (sb-concurrency:receive-message *event-queue*))

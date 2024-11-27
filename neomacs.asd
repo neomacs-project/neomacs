@@ -66,11 +66,12 @@
 
 (asdf:defsystem neomacs/app
   :defsystem-depends-on (:deploy)
-  :depends-on (:neomacs
+  :depends-on (:unix-opts
+               :neomacs
                (:feature (:not :windows) :neomacs/term))
   :build-operation "deploy-op"
   :build-pathname "neomacs"
-  :entry-point "ceramic-entry::neomacs"
+  :entry-point "neomacs::entry"
   :serial t
   :components ((:file "asdf-bundler")
                (:file "deploy")))

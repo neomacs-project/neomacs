@@ -3,14 +3,14 @@
 (sera:export-always
     '(start))
 
-(defun start (&optional (use-neomacs-debugger t))
+(defun start (&optional (self-govern t))
   "Start the Neomacs system.
 
 It's not safe to call this function more than once in a Lisp process.
 If Neomacs system has been shut down (all frames are closed), restart
 Lisp process before starting a new session.
 
-If USE-NEOMACS-DEBUGGER is nil, Neomacs assumes it is being started
+If SELF-GOVERN is nil, Neomacs assumes it is being started
 from an external Lisp development environment (e.g. SLIME). This has
 the following effect:
 
@@ -59,31 +59,24 @@ Try the following workaround:
        "*intro*" :mode 'web-mode
        :url (str:concat "file://"
                         (uiop:native-namestring intro-path)))))
-  (setf *current-frame-root* (make-frame)
-        *use-neomacs-debugger* use-neomacs-debugger
-        *debug-on-error* t)
+  (setf *current-frame-root* (make-frame))
+  (unless self-govern
+    (setf *no-debugger* t
+          *no-redirect-stream* t))
   (unless (get-buffer "*scratch*") (make-scratch))
   (start-command-loop)
-  (let ((*package* (find-package "NEOMACS-USER"))
-        (config-file (uiop:xdg-config-home "neomacs" "init.lisp")))
-    (if (uiop:file-exists-p config-file)
-        (progn
-          (format t "Loading ~a.~%" config-file)
-          (load config-file))
-        (format t "~a not yet exist.~%" config-file)))
+  (unless *no-init*
+    (let ((*package* (find-package "NEOMACS-USER"))
+          (config-file (uiop:xdg-config-home "neomacs" "init.lisp")))
+      (if (uiop:file-exists-p config-file)
+          (progn
+            (format t "Loading ~a.~%" config-file)
+            (load config-file))
+          (format t "~a not yet exist.~%" config-file))))
   (load-web-history)
   ;; If we are started from terminal instead of SLIME, don't let
   ;; `start' return, otherwise SBCL top-level tries to read from
   ;; Neomacs input stream and cause funny
-  (when (and use-neomacs-debugger
+  (when (and (not *no-redirect-stream*)
              (eql *standard-input* *current-standard-input*))
     (bt:join-thread *command-loop-thread*)))
-
-(in-package #:ceramic-entry)
-
-(defun neomacs ()
-  (setq ceramic.runtime:*releasep* t)
-  (neomacs::start)
-  (sb-ext:process-wait
-   (slot-value ceramic.driver:*driver* 'ceramic.driver::process))
-  (neomacs::kill-neomacs))
