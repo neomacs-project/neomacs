@@ -51,7 +51,7 @@
 (defmethod on-node-setup progn ((buffer html-doc-mode) (node text-node))
   (with-post-command (node 'parent)
     (let ((parent (parent node)))
-      (when (tag-name-p parent "body")
+      (when (allow-block-element-p parent)
         (let ((new-node (make-element "p")))
           (insert-nodes (text-pos node 0) new-node)
           (move-nodes (text-pos node 0) (next-sibling node)
@@ -59,7 +59,7 @@
 
 (defun allow-block-element-p (parent)
   (member (tag-name parent)
-          '("div" "li" "article" "section" "main" "aside" "header" "footer" "nav" "td" "body")
+          '("div" "li" "article" "section" "main" "aside" "header" "footer" "nav" "body")
           :test 'equal))
 
 (defun check-valid-parent (parent child-tag)
@@ -69,7 +69,7 @@
 (define-command open-paragraph
   :mode html-doc-mode (&optional (marker (focus)))
   (let ((pos (resolve-marker marker)))
-    (if (tag-name-p (node-containing pos) "body")
+    (if (allow-block-element-p (node-containing pos))
         (let ((new-node (make-element "p")))
           (insert-nodes pos new-node)
           (setf (pos marker) (pos-down new-node)))

@@ -106,7 +106,6 @@
           *sexp-node-keymap*)))
 
 (defmethod on-node-setup progn ((buffer lisp-mode) (node element))
-  (set-attribute-function node "operator" 'compute-operator)
   (with-post-command (node 'parent)
     (let ((parent (parent node)))
       (cond
@@ -129,7 +128,8 @@
           (with-output-to-string (s)
             (write-dom-aux buffer node s)))))))
   (when (symbol-node-p node)
-    (set-attribute-function node "symbol-type" 'compute-symbol-type))
+    (set-attribute-function node "symbol-type" 'compute-symbol-type)
+    (set-attribute-function node "operator" 'compute-operator))
   (when (class-p node "comment" "string")
     (setf (attribute node 'keymap) *plaintext-node-keymap*))
   (when (class-p node "object")
