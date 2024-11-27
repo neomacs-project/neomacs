@@ -36,6 +36,7 @@
 (defvar *plaintext-node-keymap*
   (make-keymap
    'plaintext-node
+   "enter" 'new-line
    "(" 'self-insert-command
    "\"" 'self-insert-command
    "space" 'self-insert-command))

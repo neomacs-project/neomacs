@@ -13,6 +13,7 @@
   "C-c t" 'insert-description-list
   "C-c d" 'insert-description
   "C-c C-u" 'insert-unordered-list
+  "C-c p" 'insert-code-block
   "C-c ," 'open-comma
   "C-c C-l"'insert-link)
 
@@ -46,7 +47,9 @@
 
 (defmethod on-node-setup progn ((buffer html-doc-mode) (node element))
   (when (class-p node "comma-expr")
-    (setf (attribute node 'keymap) *sexp-node-keymap*)))
+    (setf (attribute node 'keymap) *sexp-node-keymap*))
+  (when (tag-name-p node "pre")
+    (setf (attribute node 'keymap) *plaintext-node-keymap*)))
 
 (defmethod on-node-setup progn ((buffer html-doc-mode) (node text-node))
   (with-post-command (node 'parent)
@@ -175,6 +178,16 @@
            (a (make-element "a" :href href)))
       (insert-nodes marker a)
       (setf (pos marker) (end-pos a)))))
+
+(define-command insert-code-block
+  :mode html-doc-mode (&optional (marker (focus)))
+  (let ((parent (node-containing marker)))
+    (when (tag-name-p parent "p")
+      (setf (pos marker) (split-node (pos marker))))
+    (check-valid-parent (node-containing marker) "pre")
+    (let ((node (make-element "pre")))
+      (insert-nodes marker node)
+      (setf (pos marker) (end-pos node)))))
 
 ;;; Get DOM from renderer
 ;; Initially adapted from Nyxt
