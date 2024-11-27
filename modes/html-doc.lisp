@@ -17,13 +17,6 @@
   "C-c ," 'open-comma
   "C-c C-l"'insert-link)
 
-(defmethod selectable-p-aux ((buffer html-doc-mode) pos)
-  (and (not (and (member (node-after pos) '(#\Space #\Newline #\Tab))
-                 (member (node-before pos) '(nil #\Space #\Newline #\Tab))))
-       (not (and (tag-name-p (node-containing pos) "body")
-                 (tag-name-p (node-before pos) "p")))
-       (call-next-method)))
-
 (defmethod sexp-parent-p ((buffer html-doc-mode) node)
   (class-p node "list"))
 
