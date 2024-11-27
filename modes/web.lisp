@@ -135,6 +135,7 @@
   (make-web-send-key-command
    (car (kbd "end")))
   'self-insert-command 'web-forward-key
+  "processing" 'do-nothing
   "escape" 'web-forward-key
   "enter" 'web-forward-key
   "tab" 'web-forward-key
