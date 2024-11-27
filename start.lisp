@@ -60,7 +60,8 @@ Try the following workaround:
        :url (str:concat "file://"
                         (uiop:native-namestring intro-path)))))
   (setf *current-frame-root* (make-frame)
-        *use-neomacs-debugger* use-neomacs-debugger)
+        *use-neomacs-debugger* use-neomacs-debugger
+        *debug-on-error* t)
   (unless (get-buffer "*scratch*") (make-scratch))
   (start-command-loop)
   (let ((*package* (find-package "NEOMACS-USER"))
@@ -70,7 +71,13 @@ Try the following workaround:
           (format t "Loading ~a.~%" config-file)
           (load config-file))
         (format t "~a not yet exist.~%" config-file)))
-  (load-web-history))
+  (load-web-history)
+  ;; If we are started from terminal instead of SLIME, don't let
+  ;; `start' return, otherwise SBCL top-level tries to read from
+  ;; Neomacs input stream and cause funny
+  (when (and use-neomacs-debugger
+             (eql *standard-input* *current-standard-input*))
+    (bt:join-thread *command-loop-thread*)))
 
 (in-package #:ceramic-entry)
 
