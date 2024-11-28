@@ -402,10 +402,21 @@ wc.setZoomFactor(1.0)}"
 (defmethod generate-rows ((buffer web-history-list-mode))
   (iter (for entry in *web-history-list*)
     (insert-nodes (focus)
-                  (dom `(:tr (:td ,(or (title entry) "-"))
-                             (:td ,(url entry))
-                             (:td ,(format-readable-timestring
-                                    (access-time entry))))))))
+                  (dom `(:tr (:td :class "title" ,(or (title entry) "-"))
+                             (:td :class "url" ,(url entry))
+                             (:td :class "time"
+                                  ,(format-readable-timestring
+   (access-time entry))))))))
+
+(defsheet web-history-list-mode
+    `((".title"
+       :max-width "50vw"
+       :overflow "hidden"
+       :text-overflow "ellipsis")
+      (".url"
+       :max-width "30vw"
+       :overflow "hidden"
+       :text-overflow "ellipsis")))
 
 (define-command list-web-history ()
   (switch-to-buffer
