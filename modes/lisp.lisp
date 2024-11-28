@@ -101,7 +101,7 @@
           ((keywordp symbol) "keyword")
           (t ""))))
 
-(defmethod revert-buffer-aux :after ((buffer lisp-mode))
+(defmethod revert-buffer-aux :before ((buffer lisp-mode))
   (when (sexp-parent-p buffer (document-root buffer))
     (setf (attribute (document-root buffer) 'keymap)
           *sexp-node-keymap*)))

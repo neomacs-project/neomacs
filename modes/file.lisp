@@ -242,11 +242,12 @@ Used to detect modification from other processes before saving."))
 
 (defmethod revert-buffer-aux ((buffer file-mode))
   (erase-buffer)
-  (append-children
-   (document-root buffer)
-   (read-dom-from-file (file-path buffer)))
-  (dolist (c (child-nodes (document-root buffer)))
-    (do-dom (alex:rcurry #'node-setup buffer) c))
+  (unwind-protect
+       (append-children
+        (document-root buffer)
+        (read-dom-from-file (file-path buffer)))
+    (dolist (c (child-nodes (document-root buffer)))
+      (do-dom (alex:rcurry #'node-setup buffer) c)))
   (setf (modified buffer) nil
         (modtime buffer)
         (osicat-posix:stat-mtime
