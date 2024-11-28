@@ -224,13 +224,16 @@ non-interactive use."
     (setf (pos marker) (or pos (error 'beginning-of-subtree)))
     n))
 
-(define-command end-of-line (&optional (marker (focus) non-interactive))
+(define-command end-of-line
+  :interactive
+  (lambda () (list (focus) t))
+  (&optional (marker (focus)) interactive)
   "Move to end of line."
   (let ((pos (pos marker)))
     (iter (until (line-end-p pos))
       (setq pos (or (npos-next pos) (return))))
     (setf (pos marker) (or pos (error 'end-of-subtree)))
-    (unless non-interactive
+    (when interactive
       (setf (adjust-marker-direction (current-buffer)) 'backward))))
 
 (define-command beginning-of-defun (&optional (marker (focus)))
