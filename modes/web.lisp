@@ -3,7 +3,12 @@
 (defun look-like-url-p (string)
   (ignore-errors
    (let ((parsed (quri:uri string)))
-     (if (quri:uri-scheme parsed)
+     (if (member (quri:uri-scheme parsed)
+                 ;; From https://developer.mozilla.org/en-US/docs/Web/URI/Schemes
+                 '("http" "https" "blob" "data" "file"
+                   "javascript" "ftp" "mailto"
+                   "ssh" "tel" "urn" "view-source" "ws" "wss")
+                 :test 'equal)
          string
          (let ((prepended (str:concat "https://" string)))
            (setq parsed (quri:uri prepended))
