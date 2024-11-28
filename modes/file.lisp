@@ -242,24 +242,11 @@ Used to detect modification from other processes before saving."))
 
 (defmethod revert-buffer-aux ((buffer file-mode))
   (erase-buffer)
-  ;; Static HTML optimization:
-
-  ;; Rather than using `insert-nodes' primitive editing primitives, we
-  ;; just updates Lisp side DOM, and serialize it as a static HTML
-  ;; then serve to renderer. This is much better than renderer-side
-  ;; DOM manipulation for larger files.
-  (let ((*inhibit-dom-update* t))
-    (append-children
-     (document-root buffer)
-     (read-dom-from-file (file-path buffer)))
-   (dolist (c (child-nodes (document-root buffer)))
-     (do-dom (alex:rcurry #'node-setup buffer) c)))
-  (evaluate-javascript
-   (format nil "Contents[~s]='~a'"
-           (id buffer)
-           (quote-js (serialize (document-root buffer) nil)))
-   :global)
-  (load-url buffer (format nil "neomacs://contents/~a" (id buffer)))
+  (append-children
+   (document-root buffer)
+   (read-dom-from-file (file-path buffer)))
+  (dolist (c (child-nodes (document-root buffer)))
+    (do-dom (alex:rcurry #'node-setup buffer) c))
   (setf (modified buffer) nil
         (modtime buffer)
         (osicat-posix:stat-mtime

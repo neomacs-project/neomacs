@@ -183,7 +183,7 @@ app.on('ready', function() {
         if (host == 'contents'){
             const content = Contents[p];
             delete Contents[p];
-            return new Response(content,{headers: {'content-type': "text/html"}});
+            return new Response(content,{headers: {'content-type': "text/html; charset=utf-8"}});
         }
         else{
             const pathToServe = path.resolve(Mounts[host],p);

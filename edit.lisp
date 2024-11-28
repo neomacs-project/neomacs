@@ -489,7 +489,22 @@ NODE become the last child of NEW-NODE."
 (defgeneric revert-buffer-aux (buffer)
   (:documentation "Regenerate the content of BUFFER.")
   (:method ((buffer buffer))
-    (not-supported buffer 'revert-buffer)))
+    (not-supported buffer 'revert-buffer))
+  (:method :around ((buffer buffer))
+    ;; Static HTML optimization:
+
+    ;; Rather than using `insert-nodes' primitive editing primitives, we
+    ;; just updates Lisp side DOM, and serialize it as a static HTML
+    ;; then serve to renderer. This is much better than renderer-side
+    ;; DOM manipulation for larger files.
+    (let ((*inhibit-dom-update* t))
+      (call-next-method))
+    (evaluate-javascript
+     (format nil "Contents[~s]='~a'"
+             (id buffer)
+             (quote-js (serialize (document-root buffer) nil)))
+     :global)
+    (load-url buffer (format nil "neomacs://contents/~a" (id buffer)))))
 
 (define-command revert-buffer ()
   "Regenerate the content of current buffer.

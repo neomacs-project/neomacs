@@ -20,7 +20,7 @@
 (defmethod sexp-parent-p ((buffer html-doc-mode) node)
   (class-p node "list"))
 
-(defmethod revert-buffer-aux ((buffer html-doc-mode))
+(defmethod revert-buffer-aux :around ((buffer html-doc-mode))
   (erase-buffer)
   (load-url buffer (str:concat "file://" (uiop:native-namestring (file-path buffer))))
   ;; Enter recursive edit to wait for buffer to load, so that
