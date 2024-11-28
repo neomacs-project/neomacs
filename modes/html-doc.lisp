@@ -22,7 +22,8 @@
 
 (defmethod revert-buffer-aux :around ((buffer html-doc-mode))
   (erase-buffer)
-  (load-url buffer (str:concat "file://" (uiop:native-namestring (file-path buffer))))
+  (when (uiop:file-exists-p (file-path buffer))
+    (load-url buffer (str:concat "file://" (uiop:native-namestring (file-path buffer)))))
   ;; Enter recursive edit to wait for buffer to load, so that
   ;; buffer state is updated when `revert-buffer' returns.
   (recursive-edit
