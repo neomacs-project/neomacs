@@ -108,7 +108,13 @@ not defined in this theme are inherited from PARENT."
   'header-focus
   nil
   'header-buffer-name
-  `(:inherit default)
+  `(:flex "0 1 auto"
+    :padding-right "1em"
+    :max-width "100%"
+    :white-space "nowrap"
+    :overflow "hidden"
+    :text-overflow "ellipsis"
+    :inherit default)
   'completion-menu
   `(:white-space "nowrap"
     :font-size "0.8em"
@@ -299,7 +305,13 @@ not defined in this theme are inherited from PARENT."
   'header-focus
   '(:inherit header :background-color "lavender")
   'header-buffer-name
-  `(:inherit default)
+  `(:flex "0 1 auto"
+    :padding-right "1em"
+    :max-width "100%"
+    :white-space "nowrap"
+    :overflow "hidden"
+    :text-overflow "ellipsis"
+    :inherit default)
   'completion-menu
   `(:white-space "nowrap"
     :font-size "0.5em"

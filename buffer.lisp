@@ -56,6 +56,7 @@
    (name :type string)
    (url :initarg :url :type quri:uri)
    (load-status :initform :loading)
+   (load-spinner :initform t)
    (word-boundary-list :default (list #\  #\- #\:))
    (focus-marker)
    (selection-marker)
@@ -335,6 +336,8 @@ NODE can be either an `element' or a `text-node'."))
     (dom `(:div :class "buffer" :selectable ""
                 (:div :class "header"
                       (:div :class "header-buffer-name" ,(name buffer))
+                      (:div :class "header-spinner" ,@ (unless (load-spinner buffer)
+                                                         '(:style "display:none;")))
                       (:div :class "header-buffer-modes"
                             ,@(let ((modes
                                       (sera:mapconcat #'lighter (modes buffer)
@@ -870,6 +873,15 @@ document.body.addEventListener('click',function (event){
   (unless (equal new-val (slot-value buffer 'name))
     (update-window-decoration-field
      buffer "header-buffer-name" new-val)))
+
+(defmethod (setf load-spinner) :before (new-val (buffer buffer))
+  (when-let* ((node (window-decoration buffer))
+              (field (car (get-elements-by-class-name node "header-spinner"))))
+    (with-current-buffer (host field)
+      (evaluate-javascript-sync
+       (ps:ps (setf (ps:chain (js-node-1 field) style display)
+                    (ps:lisp (if new-val "block" "none"))))
+       (current-buffer)))))
 
 (defstyle default `(:font-family "CMU Concrete"
                     :color "#54454d"))

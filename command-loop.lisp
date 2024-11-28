@@ -216,6 +216,10 @@ If nil, disable message logging. If t, log messages but don't truncate
            (with-current-buffer buffer
              (on-buffer-title-updated
               buffer (assoc-value event :title))))
+          ((equal type "did-start-loading")
+           (when buffer (setf (load-spinner buffer) t)))
+          ((equal type "did-stop-loading")
+           (when buffer (setf (load-spinner buffer) nil)))
           ((equal type "keyUp"))
           ((equal type "click")
            (when buffer

@@ -125,6 +125,11 @@ Ceramic.createBuffer = function(id, url, options) {
         RemoteJS.send(JSON.stringify({inputEvent: {type: "title-updated", title: title}, buffer: id}))});
     buf.webContents.on('did-start-navigation',(details) =>{
         RemoteJS.send(JSON.stringify({inputEvent: {type: "did-start-navigation", ...details}, buffer: id}));});
+    // The following 2 events are just for displaying spinners
+    buf.webContents.on('did-start-loading',(details) =>{
+        RemoteJS.send(JSON.stringify({inputEvent: {type: "did-start-loading"}, buffer: id}));});
+    buf.webContents.on('did-stop-loading',(details) =>{
+        RemoteJS.send(JSON.stringify({inputEvent: {type: "did-stop-loading"}, buffer: id}));});
     buf.webContents.on('focus',()=>{
         RemoteJS.send(JSON.stringify({inputEvent: {type: "focus"}, buffer: id}));});
     buf.webContents.on('enter-html-full-screen',()=>{

@@ -637,10 +637,14 @@ makes the buffer displayed fullscreen."))
       (".minibuffer" :inherit frame-minibuffer)
       (".float" :inherit frame-float)
       (".header" :inherit header)
-      (".header > div" :padding-right "1em")
       (".focus .header" :inherit header-focus)
       (".header-buffer-name" :inherit header-buffer-name)
       (".header-buffer-modes" :inherit header-buffer-modes)
+      (:keyframes
+       "spin"
+       ("0%" :transform "rotate(0deg)")
+       ("0%" :transform "rotate(360deg)"))
+      (".header-spinner" :inherit header-spinner)
       ("body" :inherit frame-body)))
 
 (defsheet echo-area-mode
@@ -655,16 +659,30 @@ makes the buffer displayed fullscreen."))
                    :background-color "rgba(169,151,160,0.2)"))
 
 (defstyle header-buffer-name
-    `(:flex "1 0 1em"
+    `(:flex "0 1 auto"
+      :padding-right "1em"
+      :max-width "100%"
       :white-space "nowrap"
       :overflow "hidden"
       :text-overflow "ellipsis"))
 
 (defstyle header-buffer-modes
-    `(:flex "1 0 1em"
+    `(:flex "1 1 auto"
+      :min-width "10%"
+      :padding-right "1em"
       :text-align "right"
       :white-space "nowrap"
       :overflow "hidden"
       :text-overflow "ellipsis"))
+
+(defstyle header-spinner
+    `(:border "2px solid currentColor"
+      :border-top "2px solid rgba(0,0,0,0)"
+      :padding 0 :margin 0
+      :margin-right "1em"
+      :border-radius "50%"
+      :width "1em" :height "1em"
+      :flex "0 0 auto"
+      :animation "spin 2s linear infinite"))
 
 (defstyle header-focus `(:background-color "rgba(169,151,160,0.4)"))
