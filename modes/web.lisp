@@ -139,15 +139,17 @@
   (make-web-send-key-command "end")
   'forward-word (make-web-send-key-command "C-right")
   'backward-word (make-web-send-key-command "C-left")
-  'forward-cut (make-web-send-key-command "S-end delete")
   'self-insert-command 'web-forward-key
   "processing" 'do-nothing
   "escape" 'web-forward-key
   "enter" 'web-forward-key
   "tab" 'web-forward-key
   "S-tab" 'web-forward-key
-  'backward-delete
-  (make-web-send-key-command "backspace")
+  'forward-cut (make-web-send-key-command "S-end delete")
+  'backward-delete-word (make-web-send-key-command "S-C-left delete")
+  'forward-delete-word (make-web-send-key-command "S-C-right delete")
+  'backward-delete (make-web-send-key-command "backspace")
+  'forward-delete (make-web-send-key-command "delete")
   'copy-element 'web-copy
   'cut-element 'web-cut
   'paste 'web-paste
