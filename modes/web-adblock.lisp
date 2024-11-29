@@ -49,13 +49,18 @@ this amount of time.")
               (write-line url s)))
           (message "web-adblock: hostlist updated")))))
 
-(defun install-adblocker (&optional (hostlist (get-hostlist-maybe)))
+(define-command install-adblocker (&optional (hostlist (get-hostlist-maybe)))
   "Block HOSTLIST for current Web session.
 
-By default, gets the blocked host list by calling `get-hostlist-maybe'.
-If HOSTLIST is nil, the blocker is disabled."
+By default, gets the blocked host list by calling `get-hostlist-maybe'."
   (evaluate-javascript
    (format nil "electron.session.fromPartition(\"\").webRequest.onBeforeRequest({urls:[~{'*://*.~a/*'~^,~}]},(details,cb)=>{
     cb({cancel:true})})"
            hostlist)
+   :global))
+
+(define-command uninstall-adblocker ()
+  "Stop ad-blocking for current Web session."
+  (evaluate-javascript
+   "electron.session.fromPartition(\"\").webRequest.onBeforeRequest(null)"
    :global))

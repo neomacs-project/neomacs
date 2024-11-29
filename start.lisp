@@ -1,7 +1,13 @@
 (in-package #:neomacs)
 
 (sera:export-always
-    '(start))
+    '(start *startup-hooks* *kill-hooks*))
+
+(defvar *startup-hooks* '(load-web-history install-adblocker)
+  "List of functions to run after Neomacs starts.")
+
+(defvar *kill-hooks* '(save-web-history)
+  "List of functions to run before `kill-neomacs'.")
 
 (defun start (&optional (self-govern t))
   "Start the Neomacs system.
@@ -73,10 +79,26 @@ Try the following workaround:
             (format t "Loading ~a.~%" config-file)
             (load config-file))
           (format t "~a not yet exist.~%" config-file))))
-  (load-web-history)
+  (dolist (h *startup-hooks*)
+    (with-demoted-errors (format nil "Error running startup hook ~a: " h)
+      (funcall h)))
   ;; If we are started from terminal instead of SLIME, don't let
   ;; `start' return, otherwise SBCL top-level tries to read from
   ;; Neomacs input stream and cause funny
   (when (and (not *no-redirect-stream*)
              (eql *standard-input* *current-standard-input*))
     (bt:join-thread *command-loop-thread*)))
+
+
+(define-command kill-neomacs ()
+  "Exit Neomacs."
+  (dolist (h *kill-hooks*)
+    (with-demoted-errors (format nil "Error running kill hook ~a: " h)
+      (funcall h)))
+  ;; Mark all buffer as non-alive to suppress post-command operations
+  (clrhash *buffer-table*)
+  (sb-concurrency:send-message *event-queue* 'quit)
+  (ceramic:quit))
+
+(define-keys :global
+  "C-x C-c" 'kill-neomacs)

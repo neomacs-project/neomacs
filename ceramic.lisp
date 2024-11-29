@@ -126,14 +126,3 @@ this long.")
    (format nil "Mounts[~s]='~a'"
            host (quote-js (uiop:native-namestring path)))
    :global))
-
-(define-command kill-neomacs ()
-  "Exit Neomacs."
-  (save-web-history)
-  ;; Mark all buffer as non-alive to suppress post-command operations
-  (clrhash *buffer-table*)
-  (sb-concurrency:send-message *event-queue* 'quit)
-  (ceramic:quit))
-
-(define-keys :global
-  "C-x C-c" 'kill-neomacs)
