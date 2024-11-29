@@ -211,6 +211,7 @@ Return t if it hides completion, nil if it does nothing."
       :overflow-x "hidden"
       :backdrop-filter "blur(10px)"
       :overflow-y "scroll"
+      :margin 0
       :border-collapse "collapse"))
 
 (defstyle completion-match `(:color "#000"))
