@@ -80,7 +80,7 @@ Should be a list of the form (WIDTH HEIGHT)")
                  node "main"))))
     (append-child
      main
-     (dom `(:div :class "content completion-menu float"
+     (dom `(:div :class "content completion-menu float autohide"
                  :style
                  ,(format nil "position: absolute; width: ~apx; height: ~apx; display: none;"
                           (car *completion-menu-size*)
