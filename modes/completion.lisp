@@ -12,7 +12,7 @@
     (insert-nodes
      (focus)
      (dom `(:tr
-            (:td ,completion)
+            (:td :class "completion-candidate" ,completion)
             (:td :class "completion-annotation"
                  ,@(when (> (length annotation) 0)
                      (list annotation))))))))
@@ -214,10 +214,10 @@ Return t if it hides completion, nil if it does nothing."
       :margin 0
       :border-collapse "collapse"))
 
-(defstyle completion-match `(:color "#000"))
+(defstyle completion-candidate `(:padding-left "8px"))
 (defstyle completion-annotation `(:text-align "right"
                                   :font-style "italic"))
 (defsheet completion-list-mode
     `(("body" :inherit completion-menu)
-      (".completion-match" :inherit completion-match)
+      (".completion-candidate" :inherit completion-candidate)
       (".completion-annotation" :inherit completion-annotation)))
