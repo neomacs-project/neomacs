@@ -105,8 +105,8 @@
            (string char) 'narrow-hint))
 
 (define-keys web-mode
-  "M-g" 'add-hints
-  "M-G" 'add-hints-ctrl)
+  "M-g g" 'add-hints
+  "M-g M-g" 'add-hints-ctrl)
 
 (defvar *hints-chars* "asdfghjklqwertyuiopzxcvbnm")
 
