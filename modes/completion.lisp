@@ -82,7 +82,7 @@ Should be a list of the form (WIDTH HEIGHT)")
      main
      (dom `(:div :class "content completion-menu float autohide"
                  :style
-                 ,(format nil "position: absolute; width: ~apx; height: ~apx; display: none;"
+                 ,(format nil "position: absolute; width: ~apx; height: ~apx; display: none !important;"
                           (car *completion-menu-size*)
                           (cadr *completion-menu-size*))
                  :buffer ,(id (completion-buffer buffer)))))
