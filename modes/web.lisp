@@ -117,36 +117,29 @@
 (define-keys :global
   "C-x C-l" 'find-url)
 
-(defnclo web-send-key-command (key) ()
-  (web-send-key key))
+(defnclo web-send-key-command (keyspec) ()
+  (iter (for key in (kbd keyspec)) (web-send-key key)))
 
 (define-keys web-mode
   'next-line #+nil 'web-next-line
-  (make-web-send-key-command
-   (car (kbd "down")))
+  (make-web-send-key-command "down")
   'previous-line #+nil 'web-previous-line
-  (make-web-send-key-command
-   (car (kbd "up")))
+  (make-web-send-key-command "up")
   'backward-node #+nil 'web-go-backward
-  (make-web-send-key-command
-   (car (kbd "left")))
+  (make-web-send-key-command "left")
   'forward-node #+nil 'web-go-forward
-  (make-web-send-key-command
-   (car (kbd "right")))
+  (make-web-send-key-command "right")
   'scroll-up-command #+nil 'web-scroll-up
-  (make-web-send-key-command
-   (car (kbd "page-up")))
+  (make-web-send-key-command "page-up")
   'scroll-down-command #+nil 'web-scroll-down
-  (make-web-send-key-command
-   (car (kbd "page-down")))
-  'beginning-of-buffer #+nil 'web-scroll-to-top
-  (make-web-send-key-command
-   (car (kbd "home")))
-  'end-of-buffer #+nil 'web-scroll-to-bottom
-  (make-web-send-key-command
-   (car (kbd "end")))
-  'forward-word (make-web-send-key-command (car (kbd "C-right")))
-  'backward-word (make-web-send-key-command (car (kbd "C-left")))
+  (make-web-send-key-command "page-down")
+  'beginning-of-line #+nil 'web-scroll-to-top
+  (make-web-send-key-command "home")
+  'end-of-line #+nil 'web-scroll-to-bottom
+  (make-web-send-key-command "end")
+  'forward-word (make-web-send-key-command "C-right")
+  'backward-word (make-web-send-key-command "C-left")
+  'forward-cut (make-web-send-key-command "S-end delete")
   'self-insert-command 'web-forward-key
   "processing" 'do-nothing
   "escape" 'web-forward-key
@@ -154,8 +147,7 @@
   "tab" 'web-forward-key
   "S-tab" 'web-forward-key
   'backward-delete
-  (make-web-send-key-command
-   (car (kbd "backspace")))
+  (make-web-send-key-command "backspace")
   'copy-element 'web-copy
   'cut-element 'web-cut
   'paste 'web-paste

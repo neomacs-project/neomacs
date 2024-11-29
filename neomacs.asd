@@ -54,6 +54,7 @@
                :metabang-bind
                :cl-containers
                :quri
+               :dexador
                :trivial-types
                :local-time
                :sb-concurrency
