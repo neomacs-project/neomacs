@@ -211,6 +211,7 @@ not defined in this theme are inherited from PARENT."
     :background-image (:url "data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3cline x1='0' y1='0' x2='100%25' y2='0' stroke='%23777' stroke-width='1' stroke-dasharray='7%2c 7' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e"))
   'frame-buffer-focus
   `(:outline "solid 1px #777")
+  :native-theme "light"
   'default
   `(:font-family "Space Mono"
     :font-variant-ligatures "none"
