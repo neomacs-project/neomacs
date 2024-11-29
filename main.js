@@ -188,3 +188,11 @@ app.on('ready', function() {
         else{
             const pathToServe = path.resolve(Mounts[host],p);
             return net.fetch(pathToFileURL(pathToServe).toString());}});});
+
+//process.removeAllListeners("uncaughtExceptions");
+process.on("uncaughtException", (err) => {
+    if(err.message === "Invalid webContents. Created window should be connected to webContents passed with options object.")
+        return;
+    dialog.showMessageBoxSync({type: "error",
+                               title: "Error in Electron main process",
+                               message: err.stack});})
