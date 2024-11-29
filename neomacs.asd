@@ -39,6 +39,7 @@
                (:file "modes/html-doc")
                (:file "modes/web")
                (:file "modes/web-hints")
+               (:file "modes/web-adblock")
                (:file "intl/simple")
                (:file "start"))
   :depends-on (:lwcells

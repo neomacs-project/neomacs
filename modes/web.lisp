@@ -1,5 +1,8 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(*search-prefix* *web-history-path*))
+
 (defun look-like-url-p (string)
   (ignore-errors
    (let ((parsed (quri:uri string)))
@@ -17,7 +20,8 @@
                       (cl-tld:get-tld (quri:uri-domain parsed))))
              prepended))))))
 
-(defvar *search-prefix* "https://duckduckgo.com/html/?q=")
+(defvar *search-prefix* "https://duckduckgo.com/html/?q="
+  "URL prefix prepended to search query.")
 
 (define-command find-url
   :interactive
@@ -38,9 +42,11 @@
     :styles nil
     :content-scripts nil)))
 
-(defvar *web-history-list* nil)
+(defvar *web-history-list* nil
+  "List of `history-entry' for web history.")
 
-(defvar *web-history-path* nil)
+(defvar *web-history-path* nil
+  "File path to save web history entries.")
 
 (define-class history-entry ()
   ((title :initform nil :initarg :title)
