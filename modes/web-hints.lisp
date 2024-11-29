@@ -115,6 +115,8 @@
   "Select visible interactive elements using hints."
   (when (typep (current-buffer) 'active-web-hint-mode)
     (user-error "Already displaying hints."))
+  (when (load-spinner (current-buffer))
+    (user-error "Web page is still loading."))
   (pushnew 'web-hints (content-scripts (current-buffer)))
   (let ((length (evaluate-javascript-sync
                  (ps:ps (hint-elements
