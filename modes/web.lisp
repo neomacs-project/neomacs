@@ -145,6 +145,8 @@
   'end-of-buffer #+nil 'web-scroll-to-bottom
   (make-web-send-key-command
    (car (kbd "end")))
+  'forward-word (make-web-send-key-command (car (kbd "C-right")))
+  'backward-word (make-web-send-key-command (car (kbd "C-left")))
   'self-insert-command 'web-forward-key
   "processing" 'do-nothing
   "escape" 'web-forward-key
@@ -370,36 +372,40 @@ wc.setZoomFactor(1.0)}"
    (ps:ps
      (let ((buf (js-buffer (current-buffer)))
            (code (ps:lisp (key-sym key)))
-           (modes
+           (mods
              (ps:lisp
               (let (mods)
                 (when (key-shift key)
-                  (push "Shift" mods))
+                  (push "shift" mods))
                 (when (key-ctrl key)
-                  (push "Control" mods))
+                  (push "control" mods))
                 (when (key-meta key)
-                  (push "Alt" mods))
+                  (push "alt" mods))
                 (when (key-super key)
-                  (push "Meta" mods))
+                  (push "meta" mods))
                 (cons 'list mods)))))
        (ps:chain buf ignore-keys
                  (push (ps:create type "keyDown"
-                                  key (ps:lisp (key-sym key)))))
+                                  key (ps:lisp (key-sym key))
+                                  modifiers mods)))
        (ps:chain
         buf web-contents
         (send-input-event
          (ps:create type "keyDown"
-                    key-code code)))
+                    key-code code
+                    modifiers mods)))
        (ps:chain
         buf web-contents
         (send-input-event
          (ps:create type "char"
-                    key-code code)))
+                    key-code code
+                    modifiers mods)))
        (ps:chain
         buf web-contents
         (send-input-event
          (ps:create type "keyUp"
-                    key-code code)))))
+                    key-code code
+                    modifiers mods)))))
    :global))
 
 (define-command web-forward-key
