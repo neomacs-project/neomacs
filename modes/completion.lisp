@@ -82,7 +82,7 @@ Should be a list of the form (WIDTH HEIGHT)")
      main
      (dom `(:div :class "content completion-menu float autohide"
                  :style
-                 ,(format nil "position: absolute; width: ~apx; height: ~apx; display: none !important;"
+                 ,(format nil "position: absolute; width: ~apx; height: ~apx; display: none;"
                           (car *completion-menu-size*)
                           (cadr *completion-menu-size*))
                  :buffer ,(id (completion-buffer buffer)))))
@@ -141,7 +141,7 @@ X and Y are numbers in pixels."
                    (ps:chain node style min-width)
                    (ps:lisp (format nil "~apx" min-width))
                    (ps:chain node style display)
-                   "block")))
+                   null)))
          (current-buffer))))))
 
 (defun maybe-hide-completions ()
