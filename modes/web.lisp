@@ -386,7 +386,7 @@ wc.setZoomFactor(1.0)}"
                 (cons 'list mods)))))
        (ps:chain buf ignore-keys
                  (push (ps:create type "keyDown"
-                                  key (ps:lisp (key-sym key))
+                                  key-code code
                                   modifiers mods)))
        (ps:chain
         buf web-contents
