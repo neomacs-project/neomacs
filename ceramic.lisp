@@ -60,10 +60,12 @@ BUFFER is NIL."
 
 (defclass driver (ceramic.driver:driver) ())
 
-(setq cera.d:*driver* (make-instance 'driver)
-      trivial-ws:+default-timeout+ 1000000
-      ceramic.setup::+main-javascript+ (asdf:system-relative-pathname :neomacs #p"main.js")
-      ceramic.setup::*electron-version* "33.2.0")
+;; Don't run this when reloading neomacs system
+(unless (typep cera.d:*driver* 'driver)
+  (setq cera.d:*driver* (make-instance 'driver)
+        trivial-ws:+default-timeout+ 1000000
+        ceramic.setup::+main-javascript+ (asdf:system-relative-pathname :neomacs #p"main.js")
+        ceramic.setup::*electron-version* "33.2.0"))
 
 (defvar *event-queue* (sb-concurrency:make-mailbox))
 
