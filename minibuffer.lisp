@@ -154,9 +154,15 @@ If this slot is NIL, an invisible selectable dummy row is inserted at
 the beginning of the completion buffer. No completion is performed
 when this row is selected.")))
 
-(defmethod generate-rows :before ((buffer completion-buffer-mode))
-  (unless (require-match buffer)
-    (insert-nodes (focus) (make-element "tr" :class "dummy-row"))))
+(defun truncate-seq (seq n)
+  (if (> (length seq) n)
+      (subseq seq 0 n)
+      seq))
+
+(defmethod generate-rows :around ((buffer completion-buffer-mode))
+  (if (require-match buffer) (call-next-method)
+      (cons (make-element "tr" :class "dummy-row")
+            (call-next-method))))
 
 (defmethod revert-buffer-aux :after ((buffer completion-buffer-mode))
   (setf (pos (focus))

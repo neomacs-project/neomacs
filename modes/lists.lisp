@@ -18,7 +18,8 @@
                   (make-element "table" :children (list body-node)))
     (setf (pos (focus)) (end-pos body-node)
           (restriction buffer) body-node)
-    (generate-rows buffer)
+    (iter (for row in (generate-rows buffer))
+      (insert-nodes (end-pos body-node) row))
     (setf (pos (focus)) (pos-down body-node))))
 
 (define-mode command-list-mode (list-mode)
@@ -94,14 +95,13 @@
     (unless (or (member buf (exclude-buffers buffer))
                 (and (not (show-hidden buffer))
                      (sera:string-prefix-p " " name)))
-      (insert-nodes
-       (focus)
-       (attach-presentation
-        (dom `(:tr :buffer ,(id buf)
-                   (:td ,name)
-                   (:td ,@(when (> (length modes) 0)
-                            (list modes)))))
-        buf)))))
+      (collecting
+        (attach-presentation
+         (dom `(:tr :buffer ,(id buf)
+                    (:td ,name)
+                    (:td ,@(when (> (length modes) 0)
+                             (list modes)))))
+         buf)))))
 
 (define-command list-commands ()
   (switch-to-buffer
@@ -186,24 +186,23 @@ This should always be a directory pathname (with NIL name and type fields).")
 (defmethod generate-rows ((buffer file-list-mode))
   (iter (for path in (osicat:list-directory (file-path buffer)))
     (for stat = (ignore-errors (osicat-posix:stat path)))
-    (insert-nodes
-     (focus)
-     (attach-presentation
-      (dom `(:tr
-             ,(if (uiop:directory-pathname-p path)
-                  `(:td :class "directory"
-                        ,(lastcar (pathname-directory path)))
-                  `(:td ,(file-namestring path)))
-             ,@ (if stat
-                    `((:td ,@ (unless (uiop:directory-pathname-p path)
-                                (list (file-size-readable (osicat-posix:stat-size stat)))))
-                      #-windows
-                      (:td ,(osicat-posix:getpwuid
-                             (osicat-posix:stat-uid stat)))
-                      (:td ,(file-date-readable
-                             (osicat-posix:stat-mtime stat))))
-                    `((:td) (:td) (:td "<Not Avaliable>")))))
-      path))))
+    (collecting
+      (attach-presentation
+       (dom `(:tr
+              ,(if (uiop:directory-pathname-p path)
+                   `(:td :class "directory"
+                         ,(lastcar (pathname-directory path)))
+                   `(:td ,(file-namestring path)))
+              ,@ (if stat
+                     `((:td ,@ (unless (uiop:directory-pathname-p path)
+                                 (list (file-size-readable (osicat-posix:stat-size stat)))))
+                       #-windows
+                       (:td ,(osicat-posix:getpwuid
+                              (osicat-posix:stat-uid stat)))
+                       (:td ,(file-date-readable
+                              (osicat-posix:stat-mtime stat))))
+                     `((:td) (:td) (:td "<Not Avaliable>")))))
+       path))))
 
 (defmethod revert-buffer-aux ((buffer file-list-mode))
   (call-next-method)
@@ -238,16 +237,18 @@ This should always be a directory pathname (with NIL name and type fields).")
      (lambda (item)
        (alex:unionf styles (clipboard-item-styles item))))
     (setf (styles buffer) styles))
-  (containers:iterate-nodes
-   *clipboard-ring*
-   (lambda (item)
-     (insert-nodes
-      (focus)
-      (make-element
-       "tr" :children
-       (list (make-element
-              "td" :children
-              (clipboard-item-nodes item))))))))
+  (let (result)
+    (containers:iterate-nodes
+     *clipboard-ring*
+     (lambda (item)
+       (push
+        (make-element
+         "tr" :children
+         (list (make-element
+                "td" :children
+                (clipboard-item-nodes item))))
+        result)))
+    (nreverse result)))
 
 (define-mode clipboard-minibuffer-mode
     (minibuffer-completion-mode) ())
@@ -266,20 +267,19 @@ This should always be a directory pathname (with NIL name and type fields).")
 
 (defmethod generate-rows ((buffer thread-list-mode))
   (iter (for thread in (sb-thread:list-all-threads))
-    (insert-nodes
-     (focus)
-     (attach-presentation
-      (dom `(:tr (:td ,(format nil "~a"
-                               (sb-thread:thread-os-tid thread)))
-                 (:td ,(if (sb-thread:main-thread-p thread)
-                           `(:b ,(sb-thread:thread-name thread))
-                           (sb-thread:thread-name thread)))
-                 (:td ,(cond ((sb-thread::thread-waiting-for thread)
-                              "Waiting")
-                             ((sb-thread:thread-alive-p thread)
-                              "Running")
-                             (t "Stopped")))))
-      thread))))
+    (collecting
+      (attach-presentation
+       (dom `(:tr (:td ,(format nil "~a"
+                                (sb-thread:thread-os-tid thread)))
+                  (:td ,(if (sb-thread:main-thread-p thread)
+                            `(:b ,(sb-thread:thread-name thread))
+                            (sb-thread:thread-name thread)))
+                  (:td ,(cond ((sb-thread::thread-waiting-for thread)
+                               "Waiting")
+                              ((sb-thread:thread-alive-p thread)
+                               "Running")
+                              (t "Stopped")))))
+       thread))))
 
 (define-command list-threads ()
   (switch-to-buffer

@@ -314,14 +314,13 @@ wc.setZoomFactor(1.0)}"
     ((buffer web-buffer-history-list-mode))
   (iter (for item in (items buffer))
     (for i from 0)
-    (insert-nodes
-     (focus)
-     (attach-presentation
-      (dom `(:tr (:td ,(or (assoc-value item :title)
-                           "-"))
-                 (:td ,(or (assoc-value item :url)
-                           "-"))))
-      i))))
+    (collecting
+      (attach-presentation
+       (dom `(:tr (:td ,(or (assoc-value item :title)
+                            "-"))
+                  (:td ,(or (assoc-value item :url)
+                            "-"))))
+       i))))
 
 (define-command web-go-history
   :mode web-mode
@@ -412,12 +411,12 @@ wc.setZoomFactor(1.0)}"
 
 (defmethod generate-rows ((buffer web-history-list-mode))
   (iter (for entry in *web-history-list*)
-    (insert-nodes (focus)
-                  (dom `(:tr (:td :class "title" ,(or (title entry) "-"))
-                             (:td :class "url" ,(url entry))
-                             (:td :class "time"
-                                  ,(format-readable-timestring
-   (access-time entry))))))))
+    (collecting
+      (dom `(:tr (:td :class "title" ,(or (title entry) "-"))
+                 (:td :class "url" ,(url entry))
+                 (:td :class "time"
+                      ,(format-readable-timestring
+                        (access-time entry))))))))
 
 (defsheet web-history-list-mode
     `((".title"

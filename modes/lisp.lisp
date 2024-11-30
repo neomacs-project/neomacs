@@ -810,8 +810,7 @@ DEFINITION should be a `sb-introspect:definition-source'."
   (let ((*print-case* :downcase)
         (symbol (for-symbol buffer)))
     (iter (for (type def) in (find-definitions symbol))
-      (insert-nodes
-       (focus) (render-xref-definition symbol type def)))))
+      (collect (render-xref-definition symbol type def)))))
 
 (defun find-definitions (symbol &optional (types *definition-types*))
   "Find all definitions for SYMBOL.

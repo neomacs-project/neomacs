@@ -9,13 +9,12 @@
 
 (defmethod generate-rows ((buffer completion-list-mode))
   (iter (for (completion annotation) in (completions buffer))
-    (insert-nodes
-     (focus)
-     (dom `(:tr
-            (:td :class "completion-candidate" ,completion)
-            (:td :class "completion-annotation"
-                 ,@(when (> (length annotation) 0)
-                     (list annotation))))))))
+    (collecting
+      (dom `(:tr
+             (:td :class "completion-candidate" ,completion)
+             (:td :class "completion-annotation"
+                  ,@(when (> (length annotation) 0)
+                      (list annotation))))))))
 
 (defmethod (setf completions)
     :after (new-val (buffer completion-list-mode))

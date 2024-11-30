@@ -29,14 +29,13 @@ not defined in this theme are inherited from PARENT."
 
 (defmethod generate-rows ((buffer theme-list-mode))
   (iter (for theme in *themes*)
-    (insert-nodes
-     (focus)
-     (attach-presentation
-      (dom `(:tr
-             (:td ,(string-downcase (symbol-name theme)))
-             (:td ,@(when-let (doc (documentation theme 'theme))
-                      (list doc)))))
-      theme))))
+    (collecting
+      (attach-presentation
+       (dom `(:tr
+              (:td ,(string-downcase (symbol-name theme)))
+              (:td ,@(when-let (doc (documentation theme 'theme))
+                       (list doc)))))
+       theme))))
 
 (define-command apply-theme
   :interactive
