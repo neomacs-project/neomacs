@@ -477,6 +477,13 @@ NODE become the last child of NEW-NODE."
   (insert-nodes (pos-right node) new-node)
   (delete-node node))
 
+(defun swap-nodes (node-1 node-2)
+  (let ((pos (pos-right node-1)))
+    (unless (eql node-1 (pos-right node-2))
+      (move-nodes node-1 pos (pos-right node-2)))
+    (unless (eql pos node-2)
+      (move-nodes node-2 (pos-right node-2) pos))))
+
 (defun erase-buffer ()
   "Delete all content of current buffer."
   (let ((*inhibit-dom-update* t))
@@ -714,18 +721,16 @@ If selection is active, copy selected contents instead."
 (define-command swap-next-element (&optional (pos (focus)))
   (let* ((element (or (pos-up-ensure pos #'element-p)
                       (error 'top-of-subtree)))
-         (dst (or (pos-right-until (pos-right element)
-                                   (alex:compose #'not #'new-line-node-p))
+         (dst (or (pos-right-until element #'graphic-element-p)
                   (error 'end-of-subtree))))
-    (move-nodes element (pos-right element) dst)))
+    (swap-nodes element dst)))
 
 (define-command swap-previous-element (&optional (pos (focus)))
   (let* ((element (or (pos-up-ensure pos #'element-p)
                       (error 'top-of-subtree)))
-         (dst (or (pos-left-until element
-                                  (alex:compose #'not #'new-line-node-p))
+         (dst (or (pos-left-until element #'graphic-element-p)
                   (error 'end-of-subtree))))
-    (move-nodes element (pos-right element) dst)))
+    (swap-nodes element dst)))
 
 ;;; Presentations
 
