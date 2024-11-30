@@ -714,14 +714,17 @@ If selection is active, copy selected contents instead."
 (define-command swap-next-element (&optional (pos (focus)))
   (let* ((element (or (pos-up-ensure pos #'element-p)
                       (error 'top-of-subtree)))
-         (dst (or (pos-right (pos-right element))
+         (dst (or (pos-right-until (pos-right element)
+                                   (alex:compose #'not #'new-line-node-p))
                   (error 'end-of-subtree))))
     (move-nodes element (pos-right element) dst)))
 
 (define-command swap-previous-element (&optional (pos (focus)))
   (let* ((element (or (pos-up-ensure pos #'element-p)
                       (error 'top-of-subtree)))
-         (dst (or (pos-left element) (error 'end-of-subtree))))
+         (dst (or (pos-left-until element
+                                  (alex:compose #'not #'new-line-node-p))
+                  (error 'end-of-subtree))))
     (move-nodes element (pos-right element) dst)))
 
 ;;; Presentations
