@@ -181,56 +181,14 @@ Return t if it hides completion, nil if it does nothing."
 
 ;;; Auto completion
 
-;; The current implementation uses a hack to workaround Electron issue
-;; https://github.com/electron/electron/issues/42339 (addChildView
-;; grabs focus). Also see
-;; https://github.com/neomacs-project/neomacs/issues/78.
-
-;; It does so by always keeping the completion-buffer and its view
-;; around, just making it invisible when `active-completion-mode' is
-;; off. This avoids calling addChildView when automatically turning on
-;; `active-completion-mode'.
-
-;; Once the above Electron issue is resolved, our logic can possibly
-;; be simplified.
-
 (define-mode auto-completion-mode ()
   ((minimum-prefix :default 3)
-   ;; Keep our own slot, so the buffer is still present when
-   ;; `active-completion-mode' is turned off
-   (completion-buffer
-    :initform
-    (make-buffer " *completion*"
-                 :mode 'completion-list-mode))
    (allowed-commands
     :default '(self-insert-command)
     :type (list-of symbol)))
   (:documentation
    "Automatically show completion menu after input.")
   (:toggler t))
-
-
-;; Make sure completion-menu buffer is still present in frame-root
-;; even when `active-completion-mode' is disabled
-(defmethod window-decoration-aux :around ((buffer auto-completion-mode))
-  (let* ((node (call-next-method))
-         (main (only-elt (get-elements-by-class-name
-                          node "main"))))
-    (unless (get-elements-by-class-name main "completion-menu")
-      (append-child
-       main
-       (dom `(:div :class "content completion-menu float autohide"
-                   :style "display: none;"
-              :buffer ,(id (completion-buffer buffer))))))
-    node))
-
-;; Don't let `active-completion-mode' delete `completion-buffer'
-(defmethod disable-aux ((mode-name (eql 'active-completion-mode))
-                        (buffer auto-completion-mode))
-  nil)
-
-(defmethod disable-aux ((mode-name (eql 'auto-completion-mode)) buffer)
-  (delete-buffer (completion-buffer buffer)))
 
 (defmethod on-post-command progn ((buffer auto-completion-mode))
   (when (and (member *this-command* (allowed-commands buffer))
