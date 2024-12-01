@@ -1182,7 +1182,7 @@ sb-introspect:definition-source)'."
   (setf (attribute (minibuffer-input-element buffer) 'keymap)
         *sexp-node-keymap*))
 
-(defmethod minibuffer-input ((buffer lisp-minibuffer-mode))
+(defmethod minibuffer-result ((buffer lisp-minibuffer-mode))
   (node-to-sexp (first-child (minibuffer-input-element buffer))))
 
 (define-command eval-expression ()
