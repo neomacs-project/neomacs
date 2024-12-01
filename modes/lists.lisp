@@ -35,24 +35,24 @@
      (subseq doc 0 (position #\Newline doc)))))
 
 (defmethod generate-rows ((buffer command-list-mode))
-  (iter (for mode in (append (include-modes buffer) '(:global)))
+  (iter outer (for mode in (append (include-modes buffer) '(:global)))
     (iter (for c in (commands mode))
       (for name = (string-downcase (symbol-name c)))
-      (insert-nodes
-       (focus)
-       (attach-presentation
-        (make-element
-         "tr" :children
-         (list (make-element "td" :children (list name))
-               (make-element
-                "td" :class "keybinds" :children
-                (when-let (bindings (gethash c (keybinding-index buffer)))
-                  (list (sera:mapconcat #'key-description bindings ", "))))
-               (make-element "td" :children (short-doc c))
-               (make-element
-                "td" :children
-                (list (string-downcase (symbol-name mode))))))
-        c)))))
+      (in outer
+          (collecting
+            (attach-presentation
+             (make-element
+              "tr" :children
+              (list (make-element "td" :children (list name))
+                    (make-element
+                     "td" :class "keybinds" :children
+                     (when-let (bindings (gethash c (keybinding-index buffer)))
+                       (list (sera:mapconcat #'key-description bindings ", "))))
+                    (make-element "td" :children (short-doc c))
+                    (make-element
+                     "td" :children
+                     (list (string-downcase (symbol-name mode))))))
+             c))))))
 
 (defsheet command-list-mode
     `((".keybinds" :max-width "5em" :overflow "hidden"

@@ -41,31 +41,37 @@ is the matched range in text-node."
        (with-current-buffer buffer
          (update-occur buffer))))))
 
-(defun update-occur (buffer)
+(defun render-match-highlight (buffer matches)
+  (when (listp matches)
+    (evaluate-javascript
+     (ps:ps
+       (let ((highlight-range
+               (lambda (node start end)
+                 (let ((range (ps:new (-range))))
+                   (ps:chain range (set-start node start))
+                   (ps:chain range (set-end node end))
+                   (ps:chain -c-s-s highlights
+                             (get "occur")
+                             (add range))))))
+         (ps:lisp
+          `(progn
+             ,@(iter (for (text-node start end) in matches)
+                 (collect `(highlight-range (js-node ,text-node) ,start ,end)))))))
+     buffer)))
+
+(defun clear-match-highlight (buffer)
   (evaluate-javascript
    (ps:ps
      (ps:chain -c-s-s highlights (set "occur" (ps:new (-highlight)))))
-   buffer)
+   buffer))
+
+(defun update-occur (buffer)
+  (clear-match-highlight buffer)
   (iter (for c in (children (restriction buffer)))
     (if-let (matches (occur-p (occur-query buffer) c))
         (progn
           (remove-class c "invisible")
-          (when (listp matches)
-            (evaluate-javascript
-             (ps:ps
-               (let ((highlight-range
-                       (lambda (node start end)
-                         (let ((range (ps:new (-range))))
-                           (ps:chain range (set-start node start))
-                           (ps:chain range (set-end node end))
-                           (ps:chain -c-s-s highlights
-                                     (get "occur")
-                                     (add range))))))
-                 (ps:lisp
-                  `(progn
-                     ,@(iter (for (text-node start end) in matches)
-                         (collect `(highlight-range (js-node ,text-node) ,start ,end)))))))
-             buffer)))
+          (render-match-highlight buffer matches))
         (add-class c "invisible"))))
 
 (define-command occur ()

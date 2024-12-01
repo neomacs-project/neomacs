@@ -144,8 +144,11 @@ This is a wrapper around `read-from-minibuffer' that creates a completion buffer
           (attribute node 'presentation)))
       (minibuffer-input buffer)))
 
-(define-mode completion-buffer-mode (occur-mode)
-  ((require-match
+(define-mode completion-buffer-mode (list-mode)
+  ((rows :initform nil)
+   (occur-query)
+   (completion-limit :default 300)
+   (require-match
     :initform t :initarg :require-match
     :documentation
     "Whether a match is required.
@@ -154,28 +157,57 @@ If this slot is NIL, an invisible selectable dummy row is inserted at
 the beginning of the completion buffer. No completion is performed
 when this row is selected.")))
 
-(defun truncate-seq (seq n)
-  (if (> (length seq) n)
-      (subseq seq 0 n)
-      seq))
-
 (defmethod generate-rows :around ((buffer completion-buffer-mode))
   (if (require-match buffer) (call-next-method)
       (cons (make-element "tr" :class "dummy-row")
             (call-next-method))))
 
-(defmethod revert-buffer-aux :after ((buffer completion-buffer-mode))
-  (setf (pos (focus))
-        (or (npos-right-ensure
-             (pos (focus))
-             (lambda (p) (not (class-p p "dummy-row"))))
-            (error 'top-of-subtree))))
+(defmethod revert-buffer-aux ((buffer completion-buffer-mode))
+  (erase-buffer)
+  (let ((body-node (make-element "tbody")))
+    (insert-nodes (end-pos (document-root buffer))
+                  (make-element "table" :children (list body-node)))
+    (setf (restriction buffer) body-node)
+    (setf (rows buffer) (generate-rows buffer))
+    (iter (for row in (rows buffer))
+      (for _ below (completion-limit buffer))
+      (insert-nodes (end-pos body-node) row))
+    (setf (pos (focus))
+          (or (npos-right-ensure
+               (pos-down body-node)
+               (lambda (p) (not (class-p p "dummy-row"))))
+              (error 'top-of-subtree)))))
 
 (defmethod occur-p-aux :around ((buffer completion-buffer-mode)
                                 (query t) element)
   (if (class-p element "dummy-row") t (call-next-method)))
 
-(defsheet completion-buffer-mode `(("dummy-row" :display "none")))
+(defmethod (setf occur-query) :around (new-val (buffer completion-buffer-mode))
+  (let ((old-val (slot-value buffer 'occur-query)))
+    (prog1 (call-next-method)
+      (unless (equal old-val new-val)
+        (with-current-buffer buffer
+          (let* ((*inhibit-read-only* t)
+                 (body-node (last-child (first-child (document-root buffer))))
+                 (pos (pos-down body-node)))
+            (clear-match-highlight buffer)
+            (iter (with i = 0)
+              (for row in (rows buffer))
+              (for matches = (occur-p-aux buffer new-val row))
+              (when matches
+                (if (host row)
+                    (progn
+                      (delete-nodes pos row)
+                      (setf pos (pos-right row)))
+                    (insert-nodes pos row))
+                (render-match-highlight buffer matches)
+                (incf i))
+              (while (< i (completion-limit buffer))))
+            (delete-nodes pos nil)))))))
+
+(defsheet completion-buffer-mode
+    `(("dummy-row" :display "none")
+      ("::highlight(occur)" :inherit match)))
 
 (defmethod selectable-p-aux ((buffer completion-buffer-mode) pos)
   (tag-name-p (node-after pos) "tr"))
