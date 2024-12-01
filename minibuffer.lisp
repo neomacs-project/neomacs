@@ -20,7 +20,8 @@
   "M-n" 'minibuffer-next-history)
 
 (defmethod selectable-p-aux ((buffer minibuffer-mode) pos)
-  (pos-up-until pos (alex:rcurry #'class-p "input")))
+  (and (pos-up-until pos (alex:rcurry #'class-p "input"))
+       (call-next-method)))
 
 (defmethod window-decoration-aux ((buffer minibuffer-mode))
   (dom `(:div :class "minibuffer" :selectable ""
