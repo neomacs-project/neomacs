@@ -429,7 +429,8 @@ before other quit actions."
     (let ((victim (window-buffer (node-after m))))
       (setf (window-quit-action buffer)
             (nclo quit-display-buffer-use-some-window (buffer)
-              (switch-to-buffer victim buffer)))
+              (when (buffer-alive-p victim)
+                (switch-to-buffer victim buffer))))
       (switch-to-buffer buffer victim))))
 
 (defvar *split-width-threshold* 800)

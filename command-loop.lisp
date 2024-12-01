@@ -136,7 +136,8 @@ If nil, disable message logging. If t, log messages but don't truncate
 `user-error's are considered quits and does not trigger this hook.")
 
 (define-command toggle-debug-on-error ()
-  (setq *debug-on-error* (not *debug-on-error*))
+  (setf (sb-ext:symbol-global-value '*debug-on-error*)
+        (not (sb-ext:symbol-global-value '*debug-on-error*)))
   (message "Debug on error ~:[disabled~;enabled~]" *debug-on-error*))
 
 (defvar *current-frame-root* nil)

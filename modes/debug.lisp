@@ -1,5 +1,8 @@
 (in-package #:neomacs)
 
+(sera:export-always
+    '(*allow-recursive-debug*))
+
 (define-mode debugger-mode (read-only-mode lisp-mode)
   ((environment
     :initform (alex:required-argument :environment)
@@ -155,13 +158,20 @@
            :revert t)))
     (pop-to-buffer debugger)))
 
+(defvar *allow-recursive-debug* nil
+  "Whether to allow recursively enter the debugger.
+
+If nil, turn off `*debugger-on-error*' inside debugger to avoid
+recursive invocation, which can result in dead loop.")
+
 (defun invoke-neomacs-debugger (c)
   (if (eq (bt:current-thread) *command-loop-thread*)
-      (progn
-        (debug-for-environment
-         (dissect:capture-environment c)
-         nil)
-        (recursive-edit))
+      (trivial-custom-debugger:with-debugger (#'neomacs-debugger-hook)
+        (let ((*debug-on-error* *allow-recursive-debug*))
+          (debug-for-environment
+           (dissect:capture-environment c)
+           nil)
+          (recursive-edit)))
       (let ((mailbox (sb-concurrency:make-mailbox)))
         (sb-concurrency:send-message
          *event-queue*
