@@ -305,8 +305,10 @@ succeeded, ERR is nil."))
   (:method progn ((buffer buffer) (details t))))
 
 (defgeneric on-delete-buffer (buffer)
-  (:method-combination progn :most-specific-last)
+  (:method-combination progn)
   (:method progn ((buffer buffer))
+    (dolist (old (sb-mop:class-precedence-list (class-of buffer)))
+      (disable-aux (class-name old) buffer))
     (dolist (style (styles buffer))
       (remove-observer (css-cell style) buffer
                        :key (lambda (f) (and (typep f 'update-style)

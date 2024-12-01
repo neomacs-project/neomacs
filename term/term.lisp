@@ -78,7 +78,7 @@
   (and (or (text-pos-p pos) (new-line-node-p pos))
        (call-next-method)))
 
-(defmethod on-delete-buffer progn ((buffer term-mode))
+(defmethod disable-aux ((mode-name (eql 'term-mode)) buffer)
   (sb-posix:close (pty buffer))
   (sb-posix:kill (pid buffer) sb-unix:sighup)
   (sb-posix:waitpid (pid buffer) 0))
