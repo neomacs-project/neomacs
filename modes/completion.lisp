@@ -137,7 +137,7 @@ if(menu) menu.remove()}"
 
 (define-command previous-buffer-completion
   :mode active-completion-mode ()
-  (if (> (1- (completion-selection (current-buffer))) 0)
+  (if (>= (1- (completion-selection (current-buffer))) 0)
       (decf (completion-selection (current-buffer)))
       (user-error "No previous completion")))
 
