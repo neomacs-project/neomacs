@@ -123,9 +123,8 @@ not defined in this theme are inherited from PARENT."
     :max-height "300px"
     :padding "0 8px"
     :display "block"
-    :border-collapse "collapse")
-  'frame-float
-  `(:outline "solid 1px rgba(120,160,190,0.4)")
+    :border-collapse "collapse"
+    :outline "solid 1px rgba(120,160,190,0.4)")
 
   ;; Lisp
   'comment-node-1
@@ -237,9 +236,8 @@ not defined in this theme are inherited from PARENT."
     :max-height "300px"
     :padding "0 8px"
     :display "block"
-    :border-collapse "collapse")
-  'frame-float
-  `(:outline "solid 1px #777")
+    :border-collapse "collapse"
+    :outline "solid 1px #777")
 
   ;; Lisp
   'comment-node-1
@@ -328,11 +326,10 @@ not defined in this theme are inherited from PARENT."
     :max-height "300px"
     :padding "0 8px"
     :display "block"
-    :border-collapse "collapse")
+    :border-collapse "collapse"
+    :outline "solid 1px #777")
   'completion-selection
   `(:background-color "lavender")
-  'frame-float
-  `(:outline "solid 1px #777")
 
   ;;        Lisp
   'string-node
