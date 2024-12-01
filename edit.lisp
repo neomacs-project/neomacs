@@ -354,6 +354,9 @@ starting from BEG till the end of its parent."
   (let ((src-reference (previous-sibling beg))
         (length (count-nodes-between beg end)))
 
+    (when (eql beg reference)
+      (return-from move-nodes-2))
+
     (unless *inhibit-dom-update*
       (evaluate-javascript
        (if src-reference
@@ -381,8 +384,7 @@ starting from BEG till the end of its parent."
 
     (iter (for node = (if src-reference (next-sibling src-reference)
                           (first-child src-parent)))
-      (while node)
-      (until (eql node end))
+      (for i below length)
       (remove-node node)
       (insert-before dst-parent node reference))
     (record-undo
@@ -479,10 +481,8 @@ NODE become the last child of NEW-NODE."
 
 (defun swap-nodes (node-1 node-2)
   (let ((pos (pos-right node-1)))
-    (unless (eql node-1 (pos-right node-2))
-      (move-nodes node-1 pos (pos-right node-2)))
-    (unless (eql pos node-2)
-      (move-nodes node-2 (pos-right node-2) pos))))
+    (move-nodes node-1 pos (pos-right node-2))
+    (move-nodes node-2 (pos-right node-2) pos)))
 
 (defun erase-buffer ()
   "Delete all content of current buffer."
