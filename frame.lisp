@@ -221,7 +221,7 @@ fixed in future Electron, our logic may be simplified."
     (when-let (id (attribute node "buffer"))
       (if *delay-frame-update-views*
           (if (member id *frame-remove-views* :test 'equal)
-              (alex:deletef *frame-remove-views* id)
+              (alex:deletef *frame-remove-views* id :test 'equal)
               (push id *frame-add-views*))
           (add-view id))
       (when (class-p node "main")
@@ -240,7 +240,7 @@ fixed in future Electron, our logic may be simplified."
             (window-min-width buffer) nil)
       (if *delay-frame-update-views*
           (if (member id *frame-add-views* :test 'equal)
-              (alex:deletef *frame-add-views* id)
+              (alex:deletef *frame-add-views* id :test 'equal)
               (push id *frame-remove-views*))
           (remove-view id)))))
 
