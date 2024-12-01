@@ -1,7 +1,7 @@
 (in-package #:neomacs)
 
 (sera:export-always
-    '(*autodoc-delay*))
+    '(*autodoc-delay* *lisp-minibuffer-history*))
 
 ;;; Lisp mode
 
@@ -1173,7 +1173,10 @@ sb-introspect:definition-source)'."
 
 ;;; Minibuffer
 
-(define-mode lisp-minibuffer-mode (lisp-mode minibuffer-mode) ())
+(defvar *lisp-minibuffer-history* nil)
+
+(define-mode lisp-minibuffer-mode (minibuffer-mode lisp-mode) ()
+  (:default-initargs :history '*lisp-minibuffer-history*))
 
 (defmethod sexp-parent-p ((buffer lisp-minibuffer-mode) node)
   (class-p node "list" "input"))

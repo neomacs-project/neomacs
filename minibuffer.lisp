@@ -8,11 +8,16 @@
 (define-mode minibuffer-mode ()
   ((prompt :initarg :prompt)
    (initial :initform nil :initarg :initial)
-   (completed :initform nil)))
+   (completed :initform nil)
+   (history-var :initform nil :initarg :history)
+   (history-index :initform -1)
+   (saved-input :initform nil)))
 
 (define-keys minibuffer-mode
   "enter" 'exit-minibuffer
-  "C-g" 'exit-recursive-edit)
+  "C-g" 'exit-recursive-edit
+  "M-p" 'minibuffer-previous-history
+  "M-n" 'minibuffer-next-history)
 
 (defmethod selectable-p-aux ((buffer minibuffer-mode) pos)
   (pos-up-until pos (alex:rcurry #'class-p "input")))
@@ -23,10 +28,50 @@
 
 (define-command exit-minibuffer
   :mode minibuffer-mode ()
+  (when-let (var (history-var (current-buffer)))
+    (push (child-nodes (minibuffer-input-element (current-buffer)))
+          (symbol-value var)))
   (setf (completed (current-buffer)) t))
 
 (defun minibuffer-input-element (buffer)
   (only-elt (get-elements-by-class-name (document-root buffer) "input")))
+
+(define-command minibuffer-previous-history
+  :mode minibuffer-mode ()
+  (let* ((buffer (current-buffer))
+         (index (1+ (history-index buffer)))
+         (history (symbol-value (or (history-var buffer)
+                                    (error 'not-supported :operation 'history
+                                                          :buffer buffer))))
+         (input (minibuffer-input-element buffer)))
+    (if (< index (length history))
+        (progn
+          (when (= (history-index buffer) -1)
+            (setf (saved-input buffer)
+                  (child-nodes input)))
+          (setf (history-index buffer) index)
+          (delete-nodes (pos-down input) nil)
+          (apply #'insert-nodes (end-pos input)
+                 (mapcar #'clone-node (nth index history))))
+        (user-error "No previous history"))))
+
+(define-command minibuffer-next-history
+  :mode minibuffer-mode ()
+  (let* ((buffer (current-buffer))
+         (index (1- (history-index buffer)))
+         (history (symbol-value (or (history-var buffer)
+                                    (error 'not-supported :operation 'history
+                                                          :buffer buffer))))
+         (input (minibuffer-input-element buffer)))
+    (if (>= index -1)
+        (progn
+          (setf (history-index buffer) index)
+          (delete-nodes (pos-down input) nil)
+          (apply #'insert-nodes (end-pos input)
+                 (if (= index -1)
+                     (saved-input buffer)
+                     (mapcar #'clone-node (nth index history)))))
+        (user-error "No next history"))))
 
 (defgeneric minibuffer-input (buffer)
   (:method ((buffer minibuffer-mode))
