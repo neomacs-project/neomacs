@@ -1176,7 +1176,7 @@ sb-introspect:definition-source)'."
 (define-mode lisp-minibuffer-mode (lisp-mode minibuffer-mode) ())
 
 (defmethod sexp-parent-p ((buffer lisp-minibuffer-mode) node)
-  (or (class-p node "list") (tag-name-p node "input")))
+  (class-p node "list" "input"))
 
 (defmethod revert-buffer-aux :after ((buffer lisp-minibuffer-mode))
   (setf (attribute (minibuffer-input-element buffer) 'keymap)
