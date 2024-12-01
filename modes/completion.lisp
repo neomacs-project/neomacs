@@ -1,46 +1,27 @@
 (in-package #:neomacs)
 
 (sera:export-always
-    '(compute-completion
-      completions replace-range completion-buffer))
-
-(define-mode completion-list-mode (list-mode)
-  ((completions :initform nil :initarg :completions)))
-
-(defmethod generate-rows ((buffer completion-list-mode))
-  (iter (for (completion annotation) in (completions buffer))
-    (collecting
-      (dom `(:tr
-             (:td :class "completion-candidate" ,completion)
-             (:td :class "completion-annotation"
-                  ,@(when (> (length annotation) 0)
-                      (list annotation))))))))
-
-(defmethod (setf completions)
-    :after (new-val (buffer completion-list-mode))
-  (with-current-buffer buffer
-    (revert-buffer)))
+    '(compute-completion completions replace-range))
 
 ;;; TAB completion
 
 (define-mode active-completion-mode (completion-mode)
   ((replace-range)
-   (completion-buffer
-    :initform
-    (make-buffer " *completion*"
-                 :mode 'completion-list-mode)))
+   (menu-node)
+   (completions)
+   (completion-selection :initform 0))
   (:documentation "Transient mode when completion menu is active."))
 
 (define-keys prog-mode
   "tab" 'show-completions)
 
 (define-keys active-completion-mode
-  "up" 'previous-completion
-  "down" 'next-completion
-  "C-p" 'previous-completion
-  "C-n" 'next-completion
-  "C-v" 'scroll-down-completion
-  "M-v" 'scroll-up-completion
+  'next-line 'next-buffer-completion
+  'previous-line 'previous-buffer-completion
+  'scroll-down-command 'scroll-down-buffer-completion
+  'scroll-up-command 'scroll-up-buffer-completion
+  'beginning-of-buffer 'first-buffer-completion
+  'end-of-buffer 'last-buffer-completion
   "C-g" 'hide-completions
   "enter" 'complete-selection)
 
@@ -56,92 +37,62 @@ COMPLETIONS is a list of completions. Each completion is a list of
 form (text annotation)."))
 
 (define-command show-completions (&optional (marker (focus)) silent)
-  (bind (((:values replace-range completions)
-          (compute-completion (current-buffer) marker)))
+  (bind ((buffer (current-buffer))
+          ((:values replace-range completions)
+           (compute-completion buffer marker)))
     (unless completions
       (unless silent (message "No completion."))
       (hide-completions)
       (return-from show-completions))
     (enable 'active-completion-mode)
-    (setf (completions (completion-buffer (current-buffer)))
-          completions
-          (replace-range (current-buffer)) replace-range)
+    (setf (replace-range buffer) replace-range
+          (completions buffer) completions
+          (menu-node buffer)
+          (dom `(:table :class "completion-menu"
+                 (:tbody ,@ (iter (for (c annot) in completions)
+                              (collecting
+                                `(:tr :class ,(if (first-iteration-p) "completion-selection" "")
+                                  (:td :class "completion-candidate"
+                                       ,c)
+                                  (:td :class "completion-annotation"
+                                       ,@(when (> (length annot) 0)
+                                           (list annot))))))))))
+    (evaluate-javascript
+     (format nil "{var menu = document.getElementById('neomacs-completion-menu');
+if(!menu){
+    menu = document.createElement('table');
+    menu.id = 'neomacs-completion-menu';
+    document.documentElement.appendChild(menu)}
+menu.innerHTML = '~A';}"
+             (quote-js (serialize (first-child (menu-node buffer)) nil)))
+     buffer)
+    (run-in-helper '*window-layout-helper* 'update-completion-menu-position buffer)
     t))
 
-(defvar *completion-menu-size* (list 200 300)
-  "Size of completion menu.
-
-Should be a list of the form (WIDTH HEIGHT)")
-
-(defmethod window-decoration-aux ((buffer active-completion-mode))
-  (let* ((node (call-next-method))
-         (main (only-elt (get-elements-by-class-name
-                 node "main"))))
-    (append-child
-     main
-     (dom `(:div :class "content completion-menu float autohide"
-                 :style
-                 ,(format nil "position: absolute; width: ~apx; height: ~apx; display: none;"
-                          (car *completion-menu-size*)
-                          (cadr *completion-menu-size*))
-                 :buffer ,(id (completion-buffer buffer)))))
-    node))
-
-(defun compute-floating-buffer-position
-    (rect width height max-width max-height)
-  "Suggest position for displaying a floating buffer near RECT.
-
-Assume buffer has WIDTH and HEIGHT.
-
-Returns a list: (X Y)
-
-X and Y are numbers in pixels."
-  (bind (((x y w h) rect))
-    (list
-     (max 0 (min (+ x w) (- max-width width)))
-     (if (and (> (- y height) 0)
-              (> (+ y h height) max-height))
-         (- y height)
-         (+ y h)))))
+(defmethod (setf completion-selection) :before (new-val (buffer active-completion-mode))
+  (let ((old-val (slot-value buffer 'completion-selection)))
+    (unless (eql old-val new-val)
+      (evaluate-javascript
+       (format nil "{const menu = document.getElementById('neomacs-completion-menu');
+menu.firstChild.childNodes[~a].classList.remove('completion-selection');
+const selected = menu.firstChild.childNodes[~a];
+selected.classList.add('completion-selection');
+selected.scrollIntoViewIfNeeded()}"
+               old-val new-val)
+       buffer))))
 
 (defun update-completion-menu-position (buffer)
-  (when-let*
-      ((menu (car
-              (get-elements-by-class-name
-               (window-decoration buffer)
-               "completion-menu")))
-       (buffer-bounds
-        (evaluate-javascript-sync
-         (ps:ps (ps:chain (js-buffer buffer) (get-bounds)))
-         :global))
-       (range (ignore-errors (replace-range buffer)))
-       (completion-buffer
-        (ignore-errors (completion-buffer buffer)))
-       (min-width
-        (evaluate-javascript-sync
-         "document.body.scrollWidth"
-         completion-buffer))
-       (rect (get-bounding-client-rect (range-end range)))
-       (coord
-        (compute-floating-buffer-position
-         rect min-width
-         (cadr *completion-menu-size*)
-         (assoc-value buffer-bounds :width)
-         (assoc-value buffer-bounds :height))))
-    (with-current-buffer (frame-root buffer)
-      (bind (((x y) coord))
-        (evaluate-javascript
-         (ps:ps
-           (let ((node (js-node-1 menu)))
-             (setf (ps:chain node style left)
-                   (ps:lisp (format nil "~apx" x))
-                   (ps:chain node style top)
-                   (ps:lisp (format nil "~apx" y))
-                   (ps:chain node style min-width)
-                   (ps:lisp (format nil "~apx" min-width))
-                   (ps:chain node style display)
-                   null)))
-         (current-buffer))))))
+  (bind (((x y w h) (get-bounding-client-rect (focus buffer))))
+    (evaluate-javascript
+     (format nil "{const menu = document.getElementById('neomacs-completion-menu');
+if(menu){
+    const rect = document.documentElement.getBoundingClientRect();
+    const mrect = menu.getBoundingClientRect();
+    const x = ~a; const y = ~a; const w = ~a; const h = ~a;
+    menu.style.left = Math.max(0, Math.min(x+w, rect.width - mrect.width)) - rect.left + 'px';
+    menu.style.top = ((y > mrect.height && y+h+mrect.height > rect.height)?y-mrect.height:y+h) - rect.top + 'px'}}"
+             x y w h)
+     buffer)))
 
 (defun maybe-hide-completions ()
   "Hide completions if focus move out of `replace-range'.
@@ -159,25 +110,59 @@ Return t if it hides completion, nil if it does nothing."
 
 (defmethod on-post-command progn ((buffer active-completion-mode))
   (unless (maybe-hide-completions)
-    (run-in-helper
-     '*window-layout-helper*
-     'update-completion-menu-position
-     buffer)))
+    (run-in-helper '*window-layout-helper* 'update-completion-menu-position buffer)))
 
-(defmethod disable-aux ((mode (eql 'active-completion-mode))
-                        previous-instance)
-  (delete-buffer (completion-buffer previous-instance)))
+(defmethod disable-aux ((mode (eql 'active-completion-mode)) buffer)
+  (evaluate-javascript
+   "{const menu = document.getElementById('neomacs-completion-menu');
+if(menu) menu.remove()}"
+   buffer))
 
 (define-command complete-selection ()
   (bind ((buffer (current-buffer))
-         (row (node-after (focus (completion-buffer (current-buffer)))))
-         (selection (text-content (first-child row)))
+          (selection (car (nth (completion-selection buffer) (completions buffer))))
          (range (replace-range buffer))
          (end (range-end range)))
     (disable 'active-completion-mode)
     (with-marker (marker end)
       (delete-range range)
       (insert-nodes marker selection))))
+
+(define-command next-buffer-completion
+  :mode active-completion-mode ()
+  (if (< (1+ (completion-selection (current-buffer)))
+         (length (completions (current-buffer))))
+      (incf (completion-selection (current-buffer)))
+      (user-error "No next completion")))
+
+(define-command previous-buffer-completion
+  :mode active-completion-mode ()
+  (if (> (1- (completion-selection (current-buffer))) 0)
+      (decf (completion-selection (current-buffer)))
+      (user-error "No previous completion")))
+
+(define-command scroll-down-buffer-completion
+  :mode active-completion-mode ()
+  (setf (completion-selection (current-buffer))
+        (min (1- (length (completions (current-buffer))))
+             (+ (completion-selection (current-buffer))
+                (scroll-lines (current-buffer))))))
+
+(define-command scroll-up-buffer-completion
+  :mode active-completion-mode ()
+  (setf (completion-selection (current-buffer))
+        (max 0
+             (- (completion-selection (current-buffer))
+                (scroll-lines (current-buffer))))))
+
+(define-command first-buffer-completion
+  :mode active-completion-mode ()
+  (setf (completion-selection (current-buffer)) 0))
+
+(define-command last-buffer-completion
+  :mode active-completion-mode ()
+  (setf (completion-selection (current-buffer))
+        (1- (length (completions (current-buffer))))))
 
 ;;; Auto completion
 
@@ -197,26 +182,27 @@ Return t if it hides completion, nil if it does nothing."
       (when (and (>= (length (text-content node))
                      (minimum-prefix buffer))
                  (show-completions (focus buffer) t))
-        (run-in-helper
-         '*window-layout-helper*
-         'update-completion-menu-position
-         buffer)))))
+        (update-completion-menu-position buffer)))))
 
 ;;; Style
 
 (defstyle completion-menu
     `(:white-space "nowrap"
-      :font-size "0.8em"
       :overflow-x "hidden"
       :backdrop-filter "blur(10px)"
       :overflow-y "scroll"
-      :margin 0
+      :position "absolute"
+      :max-height "300px"
+      :padding "0 8px"
+      :display "block"
       :border-collapse "collapse"))
 
-(defstyle completion-candidate `(:padding-left "8px"))
+(defstyle completion-selection `(:inherit focus))
+(defstyle completion-candidate nil)
 (defstyle completion-annotation `(:text-align "right"
                                   :font-style "italic"))
-(defsheet completion-list-mode
-    `(("body" :inherit completion-menu)
+(defsheet active-completion-mode
+    `(("#neomacs-completion-menu" :inherit (default completion-menu))
+      (".completion-selection" :inherit completion-selection)
       (".completion-candidate" :inherit completion-candidate)
       (".completion-annotation" :inherit completion-annotation)))

@@ -116,10 +116,13 @@ not defined in this theme are inherited from PARENT."
     :inherit default)
   'completion-menu
   `(:white-space "nowrap"
-    :font-size "0.8em"
     :overflow-x "hidden"
     :overflow-y "scroll"
     :background "rgb(0,9,12)"
+    :position "absolute"
+    :max-height "300px"
+    :padding "0 8px"
+    :display "block"
     :border-collapse "collapse")
   'frame-float
   `(:outline "solid 1px rgba(120,160,190,0.4)")
@@ -227,10 +230,13 @@ not defined in this theme are inherited from PARENT."
   ;; Frame
   'completion-menu
   `(:white-space "nowrap"
-    :font-size "0.8em"
     :overflow-x "hidden"
     :overflow-y "scroll"
     :background "#fff"
+    :position "absolute"
+    :max-height "300px"
+    :padding "0 8px"
+    :display "block"
     :border-collapse "collapse")
   'frame-float
   `(:outline "solid 1px #777")
@@ -314,11 +320,17 @@ not defined in this theme are inherited from PARENT."
     :inherit default)
   'completion-menu
   `(:white-space "nowrap"
-    :font-size "0.5em"
+    :font-size "0.8em"
     :overflow-x "hidden"
     :overflow-y "scroll"
     :background "#fff"
+    :position "absolute"
+    :max-height "300px"
+    :padding "0 8px"
+    :display "block"
     :border-collapse "collapse")
+  'completion-selection
+  `(:background-color "lavender")
   'frame-float
   `(:outline "solid 1px #777")
 
