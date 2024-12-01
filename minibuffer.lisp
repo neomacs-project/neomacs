@@ -146,7 +146,7 @@ This is a wrapper around `read-from-minibuffer' that creates a completion buffer
 
 (define-mode completion-buffer-mode (list-mode)
   ((rows :initform nil)
-   (occur-query)
+   (occur-query :initform "")
    (completion-limit :default 300)
    (require-match
     :initform t :initarg :require-match
