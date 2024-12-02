@@ -282,9 +282,10 @@ changed."
   (:method progn ((buffer buffer) (url t) (err t)))
   (:method :around ((buffer buffer) (url t) err)
     (when err
-      ;; ERROR_ABORTED comes from issueing another load before loading
-      ;; completed, which is usually benign. Just silent it for now.
-      (unless (equal (assoc-value err :code) "ERR_ABORTED")
+      ;; ERROR_ABORTED (-3) comes from issueing another load before
+      ;; loading completed, which is usually benign. Just silent it
+      ;; for now.
+      (unless (eql (assoc-value err :errno) -3)
         (message "~a failed to load URL ~a: ~a"
                  buffer url (assoc-value err :code))))
     (when (equal url (url buffer))
