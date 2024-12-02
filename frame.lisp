@@ -600,7 +600,6 @@ makes the buffer displayed fullscreen."))
 
 (defstyle frame-body
     `(:padding "32px"
-      :margin 0
       :inherit default
       :background-size "cover"
       :background-image
@@ -648,6 +647,8 @@ makes the buffer displayed fullscreen."))
        ("0%" :transform "rotate(0deg)")
        ("0%" :transform "rotate(360deg)"))
       (".header-spinner" :inherit header-spinner)
+      ("html,body" :margin 0 :height "100%"
+                   :box-sizing "border-box")
       ("body" :inherit frame-body)))
 
 (defsheet echo-area-mode

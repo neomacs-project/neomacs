@@ -511,7 +511,8 @@ NODE become the last child of NEW-NODE."
              (id buffer)
              (quote-js
               (with-output-to-string (s)
-                (write-string "<html><head>" s)
+                (write-string "<!DOCTYPE html>
+<html><head>" s)
                 (dolist (style (reverse (styles buffer)))
                   (format s "<style id=\"neomacs-style-~a\">" style)
                   (write-string (cell-ref (css-cell style)) s)
