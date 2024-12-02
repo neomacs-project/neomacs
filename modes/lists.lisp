@@ -1,8 +1,7 @@
 (in-package #:neomacs)
 
 (sera:export-always
-    '(generate-rows
-      file-size-readable format-readable-timestring))
+    '(generate-rows format-readable-timestring))
 
 (define-mode list-mode (read-only-mode) ())
 
@@ -135,35 +134,6 @@ This should always be a directory pathname (with NIL name and type fields).")
 (define-keys file-list-mode
   "enter" 'file-list-find-file)
 
-(defun file-size-readable (file-size &optional flavor space unit)
-  (let ((power (if (or (null flavor) (eq flavor 'iec))
-		   1024.0
-		   1000.0))
-	(prefixes '("" "k" "M" "G" "T" "P" "E" "Z" "Y" "R" "Q")))
-    (iter (while (and (>= file-size power) (cdr prefixes)))
-      (setq file-size (/ file-size power)
-	    prefixes (cdr prefixes)))
-    (let* ((prefix (car prefixes))
-           (prefixed-unit (if (eq flavor 'iec)
-                              (str:concat
-                               (if (equal prefix "k") "K" prefix)
-                               (if (equal prefix "") "" "i")
-                               (or unit "B"))
-                              (str:concat prefix unit))))
-      (if (and (< file-size 10)
-               (>= (mod file-size 1.0) 0.05)
-               (< (mod file-size 1.0) 0.95))
-	  (format nil
-                  "~1$~a~a"
-	          file-size
-                  (if (equal prefixed-unit "") "" (or space ""))
-                  prefixed-unit)
-	  (format nil
-                  "~a~a~a"
-	          (round file-size)
-                  (if (equal prefixed-unit "") "" (or space ""))
-                  prefixed-unit)))))
-
 (defun format-readable-timestring (timestamp)
   (let ((decoded (multiple-value-list
                   (local-time:decode-timestamp timestamp)))
@@ -195,7 +165,8 @@ This should always be a directory pathname (with NIL name and type fields).")
                    `(:td ,(file-namestring path)))
               ,@ (if stat
                      `((:td ,@ (unless (uiop:directory-pathname-p path)
-                                 (list (file-size-readable (osicat-posix:stat-size stat)))))
+                                 (list (sera:format-file-size-human-readable
+                                        nil (osicat-posix:stat-size stat)))))
                        #-windows
                        (:td ,(osicat-posix:getpwuid
                               (osicat-posix:stat-uid stat)))
