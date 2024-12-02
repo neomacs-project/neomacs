@@ -1178,7 +1178,7 @@ sb-introspect:definition-source)'."
 (define-mode lisp-minibuffer-mode (minibuffer-mode lisp-mode) ()
   (:default-initargs :history '*lisp-minibuffer-history*))
 
-(defmethod window-decoration-aux ((buffer minibuffer-mode))
+(defmethod window-decoration-aux ((buffer lisp-minibuffer-mode))
   (dom `(:div :class "minibuffer" :selectable ""
               :style "min-height: 150px;"
               (:div :class "main content" :buffer ,(id buffer)))))
