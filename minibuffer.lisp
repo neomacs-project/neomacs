@@ -2,8 +2,8 @@
 
 (sera:export-always
     '(minibuffer-input-element minibuffer-input update-completion-buffer
-      prompt read-from-minibuffer completing-read make-completion-buffer
-      complete-minibuffer-aux))
+      prompt read-from-minibuffer read-yes-or-no read-password
+      completing-read make-completion-buffer complete-minibuffer-aux))
 
 (define-mode minibuffer-mode ()
   ((prompt :initarg :prompt)
@@ -131,6 +131,15 @@ ARGS are passed to `make-buffer' to create the minibuffer."
           ((member answer '("n" "no") :test 'equal)
            nil)
           (t (read-yes-or-no prompt)))))
+
+(define-mode minibuffer-password-mode (minibuffer-mode) ())
+
+(defsheet minibuffer-password-mode `((".input" :-webkit-text-security "disc"
+                                               :-webkit-appearance "textfield")
+                                     (".focus-tail::after" :content "")))
+
+(defun read-password (prompt)
+  (read-from-minibuffer prompt :mode 'minibuffer-password-mode))
 
 (defun completing-read (prompt list-mode &rest args)
   "Read and return a presentation from minibuffer with completion.
