@@ -509,7 +509,16 @@ NODE become the last child of NEW-NODE."
     (evaluate-javascript
      (format nil "Contents[~s]='~a'"
              (id buffer)
-             (quote-js (serialize (document-root buffer) nil)))
+             (quote-js
+              (with-output-to-string (s)
+                (write-string "<html><head>" s)
+                (dolist (style (reverse (styles buffer)))
+                  (format s "<style id=\"neomacs-style-~a\">" style)
+                  (write-string (cell-ref (css-cell style)) s)
+                  (write-string "</style>" s))
+                (write-string "</head>" s)
+                (serialize (document-root buffer) s)
+                (write-string "</html>" s))))
      :global)
     (load-url buffer (format nil "neomacs://contents/~a" (id buffer)))))
 
