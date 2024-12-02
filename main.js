@@ -112,6 +112,7 @@ Ceramic.createBuffer = function(id, url, options) {
     const buf = new WebContentsView(options);
     buf.ignoreKeys = [];
     buf.webContents.neomacsId = id;
+    buf.webContents.focusRequested = false;
     buf.webContents.setMaxListeners(100);
     buf.webContents.on('before-input-event', (event, input) => {
         const ignoreIndex = buf.ignoreKeys.findIndex((i) => true);
@@ -131,7 +132,11 @@ Ceramic.createBuffer = function(id, url, options) {
     buf.webContents.on('did-stop-loading',(details) =>{
         RemoteJS.send(JSON.stringify({inputEvent: {type: "did-stop-loading"}, buffer: id}));});
     buf.webContents.on('focus',()=>{
-        RemoteJS.send(JSON.stringify({inputEvent: {type: "focus"}, buffer: id}));});
+        // avoid dead loop: lisp => webContents.focus => on 'focus' => 'focus' event (lisp) => lisp
+        if(buf.webContents.focusRequested){
+            buf.webContents.focusRequested = false;}
+        else {
+            RemoteJS.send(JSON.stringify({inputEvent: {type: "focus"}, buffer: id}));}});
     buf.webContents.on('enter-html-full-screen',()=>{
         RemoteJS.send(JSON.stringify({inputEvent: {type: "enter-html-full-screen"}, buffer: id}));});
     buf.webContents.on('leave-html-full-screen',()=>{

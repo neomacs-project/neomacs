@@ -76,9 +76,10 @@
     (when-let (focused-buffer (window-buffer window-node))
       (evaluate-javascript
        (format nil "{const frame = Ceramic.frames[~S];
-if(frame){Ceramic.buffers[~S].webContents.focus();
+if(frame){Ceramic.buffers[~S].webContents.focusRequested = true;
+Ceramic.buffers[~S].webContents.focus();
 Ceramic.frames[~S].setTitle(~S);}}"
-               (id buffer) (id focused-buffer)
+               (id buffer) (id focused-buffer) (id focused-buffer)
                (id buffer) (name focused-buffer))
        :global))))
 
