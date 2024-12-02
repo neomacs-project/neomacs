@@ -10,7 +10,8 @@
                  ;; From https://developer.mozilla.org/en-US/docs/Web/URI/Schemes
                  '("http" "https" "blob" "data" "file"
                    "javascript" "ftp" "mailto"
-                   "ssh" "tel" "urn" "view-source" "ws" "wss")
+                   "ssh" "tel" "urn" "view-source" "ws" "wss"
+                   "about")
                  :test 'equal)
          string
          (let ((prepended (str:concat "https://" string)))
