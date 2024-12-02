@@ -255,16 +255,10 @@ If nil, disable message logging. If t, log messages but don't truncate
             (assoc-value event :mailbox)))
           (t (warn "Unrecoginized Electron event: ~a" event)))))
 
-(defun command-loop (&optional recursive-p
+(defun command-loop (&optional
                        (guard-fn (constantly t))
                        (handlers-p t)
                        (run-command-fn #'run-command))
-  (unless recursive-p
-    (unless *no-debugger*
-     (trivial-custom-debugger:install-debugger
-      #'neomacs-debugger-hook))
-    (unless *no-redirect-stream*
-      (setup-stream-indirection)))
   (let (*this-command-keys*)
     (iter (setq *last-quit-time* nil)
       (for data = (sb-concurrency:receive-message *event-queue*))
@@ -287,11 +281,7 @@ If nil, disable message logging. If t, log messages but don't truncate
                    (exit-recursive-edit
                      (lambda (c)
                        (declare (ignore c))
-                       (when recursive-p (error 'quit))))
-                   (top-level
-                     (lambda (c)
-                       (declare (ignore c))
-                       (unless recursive-p (next-iteration)))))
+                       (error 'quit))))
                 (handle-event buffer event run-command-fn))
             (abort ()
               :report "Return to command loop"))
@@ -311,7 +301,7 @@ and restart handlers."
     (bt:release-lock (lock buffer)))
   (unwind-protect
        (let (*locked-buffers*)
-         (command-loop t guard-fn handlers-p run-command-fn))
+         (command-loop guard-fn handlers-p run-command-fn))
     (dolist (buffer *locked-buffers*)
       (bt:acquire-lock (lock buffer))))
   nil)
@@ -339,6 +329,17 @@ and restart handlers."
      (message nil)
      (return-from read-key (lastcar *this-command-keys*)))))
 
+(defun top-level ()
+  (unless *no-debugger*
+           (trivial-custom-debugger:install-debugger
+            #'neomacs-debugger-hook))
+  (unless *no-redirect-stream*
+    (setup-stream-indirection))
+  (sb-thread:with-new-session ()
+    (iter (handler-case (command-loop)
+            (quit () (message "Already at top level"))
+            (top-level ())))))
+
 (defun start-command-loop ()
   "Start Neomacs command loop.
 
@@ -352,7 +353,7 @@ function `command-loop' to take effect."
     (bt:join-thread *command-loop-thread*)
     (format t "ok~%"))
   (setq *command-loop-thread*
-        (bt:make-thread #'command-loop :name "Neomacs Command Loop")))
+        (bt:make-thread #'top-level :name "Neomacs Command Loop")))
 
 (define-command keyboard-quit ()
   "Signal a `quit' condition."
