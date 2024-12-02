@@ -89,7 +89,7 @@ Can be either `forward' or `backward'.")
    (window-quit-action :initform nil)
    (amalgamate-js-p :initform nil)
    (amalgamate-js-stream :initform (make-string-output-stream)))
-  (:default-initargs :url "about:blank"))
+  (:default-initargs :url "neomacs://null.contents"))
 
 (defmethod id :around ((buffer buffer))
   (format nil "~A" (call-next-method)))

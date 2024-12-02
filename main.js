@@ -185,6 +185,10 @@ app.on('ready', function() {
             delete Contents[p];
             return new Response(content,{headers: {'content-type': "text/html; charset=utf-8"}});
         }
+        else if (host == 'null.contents'){
+            return new Response("<!DOCTYPE html><html><head></head><body></body></html>",
+                                {headers: {'content-type': "text/html; charset=utf-8"}});
+        }
         else{
             const pathToServe = path.resolve(Mounts[host],p);
             return net.fetch(pathToFileURL(pathToServe).toString());}});});
