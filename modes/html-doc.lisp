@@ -13,6 +13,7 @@
   "C-c t" 'insert-description-list
   "C-c d" 'insert-description
   "C-c C-u" 'insert-unordered-list
+  "C-c o" 'insert-ordered-list
   "C-c p" 'insert-code-block
   "C-c ," 'open-comma
   "C-c C-l"'insert-link)
@@ -39,9 +40,17 @@
       (setf (pos (focus buffer))
             (pos-down (document-root buffer))))))
 
+(defun heading-text-to-id (text)
+  (str:replace-all " " "-" (string-downcase text)))
+
+(defun compute-heading-id (node)
+  (heading-text-to-id (text-content node)))
+
 (defmethod on-node-setup progn ((buffer html-doc-mode) (node element))
   (when (class-p node "comma-expr")
     (setf (attribute node 'keymap) *sexp-node-keymap*))
+  (when (ppcre:all-matches "^h[123456]$" (tag-name node))
+    (set-attribute-function node "id" #'compute-heading-id))
   (when (tag-name-p node "pre")
     (setf (attribute node 'keymap) *plaintext-node-keymap*)))
 
@@ -92,8 +101,6 @@
       (move-nodes (pos-down node) nil (end-pos new-node))
       (delete-node node))))
 
-
-
 (define-command increase-heading
   :mode html-doc-mode (&optional (marker (focus)))
   (cycle-heading marker 1))
@@ -142,6 +149,10 @@
 (define-command insert-unordered-list
   :mode html-doc-mode (&optional (marker (focus)))
   (insert-list marker "ul" "li"))
+
+(define-command insert-ordered-list
+  :mode html-doc-mode (&optional (marker (focus)))
+  (insert-list marker "ol" "li"))
 
 (define-command insert-description-list
   :mode html-doc-mode (&optional (marker (focus)))
@@ -399,19 +410,6 @@ JSON should have the format like what `+get-body-json-code+' produces:
                  (clone-node node nil))))
     (process node)))
 
-(defun heading-text-to-id (text)
-  (str:replace-all " " "-" (string-downcase text)))
-
-(defun add-heading-ids (node)
-  (do-elements
-      (lambda (node)
-        (when (ppcre:all-matches
-               "^h[123456]$"
-               (tag-name node))
-          (setf (attribute node "id")
-                (heading-text-to-id (text-content node)))))
-    node))
-
 (define-command render-html-doc
   :mode html-doc-mode ()
   "Render current buffer by expanding at expressions."
@@ -429,8 +427,7 @@ JSON should have the format like what `+get-body-json-code+' produces:
       (let ((*serialize-exclude-attributes* '("neomacs-identifier"))
             (*package* (find-package "NEOMACS")))
         (serialize
-         (add-heading-ids
-          (expand-comma-expr (document-root (current-buffer))))
+         (expand-comma-expr (document-root (current-buffer)))
          s))
       (message "Rendered to ~a" output-path))))
 
