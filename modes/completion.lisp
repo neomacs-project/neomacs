@@ -87,11 +87,12 @@ selected.scrollIntoViewIfNeeded()}"
      (format nil "{const menu = document.getElementById('neomacs-completion-menu');
 if(menu){
     const rect = document.documentElement.getBoundingClientRect();
-    const mrect = menu.getBoundingClientRect();
+    const mw = menu.getBoundingClientRect().width;
+    const mh = Math.min(menu.scrollHeight,300);
     const x = ~a; const y = ~a; const w = ~a; const h = ~a;
-    menu.style.left = Math.max(0, Math.min(x+w, rect.width - mrect.width)) - rect.left + 'px';
-    if(y > mrect.height && y+h+mrect.height > rect.height){
-        menu.style.top = y - mrect.height + rect.top + 'px';
+    menu.style.left = Math.max(0, Math.min(x+w, rect.width - mw)) - rect.left + 'px';
+    if(y > mh && y+h+mh > rect.height){
+        menu.style.top = y - mh + rect.top + 'px';
     }
     else {
         menu.style.top = y + h - rect.top + 'px';
