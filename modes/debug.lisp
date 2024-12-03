@@ -16,6 +16,11 @@
   "v" 'debugger-show-source
   "e" 'debugger-eval-in-frame)
 
+(defvar *stack-trace-max* 300
+  "Maximum number of stack trace to show in debugger.
+
+If set to `t', do not truncate stack trace.")
+
 (defmethod revert-buffer-aux ((buffer debugger-mode))
   (erase-buffer)
   (insert-nodes
@@ -58,6 +63,8 @@
     (iter (for frame in (dissect:environment-stack
                          (environment buffer)))
       (for i from 0)
+      (while (or (eql *stack-trace-max* t)
+                 (< i *stack-trace-max*)))
       (insert-nodes
        (end-pos tbody)
        (attach-presentation
