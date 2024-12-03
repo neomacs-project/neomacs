@@ -411,7 +411,7 @@ JSON should have the format like what `+get-body-json-code+' produces:
 
 (define-command render-html-doc
   :mode html-doc-mode ()
-  "Render current buffer by expanding at expressions."
+  "Render current buffer by expanding comma expressions."
   (let* ((path (file-path (current-buffer)))
          (output-path (make-pathname
                        :directory
