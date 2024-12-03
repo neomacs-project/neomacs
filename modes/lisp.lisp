@@ -226,11 +226,30 @@
   (let (*print-pretty*)
     (make-presentation-node (prin1-to-string obj) obj)))
 
-(define-command open-paren :mode lisp-mode
-  (&optional (marker (focus)))
-  (let ((node (make-list-node nil)))
-    (insert-nodes marker node)
-    (setf (pos marker) (end-pos node))))
+(defun insert-or-wrap-node (node)
+  "Insert NODE at focus or wrap selected nodes with NODE."
+  (if (selection-active (current-buffer))
+      (let ((beg (pos (focus)))
+            (end (pos (selection-marker (current-buffer)))))
+        (when (before-p end beg)
+          (rotatef beg end))
+        (when (symbol-node-p (node-containing beg))
+          (setq beg (pos-up beg)))
+        (when (symbol-node-p (node-containing end))
+          (setq end (pos-right (pos-up end))))
+        (unless (eql (node-containing beg)
+                     (node-containing end))
+          (user-error "Selected nodes not at same level"))
+        ;; Move focus at the end into the new node
+        (when (end-pos-p end)
+          (setq end nil))
+        (wrap-nodes beg end node))
+      (progn
+        (insert-nodes (focus) node)
+        (setf (pos (focus)) (end-pos node)))))
+
+(define-command open-paren :mode lisp-mode ()
+  (insert-or-wrap-node (make-list-node nil)))
 
 (define-command wrap-paren :mode lisp-mode
   (&optional (pos (focus)))
@@ -239,11 +258,8 @@
                   (error 'top-of-subtree)))
     (wrap-node pos node)))
 
-(define-command open-string :mode lisp-mode
-  (&optional (marker (focus)))
-  (let ((node (make-atom-node "string" "")))
-    (insert-nodes marker node)
-    (setf (pos marker) (end-pos node))))
+(define-command open-string :mode lisp-mode ()
+  (insert-or-wrap-node (make-element "span" :class "string")))
 
 (define-command open-space :mode lisp-mode
   (&optional (marker (focus)))
@@ -267,9 +283,8 @@
              (cycle-level
               (parse-number:parse-number
                (attribute node "comment-level")))))
-      (let ((node (make-element "span" :class "comment" :comment-level "1")))
-        (insert-nodes marker node)
-        (setf (pos marker) (end-pos node))))))
+      (insert-or-wrap-node
+       (make-element "span" :class "comment" :comment-level "1")))))
 
 (define-command wrap-comment :mode lisp-mode
   (&optional (pos (focus)))

@@ -6,6 +6,8 @@
       extract-range delete-range
       set-selection))
 
+;;; Range primitives
+
 (defun ancestors (pos)
   "Return list of ancestor position of POS.
 POS itself appears at the beginning, Root appears at the end."
@@ -60,6 +62,8 @@ POS itself appears at the beginning, Root appears at the end."
 
 This normalizes `range-beg' and `range-end', i.e. if END is before
 BEG, they are swapped."
+  (setq beg (resolve-marker beg)
+        end (resolve-marker end))
   (if (before-p end beg)
       (%range end beg)
       (%range beg end)))
@@ -238,6 +242,8 @@ DOM before => DOM after
         (end (range-end range)))
     (and (or (equalp beg pos) (before-p beg pos))
          (or (equalp end pos) (before-p pos end)))))
+
+;;; Range selection
 
 (defun render-sibling-selection (start end)
   "Render selection between sibling positions START and END.

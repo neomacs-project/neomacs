@@ -466,9 +466,17 @@ clone. Returns the cloned node (i.e. the node after the split point)."
 (defun wrap-node (node new-node)
   "Insert NEW-NODE around NODE.
 
-NODE become the last child of NEW-NODE."
+NODE becomes the last child of NEW-NODE."
   (insert-nodes node new-node)
   (move-nodes node (pos-right node) (end-pos new-node)))
+
+(defun wrap-nodes (beg end new-node)
+  "Insert NEW-NODE around nodes between BEG and END.
+
+BEG and END must be sibling positions. Nodes between BEG and END
+become the last child of NEW-NODE."
+  (insert-nodes beg new-node)
+  (move-nodes beg end (end-pos new-node)))
 
 (defun delete-node (node)
   "Delete a single NODE."
@@ -664,8 +672,7 @@ If selection is active, cut selected contents instead."
       (progn
         (clipboard-insert
          (extract-range
-          (range (pos (selection-marker (current-buffer)))
-                 (pos (focus)))))
+          (range (selection-marker (current-buffer)) (focus))))
         (setf (selection-active (current-buffer)) nil))
       (let ((pos (or (pos-up-ensure (focus) #'element-p)
                      (error 'top-of-subtree))))
@@ -679,8 +686,7 @@ If selection is active, copy selected contents instead."
       (progn
         (clipboard-insert
          (clone-range
-          (range (pos (selection-marker (current-buffer)))
-                 (pos (focus)))))
+          (range (selection-marker (current-buffer)) (focus))))
         (setf (selection-active (current-buffer)) nil))
       (let ((pos (or (pos-up-ensure (focus) #'element-p)
                      (error 'top-of-subtree))))
@@ -703,8 +709,7 @@ If selection is active, copy selected contents instead."
       (progn
         (incf *clipboard-ring-index*)
         (delete-range
-         (range (pos (selection-marker (current-buffer)))
-                (pos (focus)))))
+         (range (selection-marker (current-buffer)) (focus))))
       (progn
         (read-system-clipboard-maybe)
         (read-from-minibuffer
