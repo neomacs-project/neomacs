@@ -267,14 +267,13 @@
              (cycle-level
               (parse-number:parse-number
                (attribute node "comment-level")))))
-      (let ((node (make-atom-node "comment" "")))
-        (setf (attribute node "comment-level") "1")
+      (let ((node (make-element "span" :class "comment" :comment-level "1")))
         (insert-nodes marker node)
         (setf (pos marker) (end-pos node))))))
 
 (define-command wrap-comment :mode lisp-mode
   (&optional (pos (focus)))
-  (let ((node (make-atom-node "comment" "")))
+  (let ((node (make-element "span" :class "comment" :comment-level "1")))
     (setq pos (or (pos-up-ensure pos #'sexp-node-p)
                   (error 'top-of-subtree)))
     (wrap-node pos node)))
@@ -287,7 +286,7 @@
 
 (define-command lisp-splice :mode lisp-mode
   (&optional (pos (focus)))
-  (setq pos (or (pos-up-until pos #'list-node-p)
+  (setq pos (or (pos-up-until pos (alex:rcurry #'class-p "list" "comment"))
                 (error 'top-of-subtree)))
   (splice-node pos))
 
