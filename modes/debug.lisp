@@ -166,8 +166,9 @@ recursive invocation, which can result in dead loop.")
 
 (defun invoke-neomacs-debugger (c)
   (if (eq (bt:current-thread) *command-loop-thread*)
-      (trivial-custom-debugger:with-debugger (#'neomacs-debugger-hook)
-        (let ((*debug-on-error* *allow-recursive-debug*))
+      (let ((*debug-on-error* *allow-recursive-debug*)
+            (*inhibit-dom-update* nil))
+        (trivial-custom-debugger:with-debugger (#'neomacs-debugger-hook)
           (debug-for-environment
            (dissect:capture-environment c)
            nil)
