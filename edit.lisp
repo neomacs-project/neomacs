@@ -564,7 +564,7 @@ Called by `self-insert-command' to get the character for insertion."
     ;; We are at the beginning of NODE
     (let* ((node (node-containing marker))
            (prev (pos-left node)))
-      (when (eq node (restriction (host node)))
+      (when (eq node (document-root (host node)))
         (error 'top-of-subtree))
       (cond ((null (first-child node))
              (delete-nodes node (pos-right node)))

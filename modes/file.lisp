@@ -252,8 +252,7 @@ Used to detect modification from other processes before saving."))
         (modtime buffer)
         (osicat-posix:stat-mtime
          (osicat-posix:stat (file-path buffer))))
-  (setf (restriction buffer) (document-root buffer)
-        (pos (focus buffer)) (pos-down (document-root buffer))))
+  (setf (pos (focus buffer)) (pos-down (document-root buffer))))
 
 (defmethod save-buffer-aux ((buffer file-mode))
   (with-open-file (s (file-path buffer)

@@ -6,8 +6,7 @@
     make-buffer get-buffer-create rename-buffer
     modes keymaps
     focus adjust-marker-direction
-    document-root restriction
-    clear-focus render-focus render-focus-aux
+    document-root clear-focus render-focus render-focus-aux
     selection-marker selection-active
     on-buffer-loaded on-delete-buffer on-buffer-title-updated
     on-buffer-dom-ready on-buffer-did-start-navigation
@@ -69,7 +68,6 @@
 Can be either `forward' or `backward'.")
    (markers :type list)
    (document-root)
-   (restriction)
    (next-neomacs-id :initform 0 :type integer)
    (scroll-margin
     :default 0.2
@@ -202,7 +200,6 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
                        (id buffer))))
   (setf (document-root buffer)
         (make-instance 'element :tag-name "body" :host buffer)
-        (restriction buffer) (document-root buffer)
         (focus-marker buffer) (make-instance 'marker :pos (end-pos (document-root buffer)))
         (selection-marker buffer) (make-instance 'marker :pos (end-pos (document-root buffer))))
   (with-current-buffer buffer

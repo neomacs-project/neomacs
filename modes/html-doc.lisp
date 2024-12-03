@@ -262,7 +262,6 @@ JSON should have the format like what `+get-body-json-code+' produces:
          (dom (named-json-parse json)))
     (do-dom (lambda (n) (setf (host n) buffer)) dom)
     (setf (document-root buffer) dom
-          (restriction buffer) dom
           (pos (focus buffer)) (pos-down dom)
           (next-neomacs-id buffer) id)))
 

@@ -69,7 +69,6 @@
     (erase-buffer)
     (apply #'insert-nodes (end-pos (document-root buffer))
            (read-dom-from-file save-path))
-    (setf (restriction buffer) (document-root buffer)
-          (pos (focus buffer)) (pos-down (document-root buffer)))))
+    (setf (pos (focus buffer)) (pos-down (document-root buffer)))))
 
 (pushnew 'auto-save-mode (hooks 'file-mode))

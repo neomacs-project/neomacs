@@ -3,7 +3,9 @@
 (sera:export-always
     '(occur-query occur-p-aux occur-p search-in-elements))
 
-(define-mode occur-mode () ((occur-query)))
+(define-mode occur-mode ()
+  ((occur-query)
+   (occur-parent)))
 
 (defgeneric occur-p-aux (buffer query element)
   (:documentation "Extension point for `occur-p'."))
@@ -67,21 +69,29 @@ is the matched range in text-node."
 
 (defun update-occur (buffer)
   (clear-match-highlight buffer)
-  (iter (for c in (children (restriction buffer)))
+  (iter (for c in (children (occur-parent buffer)))
     (if-let (matches (occur-p (occur-query buffer) c))
-        (progn
-          (remove-class c "invisible")
-          (render-match-highlight buffer matches))
-        (add-class c "invisible"))))
+      (progn
+        (remove-class c "invisible")
+        (render-match-highlight buffer matches))
+      (add-class c "invisible"))))
+
+(defmethod disable-aux ((mode-name (eql 'occur-mode)) buffer)
+  (clear-match-highlight buffer)
+  (iter (for c in (children (occur-parent buffer)))
+    (remove-class c "invisible")))
 
 (define-command occur ()
   (if (typep (current-buffer) 'occur-mode)
-      (progn
-        (disable 'occur-mode)
-        (iter (for c in (children (restriction (current-buffer))))
-          (remove-class c "invisible")))
+      (disable 'occur-mode)
       (let ((query (read-from-minibuffer "Element matching: ")))
         (enable 'occur-mode)
-        (setf (occur-query (current-buffer)) query))))
+        (setf (occur-parent (current-buffer))
+              (let ((pos (pos (focus))))
+                (iter
+                  (setq pos (node-containing pos))
+                  (until (not (selectable-p pos))))
+                pos)
+              (occur-query (current-buffer)) query))))
 
 (defsheet occur-mode `(("::highlight(occur)" :inherit match)))

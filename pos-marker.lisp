@@ -132,7 +132,8 @@ If DESTRUCTIVE is non-nil, POS might be mutated."
                   ((element) (parent pos))
                   ((end-pos node) node)
                   ((text-pos node) (parent node)))))
-      (unless (eql node (restriction (host pos)))
+      ;; Avoid selecting document root
+      (when (parent node)
         node))))
 
 (defun pos-down (pos)

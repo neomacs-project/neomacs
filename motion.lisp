@@ -11,10 +11,13 @@
   (:method ((buffer buffer) (pos t))
     (not (new-line-node-p (node-containing pos))))
   (:method :around ((buffer buffer) (pos t))
-    (unless (if (element-p (node-after pos))
-                (invisible-p (node-after pos))
-                (invisible-p (node-containing pos)))
-      (unless (new-line-node-p (node-containing pos))
+    (let ((after (node-after pos))
+          (parent (node-containing pos)))
+      (unless (or (not parent)
+                  (if (element-p after)
+                      (invisible-p after)
+                      (invisible-p parent))
+                  (new-line-node-p parent))
         (call-next-method))))
   (:documentation
    "Extension point for `selectable-p'.
@@ -70,7 +73,7 @@ Test if POS is selectable in BUFFER."))
   "Like `forward-node', but may wrap around to beginning of buffer."
   (setf (pos marker)
         (or (npos-next-until (pos marker) #'selectable-p)
-            (npos-next-until (pos-down (restriction (host marker)))
+            (npos-next-until (pos-down (document-root (host marker)))
                              #'selectable-p)
             (error 'top-of-subtree))))
 
@@ -78,7 +81,7 @@ Test if POS is selectable in BUFFER."))
   "Like `backward-node', but may wrap around to beginning of buffer."
   (setf (pos marker)
         (or (npos-prev-until (pos marker) #'selectable-p)
-            (npos-prev-until (end-pos (restriction (host marker)))
+            (npos-prev-until (end-pos (document-root (host marker)))
                              #'selectable-p)
             (error 'top-of-subtree))))
 
@@ -137,12 +140,12 @@ Test if POS is selectable in BUFFER."))
 
 (define-command beginning-of-buffer (&optional (marker (focus)))
   "Move to beginning of buffer."
-  (setf (pos marker) (pos-down (restriction (host marker)))))
+  (setf (pos marker) (pos-down (document-root (host marker)))))
 
 (define-command end-of-buffer (&optional (marker (focus)))
   "Move to end of buffer."
   (setf (adjust-marker-direction (current-buffer)) 'backward)
-  (setf (pos marker) (end-pos (restriction (host marker)))))
+  (setf (pos marker) (end-pos (document-root (host marker)))))
 
 (defun ensure-selectable
     (marker &optional (backward

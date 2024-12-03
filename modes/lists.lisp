@@ -15,11 +15,14 @@
   (let ((body-node (make-element "tbody")))
     (insert-nodes (end-pos (document-root buffer))
                   (make-element "table" :children (list body-node)))
-    (setf (pos (focus)) (end-pos body-node)
-          (restriction buffer) body-node)
-    (iter (for row in (generate-rows buffer))
+    (iter (for row in (ignore-errors (generate-rows buffer)))
       (insert-nodes (end-pos body-node) row))
     (setf (pos (focus)) (pos-down body-node))))
+
+(defmethod selectable-p-aux ((buffer list-mode) pos)
+  (and (not (or (tag-name-p pos "tbody")
+                (tag-name-p pos "table")))
+       (call-next-method)))
 
 (define-mode command-list-mode (list-mode)
   ((include-modes :initform nil :initarg :include-modes)
