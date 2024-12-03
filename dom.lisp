@@ -201,28 +201,32 @@ If ATTRIBUTE is not a string, this is a no-op."
 STREAM can also be
   - T, denotes `*standard-output*',
   - nil, returns the result as a string."
-  (plump:serialize
-   (labels ((process (node)
-              (etypecase node
-                (element
-                 (lret ((n (make-instance
-                            'plump:element :parent nil
-                            :tag-name (tag-name node))))
-                   (iter (for (k v) in-hashtable (attributes node))
-                     (when (stringp k)
-                       (unless (member k *serialize-exclude-attributes* :test 'equal)
-                         (when-let (value (cell-ref v))
-                           (setf (gethash k (plump:attributes n)) value)))))
-                   (setf (plump:children n)
-                         (iter (for c first (first-child node)
-                                    then (next-sibling c))
-                           (while c)
-                           (collect (process c) result-type 'vector)))))
-                (text-node
-                 (make-instance 'plump:text-node :parent nil
-                                                 :text (text node))))))
-     (process node))
-   stream))
+  (labels ((process (node s)
+             (etypecase node
+               (element
+                (format s "<~a" (tag-name node))
+                (iter (for (k v) in-hashtable (attributes node))
+                  (when (stringp k)
+                    (unless (member k *serialize-exclude-attributes* :test 'equal)
+                      (when-let (value (cell-ref v))
+                        (format s " ~a=\"~a\""
+                                k (spinneret::escape-attribute-value
+                                   value))))))
+                (format s ">")
+                (iter (for c first (first-child node)
+                           then (next-sibling c))
+                  (while c)
+                  (process c s))
+                (unless (spinneret::void?
+                         (find-symbol (string-upcase (tag-name node)) "KEYWORD"))
+                  (format s "</~a>" (tag-name node))))
+               (text-node
+                (sera:escape
+                 (text node)
+                 #'spinneret::escape-string-char
+                 :stream s)))))
+    (cond ((not stream) (with-output-to-string (s) (process node s)))
+          (t (process node stream)))))
 
 (defgeneric clone-node (node &optional deep)
   (:documentation

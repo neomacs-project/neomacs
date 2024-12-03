@@ -11,8 +11,8 @@
                (:file "command")
                (:file "pos-marker")
                (:file "defstyle")
-               (:file "mode")
                (:file "keymap")
+               (:file "mode")
                (:file "buffer")
                (:file "ceramic")
                (:file "command-loop")
@@ -47,8 +47,6 @@
                :str
                :dynamic-mixins
                :parenscript
-               :plump
-               :plump-sexp
                :lass
                :spinneret
                :metabang-bind
