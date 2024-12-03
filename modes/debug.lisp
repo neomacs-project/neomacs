@@ -191,10 +191,14 @@ recursive invocation, which can result in dead loop.")
   (declare (ignore hook))
   (if *debug-on-error*
       (invoke-neomacs-debugger c)
-      (progn
-        (funcall *error-hook* c)
-        (message "Error in ~a: ~a" (bt2:current-thread) c)
-        (sb-thread:abort-thread))))
+      (let ((thread sb-thread:*current-thread*))
+        (if (eql thread *command-loop-thread*)
+            ;; Convert break condition to error condition and resignal
+            (error "~a" c)
+            (progn
+              (funcall *error-hook* c)
+              (message "Error in ~a: ~a" thread c)
+              (sb-thread:abort-thread))))))
 
 (defsheet debugger-mode
     `(("table" :width "100vw"

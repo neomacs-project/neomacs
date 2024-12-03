@@ -331,8 +331,8 @@ and restart handlers."
 
 (defun top-level ()
   (unless *no-debugger*
-           (trivial-custom-debugger:install-debugger
-            #'neomacs-debugger-hook))
+    (trivial-custom-debugger:install-debugger
+     #'neomacs-debugger-hook))
   (unless *no-redirect-stream*
     (setup-stream-indirection))
   (sb-thread:with-new-session ()
