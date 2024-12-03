@@ -4,6 +4,7 @@
 
 (define-keys html-doc-mode
   "enter" 'open-paragraph
+  "space" 'insert-no-break-space-maybe
   "C-c h" 'increase-heading
   "C-c C-h" 'decrease-heading
   "C-c c" 'open-code
@@ -16,7 +17,7 @@
   "C-c o" 'insert-ordered-list
   "C-c p" 'insert-code-block
   "C-c ," 'open-comma
-  "C-c C-l"'insert-link)
+  "C-c C-l" 'insert-link)
 
 (defmethod sexp-parent-p ((buffer html-doc-mode) node)
   (class-p node "list"))
@@ -40,6 +41,18 @@
       (setf (pos (focus buffer))
             (pos-down (document-root buffer))))))
 
+(defun white-space-p (node)
+  (member node '(#\Space #\Newline #\Tab)))
+
+(defmethod selectable-p-aux ((buffer html-doc-mode) pos)
+  (and (let ((after (node-after pos)))
+         (if (characterp after)
+             (and (find-if-not #'white-space-p (text (text-pos-node pos)))
+                  (not (and (white-space-p after)
+                            (white-space-p (node-before pos)))))
+             t))
+       (call-next-method)))
+
 (defun heading-text-to-id (text)
   (str:replace-all " " "-" (string-downcase text)))
 
@@ -55,9 +68,10 @@
     (setf (attribute node 'keymap) *plaintext-node-keymap*)))
 
 (defmethod on-node-setup progn ((buffer html-doc-mode) (node text-node))
-  (with-post-command (node 'parent)
+  (with-post-command (node 'parent 'text)
     (let ((parent (parent node)))
-      (when (allow-block-element-p parent)
+      (when (and (allow-block-element-p parent)
+                 (find-if-not #'white-space-p (text node)))
         (let ((new-node (make-element "p")))
           (insert-nodes (text-pos node 0) new-node)
           (move-nodes (text-pos node 0) (next-sibling node)
@@ -80,6 +94,15 @@
           (insert-nodes pos new-node)
           (setf (pos marker) (pos-down new-node)))
         (split-node pos))))
+
+(define-command insert-no-break-space-maybe
+  :mode html-doc-mode (&optional (marker (focus)))
+  (let ((*this-command* 'self-insert-command))
+    (undo-auto-amalgamate))
+  (if (white-space-p (node-before marker))
+      (insert-nodes marker (string #\No-break_space))
+      (insert-nodes marker " "))
+  (setf (adjust-marker-direction (current-buffer)) 'backward))
 
 (defun cycle-heading (marker delta)
   (labels ((cycle-level (n)
