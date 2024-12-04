@@ -12,7 +12,9 @@
 (define-keys lisp-mode
   "C-M-x" 'eval-defun
   "C-c C-c" 'compile-defun
+  "C-u C-c C-c" 'compile-defun-debug
   "C-c C-k" 'lisp-compile-file
+  "C-u C-c C-k" 'lisp-compile-file-debug
   "M-p" 'previous-compiler-note
   "M-n" 'next-compiler-note
   "M-." 'goto-definition
@@ -622,10 +624,7 @@ Echo the result."
            (result (eval (node-to-sexp node))))
       (message "=> ~a" result))))
 
-(define-command compile-defun :mode lisp-mode ()
-  "Compile the surrounding top-level form.
-
-Highlights compiler notes."
+(defun compile-defun-with-policy (policy)
   (with-marker (marker (focus))
     (beginning-of-defun marker)
     (let ((cookie (uuid:format-as-urn nil (uuid:make-v4-uuid)))
@@ -643,7 +642,8 @@ Highlights compiler notes."
           (with-compilation-unit
               (:source-plist
                (list :neomacs-buffer (name (current-buffer))
-                     :neomacs-compile-cookie cookie))
+                     :neomacs-compile-cookie cookie)
+               :policy policy)
             (with-open-file (s input-file
                                :direction :output
                                :if-exists :supersede)
@@ -657,6 +657,18 @@ Highlights compiler notes."
           (unless (frame-root *compilation-buffer*)
             (when (first-child (document-root *compilation-buffer*))
               (display-buffer *compilation-buffer*))))))))
+
+(define-command compile-defun :mode lisp-mode ()
+  "Compile the surrounding top-level form.
+
+Highlights compiler notes."
+  (compile-defun-with-policy nil))
+
+(define-command compile-defun-debug :mode lisp-mode ()
+  "Compile the surrounding top-level form with maximal debug level.
+
+Highlights compiler notes."
+  (compile-defun-with-policy '(optimize (debug 3))))
 
 (defun last-expression (pos)
   (setq pos (resolve-marker pos))
@@ -691,10 +703,7 @@ Highlights compiler notes."
                   last-line)
     (setf (pos marker) (pos-right last-line))))
 
-(define-command lisp-compile-file :mode lisp-mode ()
-  "Compile current file.
-
-Highlight compiler notes."
+(defun lisp-compile-file-with-policy (policy)
   (when (modified (current-buffer))
     (when (read-yes-or-no "Save file? ")
       (save-buffer)))
@@ -706,8 +715,22 @@ Highlight compiler notes."
         (when (sexp-node-p c)
           (setf (attribute c 'tlf-number) i)
           (incf i)))
-      (load (compile-file (file-path (current-buffer))))
+      (load (with-compilation-unit
+                (:policy policy)
+              (compile-file (file-path (current-buffer)))))
       (message "Compiled and loaded"))))
+
+(define-command lisp-compile-file :mode lisp-mode ()
+  "Compile current file.
+
+Highlight compiler notes."
+  (lisp-compile-file-with-policy nil))
+
+(define-command lisp-compile-file-debug :mode lisp-mode ()
+  "Compile current file with maximal debug level.
+
+Highlight compiler notes."
+  (lisp-compile-file-with-policy '(optimize (debug 3))))
 
 ;;; Xref
 
