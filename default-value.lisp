@@ -33,6 +33,7 @@
     ((slot defaultable-direct-slot-definition)
      &key (default nil default-p))
   (when default-p
+    (export (sb-mop:slot-definition-name slot))
     (setf (slot-value slot 'default-value)
           (eval default))))
 
