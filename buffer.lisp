@@ -4,8 +4,7 @@
   '(buffer id name url load-status
     generate-buffer-name get-buffer buffer-alive-p
     make-buffer get-buffer-create rename-buffer
-    modes keymaps
-    focus adjust-marker-direction
+    modes keymaps focus
     document-root clear-focus render-focus render-focus-aux
     selection-marker selection-active
     on-buffer-loaded on-delete-buffer on-buffer-title-updated
@@ -60,12 +59,6 @@
    (focus-marker)
    (selection-marker)
    (selection-active :initform nil :type boolean)
-   (adjust-marker-direction
-    :initform 'forward :type (or (eql forward) (eql backward))
-    :documentation
-    "Preferred direction when `ensure-selectable' at the end of commands.
-
-Can be either `forward' or `backward'.")
    (markers :initform nil :type list)
    (document-root)
    (next-neomacs-id :initform 0 :type integer)
@@ -818,7 +811,7 @@ document.body.addEventListener('click',function (event){
          element)))))
 
 (defgeneric on-mouse-click (buffer x y)
-  (:method-combination progn)
+  (:method-combination progn :most-specific-last)
   (:method progn ((buffer buffer) x y)
     (when-let (pos (resolve-mouse-pos x y))
       (setf (pos (focus)) pos))))
