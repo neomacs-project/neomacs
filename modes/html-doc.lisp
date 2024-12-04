@@ -50,13 +50,14 @@
   (member node '(#\Space #\Newline #\Tab)))
 
 (defmethod selectable-p-aux ((buffer html-doc-mode) pos)
-  (and (let ((after (node-after pos)))
+  (let ((after (node-after pos)))
+    (and (not (tag-name-p after "p"))
          (if (characterp after)
              (and (find-if-not #'white-space-p (text (text-pos-node pos)))
                   (not (and (white-space-p after)
                             (white-space-p (node-before pos)))))
-             t))
-       (call-next-method)))
+             t)
+         (call-next-method))))
 
 (defun heading-text-to-id (text)
   (str:replace-all " " "-" (string-downcase text)))
