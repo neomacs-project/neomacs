@@ -268,7 +268,7 @@ when this row is selected.")))
 
 (defmethod on-mouse-click progn ((buffer completion-buffer-mode)
                                  (x t) (y t))
-  (ensure-selectable (focus) t))
+  (setf (adjust-marker-direction buffer) 'backward))
 
 (defmethod window-decoration-aux ((buffer minibuffer-completion-mode))
   (dom `(:div :class "buffer" :selectable ""

@@ -122,8 +122,8 @@ Test if POS is selectable in BUFFER."))
         (return)))
     (setf (pos marker)
           (or (npos-next pos)
-              (error 'end-of-subtree)))
-    (ensure-selectable marker t)))
+              (error 'end-of-subtree))
+          (adjust-marker-direction (host marker)) 'backward)))
 
 (define-command backward-element (&optional (marker (focus)))
   "Move to first element (excluding line break) to the left."
@@ -144,14 +144,18 @@ Test if POS is selectable in BUFFER."))
 
 (define-command end-of-buffer (&optional (marker (focus)))
   "Move to end of buffer."
-  (setf (pos marker) (end-pos (document-root (host marker))))
-  (ensure-selectable marker t))
+  (setf (adjust-marker-direction (current-buffer)) 'backward)
+  (setf (pos marker) (end-pos (document-root (host marker)))))
 
-(defun ensure-selectable (marker &optional backward)
+(defun ensure-selectable
+    (marker &optional (backward
+                       (eql (adjust-marker-direction (host marker))
+                            'backward)))
   "Move MARKER to nearest selectable position.
 
 Prefer going forward if BACKWARD is nil. Prefer going backward
-otherwise."
+otherwise. Default behavior depends on MARKER's host buffer's
+`adjust-marker-direction' slot."
   (let ((pos (pos marker)))
     (unless (selectable-p pos)
       (setq pos
@@ -177,12 +181,13 @@ otherwise."
     (setq pos (npos-next-until pos #'word-end-p))
     (setf (pos marker) (or pos (error 'end-of-subtree)))))
 
-(define-command backward-word (&optional (marker (focus)))
+(define-command backward-word (&optional (marker (focus) non-interactive))
   "Move to previous word start position."
   (let ((pos (pos marker)))
     (setq pos (npos-prev-until pos #'word-start-p))
     (setf (pos marker) (or pos (error 'beginning-of-subtree)))
-    (ensure-selectable marker t)))
+    (unless non-interactive
+      (setf (adjust-marker-direction (current-buffer)) 'backward))))
 
 (defgeneric block-element-p-aux (buffer element)
   (:method ((buffer buffer) (element element))
@@ -222,13 +227,17 @@ non-interactive use."
     (setf (pos marker) (or pos (error 'beginning-of-subtree)))
     n))
 
-(define-command end-of-line (&optional (marker (focus)))
+(define-command end-of-line
+  :interactive
+  (lambda () (list (focus) t))
+  (&optional (marker (focus)) interactive)
   "Move to end of line."
   (let ((pos (pos marker)))
     (iter (until (line-end-p pos))
       (setq pos (or (npos-next pos) (return))))
     (setf (pos marker) (or pos (error 'end-of-subtree)))
-    (ensure-selectable marker t)))
+    (when interactive
+      (setf (adjust-marker-direction (current-buffer)) 'backward))))
 
 (define-command beginning-of-defun (&optional (marker (focus)))
   "Move to current or previous toplevel node."
@@ -255,8 +264,8 @@ non-interactive use."
     (setq pos (npos-right-until
                pos (alex:compose #'not #'new-line-node-p
                                  #'node-after)))
-    (setf (pos marker) (or pos (error 'end-of-subtree)))
-    (ensure-selectable marker t)))
+    (setf (adjust-marker-direction (current-buffer)) 'backward
+          (pos marker) (or pos (error 'end-of-subtree)))))
 
 (defun forward-node-same-line (marker n)
   "Move MARKER forward by N selectable positions or till end of line."

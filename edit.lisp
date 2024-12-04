@@ -558,7 +558,7 @@ Called by `self-insert-command' to get the character for insertion."
   "Insert the last typed character into current buffer."
   (undo-auto-amalgamate)
   (insert-nodes (focus) (string (self-insert-char)))
-  (ensure-selectable (focus) t))
+  (setf (adjust-marker-direction (current-buffer)) 'backward))
 
 (define-command new-line (&optional (marker (focus)))
   "Insert a new line node (br element) at MARKER."
@@ -569,6 +569,8 @@ Called by `self-insert-command' to get the character for insertion."
 
 (define-command backward-delete (&optional (marker (focus)))
   (undo-auto-amalgamate)
+  (setf (adjust-marker-direction (host marker))
+        'backward)
   (if-let (before (node-before marker))
     (if (trivial-p before)
         (delete-nodes (pos-left marker) marker)
@@ -586,8 +588,7 @@ Called by `self-insert-command' to get the character for insertion."
                   (equal (attribute node "class")
                          (attribute prev "class")))
              (join-nodes prev node))
-            (t (backward-node marker)))))
-  (ensure-selectable marker t))
+            (t (backward-node marker))))))
 
 (define-command forward-delete (&optional (marker (focus)))
   (undo-auto-amalgamate)

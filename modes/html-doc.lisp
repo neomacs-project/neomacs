@@ -108,7 +108,7 @@
   (if (white-space-p (node-before marker))
       (insert-nodes marker (string #\No-break_space))
       (insert-nodes marker " "))
-  (ensure-selectable marker t))
+  (setf (adjust-marker-direction (current-buffer)) 'backward))
 
 (defun cycle-heading (marker delta)
   (labels ((cycle-level (n)
