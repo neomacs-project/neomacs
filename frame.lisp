@@ -178,7 +178,15 @@ fixed in future Electron, our logic may be simplified."
   "Make BUFFER fill its frame."
   (check-displayed buffer)
   (with-current-buffer (current-frame-root)
-    (erase-buffer)
+    ;; `erase-buffer' calls `evaluate-javascript-sync', which is
+    ;; currently not amalgamated and causes frame flicker, so we have
+    ;; to basically duplicate it here but use `evaluate-javascript'
+    ;; instead
+    (let ((*inhibit-dom-update* t))
+      (delete-nodes (pos-down (document-root (current-buffer))) nil))
+    (evaluate-javascript
+     "document.body.replaceChildren()"
+     (current-buffer))
     (init-frame-root (current-buffer) buffer)))
 
 (defvar *delay-frame-update-views* nil)

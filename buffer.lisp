@@ -431,15 +431,21 @@ operation."
            url (id buffer))
    :global))
 
+(defun call-with-amalgamate-js (buffer thunk)
+  (if (amalgamate-js-p buffer)
+      (funcall thunk)
+      (unwind-protect
+           (progn
+             (setf (amalgamate-js-p buffer) t)
+             (funcall thunk))
+        (setf (amalgamate-js-p buffer) nil)
+        (send-js-for-buffer
+         (get-output-stream-string (amalgamate-js-stream buffer))
+         buffer))))
+
 (defmacro with-amalgamate-js (buffer &body body)
-  `(unwind-protect
-        (progn
-          (setf (amalgamate-js-p ,buffer) t)
-          ,@body)
-     (setf (amalgamate-js-p ,buffer) nil)
-     (send-js-for-buffer
-      (get-output-stream-string (amalgamate-js-stream ,buffer))
-      ,buffer)))
+  `(call-with-amalgamate-js ,buffer
+                            (lambda () ,@body)))
 
 (defun get-buffer-create (name &rest args)
   "Returning a buffer with NAME if found, or create one.
