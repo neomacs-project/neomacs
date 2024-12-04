@@ -43,11 +43,13 @@
           (find-if (alex:rcurry #'slot-boundp 'default-value)
                    dslotds))))
 
-(defmethod sb-mop:slot-value-using-class
-    ((class defaultable-class) object (slot defaultable-effective-slot-definition))
-  (if (sb-mop:slot-boundp-using-class class object slot)
-      (call-next-method)
-      (slot-value (slot-value slot 'default-direct-slot) 'default-value)))
+(defmethod slot-unbound ((class defaultable-class) object slot-name)
+  ;; TODO: eliminate the search somehow?
+  (let ((slot (find slot-name (sb-mop:class-slots class)
+                    :key #'sb-mop:slot-definition-name)))
+    (if-let (ds (slot-value slot 'default-direct-slot))
+      (slot-value ds 'default-value)
+      (call-next-method))))
 
 (defmacro default (class-name slot-name)
   `(slot-value (find ,slot-name
