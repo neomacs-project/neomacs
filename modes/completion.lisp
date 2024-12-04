@@ -47,6 +47,7 @@ form (text annotation)."))
     (enable 'active-completion-mode)
     (setf (replace-range buffer) replace-range
           (completions buffer) completions
+          (completion-selection buffer) 0
           (menu-node buffer)
           (dom `(:table :class "completion-menu"
                  (:tbody ,@ (iter (for (c annot) in completions)
