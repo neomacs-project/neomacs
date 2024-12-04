@@ -568,16 +568,6 @@ Called by `self-insert-command' to get the character for insertion."
   (or (characterp node) (new-line-node-p node)))
 
 (define-command backward-delete (&optional (marker (focus)))
-  (let ((end (pos marker)))
-    (iter (until (pos-right end))
-      (if-let (up (pos-right (pos-up end)))
-        (setq end up)
-        (return)))
-    (backward-node marker)
-    (delete-range (range marker end))
-    (ensure-selectable marker t)))
-
-(define-command backward-delete (&optional (marker (focus)))
   (undo-auto-amalgamate)
   (if-let (before (node-before marker))
     (if (trivial-p before)
