@@ -293,8 +293,11 @@ JSON should have the format like what `+get-body-json-code+' produces:
     (serialize node stream)))
 
 (defun print-arglist (arglist package)
-  (let ((*package* package))
-    (format nil "(~{~a~^ ~})" arglist)))
+  (let ((*package* package)
+        (last (last arglist)))
+    (format nil "(~{~a~} ~:[~;. ~]~a)"
+            (butlast arglist) (consp last)
+            (if (consp last) (car last) last))))
 
 (defun render-doc-string-paragraph (p)
   (let ((last-end 0))
