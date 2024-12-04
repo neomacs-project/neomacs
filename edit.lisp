@@ -501,6 +501,17 @@ become the last child of NEW-NODE."
      "document.body.replaceChildren()"
      (current-buffer))))
 
+(defun serialize-document (document-root styles stream)
+  (write-string "<!DOCTYPE html>
+<html><head>" stream)
+  (dolist (style (reverse styles))
+    (format stream "<style id=\"neomacs-style-~a\">" style)
+    (write-string (cell-ref (css-cell style)) stream)
+    (write-string "</style>" stream))
+  (write-string "</head>" stream)
+  (serialize document-root stream)
+  (write-string "</html>" stream))
+
 (defgeneric revert-buffer-aux (buffer)
   (:documentation "Regenerate the content of BUFFER.")
   (:method ((buffer buffer))
@@ -519,15 +530,10 @@ become the last child of NEW-NODE."
              (id buffer)
              (quote-js
               (with-output-to-string (s)
-                (write-string "<!DOCTYPE html>
-<html><head>" s)
-                (dolist (style (reverse (styles buffer)))
-                  (format s "<style id=\"neomacs-style-~a\">" style)
-                  (write-string (cell-ref (css-cell style)) s)
-                  (write-string "</style>" s))
-                (write-string "</head>" s)
-                (serialize (document-root buffer) s)
-                (write-string "</html>" s))))
+                (serialize-document
+                 (document-root buffer)
+                 (styles buffer)
+                 s))))
      :global)
     (load-url buffer (format nil "neomacs://contents/~a" (id buffer)))))
 

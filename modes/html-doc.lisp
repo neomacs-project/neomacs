@@ -32,6 +32,11 @@
    (lambda () (eql (load-status buffer) :loading))
    nil))
 
+;; Avoid setting focus-tail to body when loading from file URL
+(defmethod render-focus-aux ((buffer html-doc-mode) pos)
+  (unless (eql (load-status buffer) :loading)
+    (call-next-method)))
+
 (defmethod on-buffer-loaded progn ((buffer html-doc-mode) url err)
   (when (equal url (str:concat "file://" (uiop:native-namestring (file-path buffer))))
     (unless err
@@ -292,6 +297,16 @@ JSON should have the format like what `+get-body-json-code+' produces:
   (let ((*serialize-exclude-attributes* '("neomacs-identifier")))
     (serialize node stream)))
 
+(defmethod save-buffer-aux ((buffer html-doc-mode))
+  (with-open-file (s (file-path buffer)
+                     :direction :output :if-exists :supersede)
+    (with-standard-io-syntax
+      (let ((*serialize-exclude-attributes* '("neomacs-identifier")))
+        (serialize-document
+         (document-root buffer)
+         nil s))
+      nil)))
+
 (defun print-arglist (arglist package)
   (let ((*package* package)
         (last (last arglist)))
@@ -449,11 +464,13 @@ JSON should have the format like what `+get-body-json-code+' produces:
                        :direction :output
                        :if-exists :supersede)
       (message "Rendering ~a" output-path)
-      (let ((*serialize-exclude-attributes* '("neomacs-identifier"))
-            (*package* (find-package "NEOMACS")))
-        (serialize
-         (expand-comma-expr (document-root (current-buffer)))
-         s))
+      (with-standard-io-syntax
+        (let ((*serialize-exclude-attributes* '("neomacs-identifier"))
+              (*package* (find-package "NEOMACS")))
+          (serialize-document
+           (expand-comma-expr (document-root (current-buffer)))
+           (styles (current-buffer))
+           s)))
       (message "Rendered to ~a" output-path))))
 
 (defun build-manual-section (file)
