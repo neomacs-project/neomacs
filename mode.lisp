@@ -5,7 +5,7 @@
 
 (defvar *modes* nil)
 
-(defclass mode (standard-class)
+(defclass mode (defaultable-class)
   ((commands :initform nil :accessor commands)
    (keymap :accessor keymap)
    (lighter

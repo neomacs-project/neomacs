@@ -45,7 +45,6 @@
   :depends-on (:lwcells
                :ceramic
                :str
-               :dynamic-mixins
                :parenscript
                :lass
                :spinneret

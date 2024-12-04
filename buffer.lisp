@@ -50,7 +50,7 @@
 
 (defvar *buffer-table-lock* (bt:make-recursive-lock))
 
-(define-class buffer (default-mixin)
+(define-class buffer ()
   ((id :type integer)
    (name :type string)
    (url :initarg :url :type quri:uri)
@@ -66,7 +66,7 @@
     "Preferred direction when `ensure-selectable' at the end of commands.
 
 Can be either `forward' or `backward'.")
-   (markers :type list)
+   (markers :initform nil :type list)
    (document-root)
    (next-neomacs-id :initform 0 :type integer)
    (scroll-margin
@@ -87,6 +87,7 @@ Can be either `forward' or `backward'.")
    (window-quit-action :initform nil)
    (amalgamate-js-p :initform nil)
    (amalgamate-js-stream :initform (make-string-output-stream)))
+  (:metaclass defaultable-class)
   (:default-initargs :url "neomacs://null.contents"))
 
 (defmethod id :around ((buffer buffer))
@@ -94,7 +95,7 @@ Can be either `forward' or `backward'.")
 
 (defun enable (mode-name)
   "Enable the mode named by MODE-NAME in current buffer."
-  (dynamic-mixins:ensure-mix (current-buffer) mode-name))
+  (ensure-mix (current-buffer) mode-name))
 
 (defun disable (mode-name)
   "Disable the mode named by MODE-NAME in current buffer.
@@ -105,7 +106,7 @@ This also disables any modes that has MODE-NAME as super-mode."
        (iter (for m in (modes (current-buffer)))
          (when (subtypep m mode-name)
            (collect m))))
-    (apply #'dynamic-mixins:delete-from-mix
+    (apply #'delete-from-mix
            (current-buffer)
            delete-modes)))
 
@@ -184,7 +185,9 @@ for which MODE-NAME is being disabled."))
   (unless name (alex:required-argument :name))
   (when id (setf (slot-value buffer 'id) (parse-integer id)))
   (bt:with-recursive-lock-held (*buffer-table-lock*)
-    (setf (name buffer) (generate-buffer-name name disambiguate)
+    ;; Initialize with slot-value instead of accessor, to avoid triggering
+    ;; the before method to update window title
+    (setf (slot-value buffer 'name) (generate-buffer-name name disambiguate)
           (gethash (name buffer) *buffer-name-table*) buffer)
     (unless (slot-boundp buffer 'id)
       (setf (slot-value buffer 'id) (generate-buffer-id)))
@@ -405,8 +408,7 @@ buffer."
   (let ((modes (uiop:ensure-list (getf args :mode))))
     (remf args :mode)
     (apply #'make-instance
-           (apply #'dynamic-mixins:mix
-                  (append modes (list 'buffer)))
+           (apply #'mix (append modes (list 'buffer)))
            :name name args)))
 
 (defun load-url (buffer url)
@@ -452,9 +454,8 @@ If an existing buffer is found, it is reinitialized with ARGS."
         (remf args :mode)
         (change-class
          existing
-         (dynamic-mixins::ensure-mixin
-          (apply #'dynamic-mixins:mix
-                 (append modes (list 'buffer)))))
+         (ensure-mixin
+          (apply #'mix (append modes (list 'buffer)))))
         (apply #'reinitialize-instance
                existing args))
       (apply #'make-buffer name args))))
@@ -473,8 +474,7 @@ If an existing buffer is found, it is reinitialized with ARGS."
 
 (defun modes (buffer)
   (iter (for c in (ignore-errors
-                   (slot-value (class-of buffer)
-                               'dynamic-mixins::classes)))
+                   (slot-value (class-of buffer) 'classes)))
     (when (typep c 'mode)
       (collect (class-name c)))))
 
