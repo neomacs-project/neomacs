@@ -88,7 +88,7 @@ selected.scrollIntoViewIfNeeded()}"
 if(menu){
     const rect = document.documentElement.getBoundingClientRect();
     const mw = menu.getBoundingClientRect().width;
-    const mh = Math.min(menu.scrollHeight,300);
+    const mh = 300;
     const x = ~a; const y = ~a; const w = ~a; const h = ~a;
     menu.style.left = Math.max(0, Math.min(x+w, rect.width - mw)) - rect.left + 'px';
     if(y > mh && y+h+mh > rect.height){
