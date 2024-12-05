@@ -36,6 +36,8 @@
   "Map buffer name to buffer instances.")
 
 (defun generate-buffer-name (name &optional disambiguate)
+  (when (zerop (length name))
+    (setq name "-"))
   (if (gethash name *buffer-name-table*)
       (progn
         (when disambiguate
