@@ -3,15 +3,14 @@
 (sera:export-always
     '(inspect-object))
 
-(define-mode describe-mode () ())
-
-(push 'read-only-mode (hooks 'describe-mode))
+(define-mode describe-mode (read-only-mode) ())
 
 (define-keys describe-mode
   "q" 'quit-buffer)
 
-(define-mode describe-key-mode
-    (describe-mode)
+;;; Describe key
+
+(define-mode describe-key-mode (describe-mode)
   ((for-key :initform (alex:required-argument :key)
             :initarg :key)
    (for-buffer :initform (alex:required-argument :buffer)
@@ -114,10 +113,79 @@
                   " is unbound in "
                   ,(print-dom (for-buffer buffer)))))))))
 
-(defsheet describe-mode
-    `(("p" :margin-top 0 :margin-bottom 0)
-      ("h1" :margin-top 0 :margin-bottom 0
-            :font-size "1.2rem")))
+;;; Describe bindings
+
+(define-mode keymap-list-mode (list-mode) ())
+
+(defmethod generate-rows ((buffer keymap-list-mode))
+  (let ((*print-case* :downcase))
+    (iter (for (name keymap) in-hashtable *keymap-table*)
+      (collect (attach-presentation
+                (dom `(:tr (:td ,(princ-to-string name))))
+                keymap)))))
+
+(defun render-describe-keymap-rows (keymap)
+  (let (rows)
+     (traverse-keymap
+      keymap
+      (lambda (kseq cmd)
+        (push (dom `(:tr (:td ,(key-description kseq))
+                         (:td ,(print-dom cmd))))
+              rows)))
+     (nreverse rows)))
+
+(define-mode describe-keymap-mode (describe-mode list-mode)
+  ((for-keymap :initform (alex:required-argument :keymap)
+               :initarg :keymap)))
+
+(define-command describe-keymap
+  :interactive
+  (lambda ()
+    (list (completing-read "Describe keymap: " 'keymap-list-mode)))
+  (keymap)
+  "Describe key bindings in KEYMAP."
+  (pop-to-buffer
+   (make-buffer
+    "*describe-keymap*" :mode 'describe-keymap-mode
+                        :keymap keymap :revert t)))
+
+(defmethod generate-rows ((buffer describe-keymap-mode))
+  (render-describe-keymap-rows (for-keymap buffer)))
+
+(defmethod revert-buffer-aux ((buffer describe-keymap-mode))
+  (call-next-method)
+  (insert-nodes
+   (pos-down (document-root buffer))
+   (make-element "div" :class "header"
+                       :children (list
+                                  (print-dom
+                                   (keymap-name
+                                    (for-keymap buffer)))))))
+
+(define-mode describe-bindings-mode (describe-mode list-mode)
+  ((for-buffer :initform (alex:required-argument :buffer)
+               :initarg :buffer)))
+
+(define-command describe-bindings ()
+  "Describe key bindings in currently active keymaps."
+  (pop-to-buffer
+   (make-buffer
+    "*describe-bindings*" :mode 'describe-bindings-mode
+    :buffer (current-buffer) :revert t)))
+
+(defmethod revert-buffer-aux ((buffer describe-bindings-mode))
+  (erase-buffer)
+  (iter (for keymap in (keymaps (for-buffer buffer)))
+    (insert-nodes
+     (end-pos (document-root buffer))
+     (dom `(:div :class "header"
+                 ,(print-dom (keymap-name keymap))))
+     (dom `(:table
+            (:tbody ,@ (render-describe-keymap-rows keymap))))))
+  (setf (pos (focus buffer))
+        (pos-down (document-root buffer))))
+
+;;; Inspector
 
 (define-mode inspector-mode (describe-mode lisp-mode)
   ((for-object
@@ -147,7 +215,7 @@
                   :object object :revert t)))
 
 (define-command eval-expression-inspect ()
-  "Evaluate a Lisp expression from minibuffer inspect the result."
+  "Evaluate a Lisp expression from minibuffer and inspect the result."
   (let ((*package* (current-package)))
     (inspect-object
      (eval (read-from-minibuffer
@@ -157,6 +225,13 @@
 (define-command inspect-presentation ()
   "Inspect object presentation under focus."
   (inspect-object (presentation-at (focus))))
+
+;;; Styles
+
+(defsheet describe-mode
+    `(("p" :margin-top 0 :margin-bottom 0)
+      ("h1" :margin-top 0 :margin-bottom 0
+            :font-size "1.2rem")))
 
 (defsheet inspector-mode
     `(("table" :width "100vw"

@@ -123,7 +123,8 @@
                       ("tbody:empty::after"
                        :content "<No Item>"
                        :display "inline")
-                      ("td" :padding-right "1em")))
+                      ("td" :padding-right "1em")
+                      (".header" :inherit bold)))
 
 (define-mode file-list-mode (list-mode)
   ((file-path
@@ -193,8 +194,7 @@ This should always be a directory pathname (with NIL name and type fields).")
         (with-current-buffer buffer
           (revert-buffer))))))
 
-(defsheet file-list-mode `((".directory::after" :content "/")
-                           (".header" :inherit bold)))
+(defsheet file-list-mode `((".directory::after" :content "/")))
 
 (define-command file-list-find-file
   :mode file-list-mode ()
