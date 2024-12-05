@@ -80,7 +80,8 @@
 
 (define-command buffer-list-delete-buffer
   :mode buffer-list-mode ()
-  (delete-buffer (presentation-at (focus) 'buffer t)))
+  (delete-buffer (presentation-at (focus) 'buffer t))
+  (revert-buffer))
 
 (define-command buffer-list-toggle-hidden
   :mode buffer-list-mode ()
