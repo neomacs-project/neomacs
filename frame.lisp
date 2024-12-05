@@ -76,11 +76,13 @@
     (when-let (focused-buffer (window-buffer window-node))
       (evaluate-javascript
        (format nil "{const frame = Ceramic.frames[~S];
-if(frame){Ceramic.buffers[~S].webContents.focusRequested = true;
-Ceramic.buffers[~S].webContents.focus();
-Ceramic.frames[~S].setTitle(~S);}}"
-               (id buffer) (id focused-buffer) (id focused-buffer)
-               (id buffer) (name focused-buffer))
+if(frame){
+const buffer = Ceramic.buffers[~S]
+if(!buffer.webContents.isFocused()){
+buffer.webContents.focusRequested = true;
+buffer.webContents.focus();}
+frame.setTitle(~S);}}"
+               (id buffer) (id focused-buffer)(name focused-buffer))
        :global))))
 
 (defmethod enable-aux ((mode (eql 'frame-root-mode)))
@@ -128,6 +130,10 @@ fixed in future Electron, our logic may be simplified."
   (let ((node (node-after pos)))
     (and (class-p node "buffer" "minibuffer")
          (attribute node "selectable"))))
+
+(defmethod on-mouse-click progn ((buffer frame-root-mode)
+                                 (x t) (y t))
+  (setf (adjust-marker-direction buffer) 'backward))
 
 (defun focused-buffer (&optional (frame-root (current-frame-root)))
   (when frame-root
@@ -366,15 +372,21 @@ nil, the window displaying BUFFER is closed instead."
     buffer))
 
 (defun focus-buffer (buffer)
-  "Give BUFFER focus.
+  "Give BUFFER or its parent buffer focus.
 
-BUFFER must be already displayed.
-
-If BUFFER's window decoration is not focusable, does nothing."
-  (when-let (node (window-decoration buffer))
+BUFFER must be already displayed."
+  (when-let (frame (frame-root buffer))
     (with-current-buffer (frame-root buffer)
-      (when (selectable-p node)
-        (setf (pos (focus)) node))
+      (when-let
+          (node (or (window-decoration buffer)
+                    (block nil
+                      (do-elements
+                          (lambda (node)
+                            (when (equal (attribute node "buffer") (id buffer))
+                              (return node)))
+                        (document-root (current-buffer))))))
+        (setq node (pos-up-ensure node #'selectable-p))
+        (when node (setf (pos (focus)) node)))
       buffer)))
 
 (define-keys :global
