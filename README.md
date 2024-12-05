@@ -10,7 +10,7 @@ is a usable Lisp IDE and keyboard-driven browser.
 
 Prebuilt binary for x64 Linux: https://github.com/neomacs-project/neomacs/releases/
 
-Documentation: `M-x manual`. There is also an online version at https://neomacs-project.github.io/doc/toc.html
+Documentation: `M-x manual`. There is also an online version at https://neomacs-project.github.io/doc/
 
 To build locally, make sure you have SBCL, quicklisp, and the Ultralisp dist (if you haven't done so, `(ql-dist:install-dist "http://dist.ultralisp.org/" :prompt nil)`). Clone this repo and `https://github.com/ceramic/ceramic` under `~/quicklisp/local-projects/`. Then `(ql:quickload "neomacs")` and `(neomacs:start)`.
 
