@@ -577,7 +577,7 @@ Called by `self-insert-command' to get the character for insertion."
       (while next) (setq end next))
     (map-range (range beg end)
                (lambda (beg end)
-                 (unless (or (equal beg end)
+                 (unless (or (equalp beg end)
                              (and (end-pos-p beg) (not end)))
                    (unless
                        (every (alex:curry #'trivial-p-aux buffer)
@@ -610,7 +610,7 @@ Called by `self-insert-command' to get the character for insertion."
       (while next) (setq beg next))
     (map-range (range beg end)
                (lambda (beg end)
-                 (unless (or (equal beg end)
+                 (unless (or (equalp beg end)
                              (and (end-pos-p beg) (not end)))
                    (unless
                        (every (alex:curry #'trivial-p-aux buffer)
