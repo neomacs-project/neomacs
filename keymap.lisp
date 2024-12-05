@@ -30,7 +30,6 @@
   '(trivial-types:proper-list key))
 
 (defstruct (keymap (:constructor %make-keymap))
-  undef-hook
   (name (alex:required-argument :name) :type symbol)
   (table (make-hash-table :test 'eq))
   (function-table (make-hash-table :test 'eq)))
@@ -189,9 +188,7 @@ If STREAM is nil, return the string representation instead."
         (values next :key)
         (if-let (next (gethash cmd (keymap-function-table keymap)))
           (values next :function)
-          (if-let (next (keymap-undef-hook keymap))
-            (values next :undef)
-            cmd))))))
+          cmd)))))
 
 (defun lookup-keybind (key &optional (keymaps (keymaps (current-buffer))))
   "Lookup the command bound to KEY using KEYMAPS.
