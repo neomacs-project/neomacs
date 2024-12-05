@@ -550,6 +550,7 @@ JSON should have the format like what `+get-body-json-code+' produces:
 (defsheet html-doc-mode
     `((":empty::after" :content "_")
       ("li p" :margin 0)
-      ("body" :white-space "normal")
+      ("body" :white-space "normal" :max-width "48rem"
+              :text-align "justify" :hyphens "auto")
       (".comma-expr::before" :content ",")
       (".comma-expr" :border "solid 1px currentColor")))
