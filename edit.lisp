@@ -564,9 +564,6 @@ Called by `self-insert-command' to get the character for insertion."
   "Insert a new line node (br element) at MARKER."
   (insert-nodes marker (make-new-line-node)))
 
-(defun trivial-p (node)
-  (or (characterp node) (new-line-node-p node)))
-
 (defgeneric trivial-p-aux (buffer node)
   (:method ((buffer buffer) node) nil))
 
