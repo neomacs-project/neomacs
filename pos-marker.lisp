@@ -384,6 +384,14 @@ Return that buffer or nil otherwise."
            ,@body)
        (delete-marker ,marker))))
 
+(defmacro with-advance-p ((marker advance-p) &body body)
+  "Temporarily set MARKER's ADVANCE-P during BODY."
+  `(let ((saved-advance-p (advance-p ,marker)))
+     (unwind-protect
+          (progn (setf (advance-p ,marker) ,advance-p)
+                 ,@body)
+       (setf (advance-p ,marker) saved-advance-p))))
+
 (defvar *current-buffer* nil)
 
 (defmacro with-current-buffer (buffer &body body)
