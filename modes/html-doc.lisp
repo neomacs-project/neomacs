@@ -455,27 +455,29 @@ JSON should have the format like what `+get-body-json-code+' produces:
     (process node)))
 
 (define-command render-html-doc
-  :mode html-doc-mode ()
+  :mode html-doc-mode
+  (&optional
+   (output-path
+    (let ((path (file-path (current-buffer))))
+      (make-pathname
+       :directory
+       (append (pathname-directory path)
+               (list "build"))
+       :defaults path))))
   "Render current buffer by expanding comma expressions."
-  (let* ((path (file-path (current-buffer)))
-         (output-path (make-pathname
-                       :directory
-                       (append (pathname-directory path)
-                               (list "build"))
-                       :defaults path)))
-    (ensure-directories-exist output-path)
-    (with-open-file (s output-path
-                       :direction :output
-                       :if-exists :supersede)
-      (message "Rendering ~a" output-path)
-      (with-standard-io-syntax
-        (let ((*serialize-exclude-attributes* '("neomacs-identifier"))
-              (*package* (find-package "NEOMACS")))
-          (serialize-document
-           (expand-comma-expr (document-root (current-buffer)))
-           (styles (current-buffer))
-           s)))
-      (message "Rendered to ~a" output-path))))
+  (ensure-directories-exist output-path)
+  (with-open-file (s output-path
+                     :direction :output
+                     :if-exists :supersede)
+    (message "Rendering ~a" output-path)
+    (with-standard-io-syntax
+      (let ((*serialize-exclude-attributes* '("neomacs-identifier"))
+            (*package* (find-package "NEOMACS")))
+        (serialize-document
+         (expand-comma-expr (document-root (current-buffer)))
+         (styles (current-buffer))
+         s)))
+    (message "Rendered to ~a" output-path)))
 
 (defun build-manual-section (file)
   (with-current-buffer (find-file-no-select file)
@@ -531,12 +533,13 @@ JSON should have the format like what `+get-body-json-code+' produces:
         (insert-nodes
          (end-pos (document-root (current-buffer)))
          *dom-output*)
-        (save-buffer)))))
+        (save-buffer)
+        (render-html-doc (ceramic:resource 'doc "build/index.html"))))))
 
 (define-command manual ()
   "View Neomacs manual."
   (let ((toc-path
-          (ceramic:resource 'doc "build/toc.html")))
+          (ceramic:resource 'doc "build/index.html")))
     (unless (uiop:file-exists-p toc-path)
       (if (read-yes-or-no "Manual seems not built yet, build now? ")
           (build-manual)
