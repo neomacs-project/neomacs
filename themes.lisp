@@ -65,7 +65,7 @@ not defined in this theme are inherited from PARENT."
     "A dark theme featuring monospace fonts."
   'frame-body
   `(:background "rgb(0,9,12)"
-    :margin "8px"
+    :padding "8px"
     :inherit default
     :background-image "radial-gradient(rgb(120,160,190,0.2) 1px,transparent 0)"
     :background-size "20px 20px")
@@ -198,7 +198,7 @@ not defined in this theme are inherited from PARENT."
   :inherit 'matrix
   'frame-body
   `(:background "#fff"
-    :margin "8px"
+    :padding "8px"
     :inherit default
     :background-image "radial-gradient(#ccc 1px,transparent 0)"
     :background-size "20px 20px")
@@ -270,7 +270,7 @@ not defined in this theme are inherited from PARENT."
   "A light and blue theme."
   'frame-body
   `(:background "white"
-    :margin "8px"
+    :padding "8px"
     :inherit default
     :background-size "10px 10px")
   'frame-buffer
