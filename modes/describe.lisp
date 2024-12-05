@@ -153,14 +153,13 @@
   (render-describe-keymap-rows (for-keymap buffer)))
 
 (defmethod revert-buffer-aux ((buffer describe-keymap-mode))
-  (call-next-method)
-  (insert-nodes
-   (pos-down (document-root buffer))
-   (make-element "div" :class "header"
-                       :children (list
-                                  (print-dom
-                                   (keymap-name
-                                    (for-keymap buffer)))))))
+  (let ((*package* (find-package "NEOMACS-USER")))
+    (call-next-method)
+    (insert-nodes
+     (pos-down (document-root buffer))
+     (make-element
+      "div" :class "header"
+      :children (list (print-dom (keymap-name (for-keymap buffer))))))))
 
 (define-mode describe-bindings-mode (describe-mode list-mode)
   ((for-buffer :initform (alex:required-argument :buffer)
@@ -175,13 +174,14 @@
 
 (defmethod revert-buffer-aux ((buffer describe-bindings-mode))
   (erase-buffer)
-  (iter (for keymap in (keymaps (for-buffer buffer)))
-    (insert-nodes
-     (end-pos (document-root buffer))
-     (dom `(:div :class "header"
-                 ,(print-dom (keymap-name keymap))))
-     (dom `(:table
-            (:tbody ,@ (render-describe-keymap-rows keymap))))))
+  (let ((*package* (find-package "NEOMACS-USER")))
+    (iter (for keymap in (keymaps (for-buffer buffer)))
+      (insert-nodes
+       (end-pos (document-root buffer))
+       (dom `(:div :class "header"
+                   ,(print-dom (keymap-name keymap))))
+       (dom `(:table
+              (:tbody ,@ (render-describe-keymap-rows keymap)))))))
   (setf (pos (focus buffer))
         (pos-down (document-root buffer))))
 
