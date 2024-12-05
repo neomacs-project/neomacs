@@ -59,6 +59,9 @@
              t)
          (call-next-method))))
 
+(defmethod trivial-p-aux ((buffer html-doc-mode) text-node)
+  (every #'white-space-p (text text-node)))
+
 (defun heading-text-to-id (text)
   (str:replace-all " " "-" (string-downcase text)))
 
