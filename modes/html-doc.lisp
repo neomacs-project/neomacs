@@ -25,7 +25,7 @@
 (defmethod revert-buffer-aux :around ((buffer html-doc-mode))
   (erase-buffer)
   (when (uiop:file-exists-p (file-path buffer))
-    (load-url buffer (str:concat "file://" (uiop:native-namestring (file-path buffer)))))
+    (load-url buffer (file-path-url (file-path buffer))))
   ;; Enter recursive edit to wait for buffer to load, so that
   ;; buffer state is updated when `revert-buffer' returns.
   (recursive-edit
@@ -38,7 +38,7 @@
     (call-next-method)))
 
 (defmethod on-buffer-loaded progn ((buffer html-doc-mode) url err)
-  (when (equal url (str:concat "file://" (uiop:native-namestring (file-path buffer))))
+  (when (equal url (file-path-url (file-path buffer)))
     (unless err
       (update-document-model buffer)
       (mapc (alex:curry #'do-dom (alex:curry #'on-node-setup buffer))
@@ -547,8 +547,7 @@ JSON should have the format like what `+get-body-json-code+' produces:
     (switch-to-buffer
      (get-buffer-create
       "*manual*" :mode 'web-mode
-      :url (str:concat
-            "file://" (uiop:native-namestring toc-path))))))
+      :url (file-path-url toc-path)))))
 
 (defsheet html-doc-mode
     `((":empty::after" :content "_")

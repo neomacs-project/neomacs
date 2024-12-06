@@ -356,9 +356,12 @@ wc.setZoomFactor(1.0)}"
     (user-error "Can not go to history entry ~a." index)))
 
 
+(defun file-path-url (path)
+  (str:concat "file://" (uiop:native-namestring path)))
+
 (defmethod revert-buffer-aux :around ((buffer web-mode))
   (when (typep buffer 'file-mode)
-    (setf (url buffer) (str:concat "file://" (uiop:native-namestring (file-path buffer)))))
+    (setf (url buffer) (file-path-url (file-path buffer))))
   (load-url buffer (url buffer)))
 
 (defun web-send-key (key)

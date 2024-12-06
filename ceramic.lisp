@@ -123,7 +123,9 @@ this long.")
                     (ceramic.runtime:executable-pathname))))
 
 (defun mount-asset (host path)
-  "Mount files under PATH to neomacs://HOST/."
+  "Mount files under PATH to neomacs://HOST/.
+
+PATH should be an absolute directory pathname (ending with slash)."
   (evaluate-javascript
    (format nil "Mounts[~s]='~a'"
            host (quote-js (uiop:native-namestring path)))

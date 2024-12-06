@@ -63,8 +63,7 @@ Try the following workaround:
     (when (uiop:file-exists-p intro-path)
       (make-buffer
        "*intro*" :mode 'web-mode
-       :url (str:concat "file://"
-                        (uiop:native-namestring intro-path)))))
+       :url (file-path-url intro-path))))
   (setf *current-frame-root* (make-frame))
   (unless self-govern
     (setf *no-debugger* t
