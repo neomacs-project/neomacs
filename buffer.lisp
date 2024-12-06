@@ -602,9 +602,9 @@ WIDTH and HEIGHT are numbers in pixels."
   (bind (((x y w h)
           (or (get-bounding-client-rect pos)
               (return-from render-br-focus))))
-    (when (zerop h)
-      (when-let ((rect (get-bounding-client-rect (pos-left pos))))
-        (bind (((xx yy ww hh) rect))
+    (when-let ((rect (get-bounding-client-rect (pos-left pos))))
+      (bind (((xx yy ww hh) rect))
+        (unless (zerop ww)
           (setq x (+ xx ww) y yy w 0 h hh))))
     (evaluate-javascript
      (ps:ps
