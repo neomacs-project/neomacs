@@ -3,7 +3,7 @@
 (sera:export-always
     '(start *startup-hooks* *kill-hooks*))
 
-(defvar *startup-hooks* '(load-web-history install-adblocker)
+(defvar *startup-hooks* '(load-web-history install-adblocker mount-pdf-tmp)
   "List of functions to run after Neomacs starts.")
 
 (defvar *kill-hooks* '(save-web-history)

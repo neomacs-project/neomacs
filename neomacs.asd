@@ -40,6 +40,7 @@
                (:file "modes/web")
                (:file "modes/web-hints")
                (:file "modes/web-adblock")
+               (:file "modes/pdf")
                (:file "intl/simple")
                (:file "start"))
   :depends-on (:lwcells
@@ -61,6 +62,7 @@
                :osicat
                :swank
                :swank/exts
+               :plump
                :trivial-package-local-nicknames))
 
 (asdf:defsystem neomacs/app
