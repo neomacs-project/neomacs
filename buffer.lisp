@@ -788,7 +788,7 @@ If it is, should signal a condition of type `read-only-error'."))
             return {element:child.getAttribute('neomacs-identifier')}}}
 }
 document.body.addEventListener('click',function (event){
-    electronAPI.send('click',{x:event.clientX, y:event.clientY})})")
+    electronAPI.send('neomacs',{type:'click', x:event.clientX, y:event.clientY})})")
 
 (defun resolve-mouse-pos (x y)
   (let ((data (evaluate-javascript-sync
@@ -818,6 +818,15 @@ document.body.addEventListener('click',function (event){
                              (document-root (current-buffer))
                              x)))
          element)))))
+
+(defvar *ipc-handler-table* (make-hash-table :test 'equal))
+
+(setf (gethash "click" *ipc-handler-table*)
+      (lambda (buffer details)
+        (when buffer
+          (with-current-buffer buffer
+            (on-mouse-click buffer (assoc-value details :x)
+                            (assoc-value details :y))))))
 
 (defgeneric on-mouse-click (buffer x y)
   (:method-combination progn)

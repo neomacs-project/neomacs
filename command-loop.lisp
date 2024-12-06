@@ -222,11 +222,12 @@ If nil, disable message logging. If t, log messages but don't truncate
           ((equal type "did-stop-loading")
            (when buffer (setf (load-spinner buffer) nil)))
           ((equal type "keyUp"))
-          ((equal type "click")
-           (when buffer
-             (with-current-buffer buffer
-               (on-mouse-click buffer (assoc-value event :x)
-                               (assoc-value event :y)))))
+          ((equal type "ipc")
+           (let ((details (assoc-value event :details)))
+             (if-let (handler (gethash (assoc-value details :type)
+                                       *ipc-handler-table*))
+               (funcall handler buffer details)
+               (warn "Unreconginized IPC message: ~a" event))))
           ((equal type "did-start-navigation")
            (when buffer
              (with-current-buffer buffer
