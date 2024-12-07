@@ -141,6 +141,8 @@ Ceramic.createBuffer = function(id, url, options) {
         RemoteJS.send(JSON.stringify({inputEvent: {type: "enter-html-full-screen"}, buffer: id}));});
     buf.webContents.on('leave-html-full-screen',()=>{
         RemoteJS.send(JSON.stringify({inputEvent: {type: "leave-html-full-screen"}, buffer: id}));});
+    buf.webContents.on('found-in-page',(event, result)=>{
+        RemoteJS.send(JSON.stringify({inputEvent: {type: "found-in-page", ...result}, buffer: id}));});
     buf.webContents.loadURL(url).then(()=>
         {RemoteJS.send(JSON.stringify({inputEvent: {type: "load", url: url}, buffer: id}));},
         (err)=>{RemoteJS.send(JSON.stringify({inputEvent: {type: "fail-load", url: url, err: err}, buffer: id}));});

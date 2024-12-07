@@ -251,6 +251,11 @@ If nil, disable message logging. If t, log messages but don't truncate
           ((equal type "leave-html-full-screen")
            (with-current-buffer (frame-root buffer)
              (disable 'fullscreen-mode)))
+          ((equal type "found-in-page")
+           (let ((match (assoc-value event :matches)))
+             (if (zerop match)
+                 (message "No candidate")
+                 (message "~a candidate~P" match match))))
           ((eq type 'debug-request)
            (debug-for-environment
             (assoc-value event :environment)
