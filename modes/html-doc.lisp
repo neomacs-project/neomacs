@@ -333,11 +333,8 @@ JSON should have the format like what `+get-body-json-code+' produces:
       nil)))
 
 (defun print-arglist (arglist package)
-  (let ((*package* package)
-        (last (last arglist)))
-    (format nil "(~{~a~} ~:[~;. ~]~a)"
-            (butlast arglist) (consp last)
-            (if (consp last) (car last) last))))
+  (let ((*package* package))
+    (if arglist (format nil "~a" arglist) "()")))
 
 (defun render-doc-string-paragraph (p)
   (let ((last-end 0))
