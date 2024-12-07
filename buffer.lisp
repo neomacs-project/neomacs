@@ -271,6 +271,7 @@ changed."
     (let ((marker (focus-marker buffer)))
       (setf (pos marker) (pos marker)))
     (dolist (style (reverse (styles buffer)))
+      (ensure-style buffer style)
       (update-style buffer style))
     (dolist (script (content-scripts buffer))
       (evaluate-javascript (get script 'content-script) buffer))
@@ -836,20 +837,29 @@ document.body.addEventListener('click',function (event){
 
 ;;; Styles
 
-(defun update-style (buffer style)
+(defun ensure-style (buffer style)
+  "Ensure STYLE exist as the last element in <header> for BUFFER."
   (let ((id (format nil "neomacs-style-~a" style)))
-    (with-current-buffer buffer
-      (evaluate-javascript
-       (ps:ps
-         (let ((element (ps:chain document (get-element-by-id
-                                            (ps:lisp id)))))
-           (unless element
-             (setq element (ps:chain document (create-element "style")))
-             (setf (ps:chain element id) (ps:lisp id))
-             (ps:chain document head (append-child element)))
-           (setf (ps:chain element inner-h-t-m-l)
-                 (ps:lisp (cell-ref (css-cell style))))))
-       buffer))))
+    (evaluate-javascript
+     (ps:ps
+       (let ((element (ps:chain document (get-element-by-id
+                                          (ps:lisp id)))))
+         (unless element
+           (setq element (ps:chain document (create-element "style")))
+           (setf (ps:chain element id) (ps:lisp id)))
+         (ps:chain document head (append-child element))))
+     buffer)))
+
+(defun update-style (buffer style)
+  "Update CSS content of STYLE in BUFFER."
+  (let ((id (format nil "neomacs-style-~a" style)))
+    (evaluate-javascript
+     (ps:ps
+       (let ((element (ps:chain document (get-element-by-id
+                                          (ps:lisp id)))))
+         (setf (ps:chain element inner-h-t-m-l)
+               (ps:lisp (cell-ref (css-cell style))))))
+     buffer)))
 
 (defun remove-style (buffer style)
   (let ((id (format nil "neomacs-style-~a" style)))
@@ -862,8 +872,10 @@ document.body.addEventListener('click',function (event){
      buffer)))
 
 (defmethod (setf styles) :before (new-val (buffer buffer))
-  ;; TODO: maintain order of the style sheets correctly
-  (dolist (style (stable-set-difference new-val (slot-value buffer 'styles)))
+  ;; First ensure correct order
+  (dolist (style (reverse new-val))
+    (ensure-style buffer style))
+  (dolist (style (set-difference new-val (slot-value buffer 'styles)))
     (update-style buffer style)
     (add-observer (css-cell style)
                   (make-update-style buffer style)))
