@@ -41,19 +41,26 @@
         (setq cmd next)))
     (values cmd trace)))
 
-(defun render-describe-documentation (pos doc)
-  (insert-nodes pos (make-element "h1" :children (list "Documentation:")))
-  (if doc
-      (let ((paragraphs (str:split "
+(defun render-describe-documentation (doc)
+  (cons (make-element "h1" :children (list "Documentation:"))
+        (if doc
+            (let ((paragraphs (str:split "
 
 "
-                                   doc)))
-        (iter (for p in paragraphs)
-          (insert-nodes
-           pos (make-element "p" :children
-                             (render-doc-string-paragraph p)))))
-      (insert-nodes
-       pos (make-element "p" :children (list "No docstring avaliable.")))))
+                                         doc)))
+              (iter (for p in paragraphs)
+                (collecting
+                  (make-element "p" :children (render-doc-string-paragraph p)))))
+            (list (make-element "p" :children (list "No docstring avaliable."))))))
+
+(defun render-describe-definitions (symbol defs)
+  (let ((*print-case* :downcase))
+    (list (make-element "h1" :children (list "Definitions:"))
+          (dom `(:table
+                 (:tbody
+                  ,@(iter
+                      (for (type def) in defs)
+                      (collect (render-xref-definition symbol type def)))))))))
 
 (defmethod revert-buffer-aux ((buffer describe-key-mode))
   (erase-buffer)
@@ -84,20 +91,15 @@
                             (collecting
                               `(:p "translated to " ,(print-dom cmd)
                                    " by " ,(print-dom name)))))))))
-          (insert-nodes
-           (end-pos (document-root buffer))
-           (make-element "h1" :children (list "Definitions:"))
-           (dom `(:table
-                  (:tbody
-                   ,@(iter
-                       (for
-                        (type def) in
-                        (find-definitions
-                         cmd '(:function :generic-function :method)))
-                       (collect (render-xref-definition cmd type def)))))))
-          (render-describe-documentation
-           (end-pos (document-root buffer))
-           (documentation cmd 'function)))
+          (apply #'insert-nodes
+                 (end-pos (document-root buffer))
+                 (render-describe-definitions
+                  cmd
+                  (find-definitions
+                   cmd '(:function :generic-function :method))))
+          (apply #'insert-nodes
+                 (end-pos (document-root buffer))
+                 (render-describe-documentation (documentation cmd 'function))))
         (progn
           (insert-nodes
            (end-pos (document-root buffer))
@@ -185,29 +187,58 @@
     :initform (alex:required-argument :object)
     :initarg :object)))
 
+(defgeneric render-inspect-object (object)
+  (:method ((object t)))
+  (:documentation "Render extra information for OBJECT in the inspector."))
+
 (defmethod revert-buffer-aux ((buffer inspector-mode))
   (erase-buffer)
   (let ((object (for-object buffer)) *print-pretty*)
     (multiple-value-bind (text label parts) (sb-impl::inspected-parts object)
-      (insert-nodes
-       (end-pos (document-root buffer))
-       (dom `(:p ,text)))
-      (when-let (doc (documentation object t))
-        (render-describe-documentation (end-pos (document-root buffer)) doc))
       (unless label
         (setq parts (mapcar #'cons (alex:iota (length parts)) parts)))
+      (insert-nodes (end-pos (document-root buffer))
+                    (make-element "p" :children (list text)))
+      (apply #'insert-nodes (end-pos (document-root buffer))
+             (render-inspect-object object))
       (insert-nodes
        (end-pos (document-root buffer))
-       (make-element "h1" :children (list "Slots:")))
-      (let ((tbody (dom `(:tbody
-                          ,@ (iter (for (l . v) in parts)
-                               (collect `(:tr (:td :class "component-name"
-                                                   ,(princ-to-string l))
-                                              (:td ,(print-dom v)))))))))
-        (insert-nodes
-         (end-pos (document-root buffer))
-         (make-element "table" :children (list tbody)))
-        (setf (pos (focus)) (pos-down tbody))))))
+       (make-element "h1" :children (list "Slots:"))
+       (dom `(:table
+              (:tbody
+               ,@ (iter (for (l . v) in parts)
+                    (collect `(:tr (:td :class "component-name"
+                                        ,(princ-to-string l))
+                                   (:td ,(print-dom v))))))))))
+    (setf (pos (focus buffer))
+          (or (block nil
+                (do-elements
+                    (lambda (node)
+                      (when (tag-name-p node "tr")
+                        (return node)))
+                  (document-root buffer)))
+              (pos-down (document-root buffer))))))
+
+(defmethod render-inspect-object ((object standard-generic-function))
+  (append
+   (when-let (name (sb-mop:generic-function-name object))
+     (render-describe-definitions
+      name (find-definitions name '(:generic-function :method))))
+   (render-describe-documentation (documentation object t))))
+
+(defmethod render-inspect-object ((object function))
+  (append
+   (match (swank/backend:function-name object)
+     ((list 'macro-function name)
+      (render-describe-definitions
+       name (find-definitions name '(:macro))))
+     ((list 'setf name)
+      (render-describe-definitions
+       name (find-definitions (list 'setf name) '(:function))))
+     ((and name (type symbol))
+      (render-describe-definitions
+       name (find-definitions name '(:function)))))
+   (render-describe-documentation (documentation object t))))
 
 (defun inspect-object (object)
   (pop-to-buffer (make-buffer
