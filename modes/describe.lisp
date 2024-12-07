@@ -41,6 +41,20 @@
         (setq cmd next)))
     (values cmd trace)))
 
+(defun render-describe-documentation (pos doc)
+  (insert-nodes pos (make-element "h1" :children (list "Documentation:")))
+  (if doc
+      (let ((paragraphs (str:split "
+
+"
+                                   doc)))
+        (iter (for p in paragraphs)
+          (insert-nodes
+           pos (make-element "p" :children
+                             (render-doc-string-paragraph p)))))
+      (insert-nodes
+       pos (make-element "p" :children (list "No docstring avaliable.")))))
+
 (defmethod revert-buffer-aux ((buffer describe-key-mode))
   (erase-buffer)
   (multiple-value-bind (cmd trace)
@@ -61,21 +75,15 @@
            (make-element "h1" :children (list "Bindings:"))
            (dom
             (cons :div (iter (for (cmd name bind-type) in trace)
-                        (ecase bind-type
-                          ((:key)
-                           (collect
-                               `(:p
-                                 "bound to "
-                                 ,(print-dom cmd)
-                                 " by "
-                                 ,(print-dom name))))
-                          ((:function)
-                           (collect
-                               `(:p
-                                 "translated to "
-                                 ,(print-dom cmd)
-                                 " by "
-                                 ,(print-dom name)))))))))
+                         (ecase bind-type
+                           ((:key)
+                            (collecting
+                              `(:p "bound to " ,(print-dom cmd)
+                                   " by " ,(print-dom name))))
+                           ((:function)
+                            (collecting
+                              `(:p "translated to " ,(print-dom cmd)
+                                   " by " ,(print-dom name)))))))))
           (insert-nodes
            (end-pos (document-root buffer))
            (make-element "h1" :children (list "Definitions:"))
@@ -86,25 +94,10 @@
                         (type def) in
                         (find-definitions
                          cmd '(:function :generic-function :method)))
-                       (collect (render-xref-definition cmd type def))))))
-           (make-element "h1" :children (list "Documentation:")))
-          (if-let (doc (documentation cmd 'function))
-            (let ((paragraphs (str:split "
-
-"
-                                         doc)))
-              (iter (for p in paragraphs)
-                (collect
-                    (insert-nodes
-                     (end-pos (document-root buffer))
-                     (make-element
-                      "p" :children
-                      (render-doc-string-paragraph p))))))
-            (insert-nodes
-             (end-pos (document-root buffer))
-             (make-element
-              "p" :children
-              (list "No docstring avaliable.")))))
+                       (collect (render-xref-definition cmd type def)))))))
+          (render-describe-documentation
+           (end-pos (document-root buffer))
+           (documentation cmd 'function)))
         (progn
           (insert-nodes
            (end-pos (document-root buffer))
@@ -196,8 +189,16 @@
   (erase-buffer)
   (let ((object (for-object buffer)) *print-pretty*)
     (multiple-value-bind (text label parts) (sb-impl::inspected-parts object)
+      (insert-nodes
+       (end-pos (document-root buffer))
+       (dom `(:p ,text)))
+      (when-let (doc (documentation object t))
+        (render-describe-documentation (end-pos (document-root buffer)) doc))
       (unless label
         (setq parts (mapcar #'cons (alex:iota (length parts)) parts)))
+      (insert-nodes
+       (end-pos (document-root buffer))
+       (make-element "h1" :children (list "Slots:")))
       (let ((tbody (dom `(:tbody
                           ,@ (iter (for (l . v) in parts)
                                (collect `(:tr (:td :class "component-name"
@@ -205,7 +206,6 @@
                                               (:td ,(print-dom v)))))))))
         (insert-nodes
          (end-pos (document-root buffer))
-         (dom `(:div ,text))
          (make-element "table" :children (list tbody)))
         (setf (pos (focus)) (pos-down tbody))))))
 
