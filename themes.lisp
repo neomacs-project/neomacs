@@ -288,7 +288,7 @@ not defined in this theme are inherited from PARENT."
   `(:font-family "DejaVu Sans Mono"
     :font-variant-ligatures "none"
     :color "#2E3436"
-    :font-size "0.9em")
+    :font-size "14px")
   'keyword
   `(:color "#204A87")
   'comment
