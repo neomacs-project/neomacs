@@ -87,16 +87,18 @@ selected.scrollIntoViewIfNeeded()}"
     (evaluate-javascript
      (format nil "{const menu = document.getElementById('neomacs-completion-menu');
 if(menu){
-    const rect = document.documentElement.getBoundingClientRect();
+    const rw = document.documentElement.clientWidth;
+    const rh = document.documentElement.clientHeight;
     const mw = menu.getBoundingClientRect().width;
     const mh = 300;
     const x = ~a; const y = ~a; const w = ~a; const h = ~a;
-    menu.style.left = Math.max(0, Math.min(x+w, rect.width - mw)) - rect.left + 'px';
-    if(y > mh && y+h+mh > rect.height){
-        menu.style.top = y - mh + rect.top + 'px';
+    menu.style.left = Math.max(0, Math.min(x+w, rw - mw)) + 'px';
+    if(y > mh && y+h+mh > rh){
+        menu.style.top = null;
+        menu.style.bottom = rh - y + 'px';
     }
     else {
-        menu.style.top = y + h - rect.top + 'px';
+        menu.style.top = y + h + 'px';
         menu.style.bottom = '0px';
     }}}"
              x y w h)
