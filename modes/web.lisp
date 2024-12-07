@@ -260,7 +260,12 @@
   :mode web-mode ()
   "Copy URL of current page into clipboard."
   (let ((url (url (current-buffer))))
-    (clipboard-insert (list (make-instance 'text-node :text url)))
+    (clipboard-insert
+     (list (attach-presentation
+            (make-element
+             "a" :href url
+                 :children (list (name (current-buffer))))
+            url)))
     (message "Copied ~a" url)))
 
 ;; These commands are web-mode only for now, because Chromium zoom is

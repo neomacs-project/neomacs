@@ -659,6 +659,17 @@ Called by `self-insert-command' to get the character for insertion."
 
 (defvar *system-clipboard-last-read* nil)
 
+(defun convert-to-text (node)
+  "Like `text-content', but also use string representations."
+  (map-dom
+   (lambda (node results)
+     (etypecase node
+       (text-node (text node))
+       (element (let ((p (attribute node 'presentation)))
+                  (if (stringp p) p
+                      (apply #'sera:concat results))))))
+   node))
+
 (defun clipboard-insert (items)
   (if items
       (progn
@@ -678,7 +689,7 @@ Called by `self-insert-command' to get the character for insertion."
                   (not-supported ()
                     (with-output-to-string (s)
                       (dolist (n items)
-                        (write-string (text-content n) s)))))))
+                        (write-string (convert-to-text n) s)))))))
           (evaluate-javascript
            (ps:ps
              (ps:chain clipboard (write-text (ps:lisp text))))
