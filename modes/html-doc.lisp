@@ -3,21 +3,22 @@
 (define-mode html-doc-mode (lisp-mode file-mode) ())
 
 (define-keys html-doc-mode
-  "enter" 'open-paragraph
+  "enter" 'insert-paragraph
   "space" 'insert-no-break-space-maybe
   "C-c h" 'increase-heading
   "C-c C-h" 'decrease-heading
-  "C-c c" 'open-code
-  "C-c b" 'open-bold
-  "C-c i" 'open-italic
-  "C-c u" 'open-underline
+  "C-c c" 'insert-code
+  "C-c b" 'insert-bold
+  "C-c i" 'insert-italic
+  "C-c u" 'insert-underline
   "C-c t" 'insert-description-list
   "C-c d" 'insert-description
   "C-c C-u" 'insert-unordered-list
   "C-c o" 'insert-ordered-list
   "C-c p" 'insert-code-block
-  "C-c ," 'open-comma
-  "C-c C-l" 'insert-link)
+  "C-c ," 'insert-comma
+  "C-c C-l" 'insert-link
+  "C-c C-o" 'open-link)
 
 (defmethod sexp-parent-p ((buffer html-doc-mode) node)
   (class-p node "list"))
@@ -95,7 +96,7 @@
   (unless (allow-block-element-p parent)
     (user-error "~a element not allowed in ~a" child-tag parent)))
 
-(define-command open-paragraph
+(define-command insert-paragraph
   :mode html-doc-mode (&optional (marker (focus)))
   (let ((pos (resolve-marker marker)))
     (if (allow-block-element-p (node-containing pos))
@@ -141,25 +142,25 @@
   :mode html-doc-mode (&optional (marker (focus)))
   (cycle-heading marker -1))
 
-(define-command open-code
+(define-command insert-code
   :mode html-doc-mode (&optional (marker (focus)))
   (let ((node (make-element "code")))
     (insert-nodes marker node)
     (setf (pos marker) (end-pos node))))
 
-(define-command open-italic
+(define-command insert-italic
   :mode html-doc-mode (&optional (marker (focus)))
   (let ((node (make-element "i")))
     (insert-nodes marker node)
     (setf (pos marker) (end-pos node))))
 
-(define-command open-bold
+(define-command insert-bold
   :mode html-doc-mode (&optional (marker (focus)))
   (let ((node (make-element "b")))
     (insert-nodes marker node)
     (setf (pos marker) (end-pos node))))
 
-(define-command open-underline
+(define-command insert-underline
   :mode html-doc-mode (&optional (marker (focus)))
   (let ((node (make-element "u")))
     (insert-nodes marker node)
@@ -194,7 +195,7 @@
   :mode html-doc-mode (&optional (marker (focus)))
   (insert-list marker "dl" "dd"))
 
-(define-command open-comma
+(define-command insert-comma
   :mode html-doc-mode (&optional (marker (focus)))
   "Insert a Sexp list and change the surrounding node to a comma expr."
   (let* ((list (make-list-node nil)))
@@ -225,6 +226,26 @@
     (let ((node (make-element "pre")))
       (insert-nodes marker node)
       (setf (pos marker) (end-pos node)))))
+
+(define-command open-link
+  :mode html-doc-mode (&optional (marker (focus)))
+  "Open link under focus."
+  (if-let (node (pos-up-ensure (pos marker)
+                               (alex:rcurry #'tag-name-p "a")))
+    (let ((url (quri:uri (attribute node "href"))))
+      (push-global-marker)
+      (with-current-buffer
+          (find-file (merge-pathnames (quri:uri-path url)
+                                      (file-path (current-buffer))))
+        (when-let
+            (node (block nil
+                    (do-elements
+                        (lambda (child)
+                          (when (equal (attribute child "id") (quri:uri-fragment url))
+                            (return child)))
+                      (document-root (current-buffer)))))
+          (setf (pos (focus)) node))))
+    (user-error "No link under focus")))
 
 ;;; Get DOM from renderer
 ;; Initially adapted from Nyxt

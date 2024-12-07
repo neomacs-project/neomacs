@@ -30,10 +30,10 @@
    "M-;" 'wrap-comment
    "M-r" 'lisp-raise
    "M-s" 'lisp-splice
-   ";" 'open-comment
-   "(" 'open-paren
-   "\"" 'open-string
-   "space" 'open-space))
+   ";" 'insert-comment
+   "(" 'insert-paren
+   "\"" 'insert-string
+   "space" 'insert-space))
 
 (defvar *plaintext-node-keymap*
   (make-keymap
@@ -250,7 +250,7 @@
         (insert-nodes (focus) node)
         (setf (pos (focus)) (end-pos node)))))
 
-(define-command open-paren :mode lisp-mode ()
+(define-command insert-paren :mode lisp-mode ()
   (insert-or-wrap-node (make-list-node nil)))
 
 (define-command wrap-paren :mode lisp-mode
@@ -260,10 +260,10 @@
                   (error 'top-of-subtree)))
     (wrap-node pos node)))
 
-(define-command open-string :mode lisp-mode ()
+(define-command insert-string :mode lisp-mode ()
   (insert-or-wrap-node (make-element "span" :class "string")))
 
-(define-command open-space :mode lisp-mode
+(define-command insert-space :mode lisp-mode
   (&optional (marker (focus)))
   (if (class-p (node-containing marker) "symbol")
       (setf (pos marker) (pos-down (split-node marker)))
@@ -271,7 +271,7 @@
         (insert-nodes marker node)
         (setf (pos marker) (end-pos node)))))
 
-(define-command open-comment :mode lisp-mode
+(define-command insert-comment :mode lisp-mode
   (&optional (marker (focus)))
   (labels ((cycle-level (n)
              (lret ((n (1+ (mod n 4))))
