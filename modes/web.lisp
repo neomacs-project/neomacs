@@ -123,22 +123,16 @@
   (iter (for key in (kbd keyspec)) (web-send-key key)))
 
 (define-keys web-mode
-  'next-line #+nil 'web-next-line
-  (make-web-send-key-command "down")
-  'previous-line #+nil 'web-previous-line
-  (make-web-send-key-command "up")
-  'backward-node #+nil 'web-go-backward
-  (make-web-send-key-command "left")
-  'forward-node #+nil 'web-go-forward
-  (make-web-send-key-command "right")
-  'scroll-up-command #+nil 'web-scroll-up
-  (make-web-send-key-command "page-up")
-  'scroll-down-command #+nil 'web-scroll-down
-  (make-web-send-key-command "page-down")
-  'beginning-of-line #+nil 'web-scroll-to-top
-  (make-web-send-key-command "home")
-  'end-of-line #+nil 'web-scroll-to-bottom
-  (make-web-send-key-command "end")
+  'next-line (make-web-send-key-command "down")
+  'previous-line (make-web-send-key-command "up")
+  'backward-node (make-web-send-key-command "left")
+  'forward-node (make-web-send-key-command "right")
+  'scroll-up-command (make-web-send-key-command "page-up")
+  'scroll-down-command (make-web-send-key-command "page-down")
+  'beginning-of-line (make-web-send-key-command "home")
+  'end-of-line (make-web-send-key-command "end")
+  'beginning-of-buffer (make-web-send-key-command "home")
+  'end-of-buffer (make-web-send-key-command "end")
   'forward-word (make-web-send-key-command "C-right")
   'backward-word (make-web-send-key-command "C-left")
   'self-insert-command 'web-forward-key
