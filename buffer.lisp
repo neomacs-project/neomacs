@@ -845,10 +845,10 @@ document.body.addEventListener('click',function (event){
                                             (ps:lisp id)))))
            (unless element
              (setq element (ps:chain document (create-element "style")))
-             (setf (ps:chain element id) (ps:lisp id)))
+             (setf (ps:chain element id) (ps:lisp id))
+             (ps:chain document head (append-child element)))
            (setf (ps:chain element inner-h-t-m-l)
-                 (ps:lisp (cell-ref (css-cell style))))
-           (ps:chain document head (append-child element))))
+                 (ps:lisp (cell-ref (css-cell style))))))
        buffer))))
 
 (defun remove-style (buffer style)
