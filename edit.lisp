@@ -795,9 +795,11 @@ If selection is active, copy selected contents instead."
 
 (defun presentation-at
     (pos-or-marker &optional (type t) error-p)
-  "Find enclosing element with a presentation attribute of TYPE.
+  "Find element with a presentation attribute of TYPE under focus.
 
-If ERROR-P is t, signal a `user-error' if no such element is found"
+Either the element immediately after POS-OR-MARKER, or an enclosing
+element, is eligible. If ERROR-P is t, signal a `user-error' if no
+such element is found"
   (let ((pos (resolve-marker pos-or-marker))
         presentation)
     (iter

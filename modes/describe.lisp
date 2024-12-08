@@ -16,6 +16,9 @@
    (for-buffer :initform (alex:required-argument :buffer)
                :initarg :buffer)))
 
+(define-keys describe-key-mode
+  "enter" 'describe-goto-definition)
+
 (define-command describe-key
   :interactive
   (lambda ()
@@ -61,6 +64,11 @@
                   ,@(iter
                       (for (type def) in defs)
                       (collect (render-xref-definition symbol type def)))))))))
+
+(define-command describe-goto-definition
+  :mode describe-mode ()
+  (visit-definition
+   (presentation-at (focus) 'sb-introspect:definition-source t)))
 
 (defmethod revert-buffer-aux ((buffer describe-key-mode))
   (erase-buffer)
@@ -124,14 +132,22 @@
      (traverse-keymap
       keymap
       (lambda (kseq cmd)
-        (push (dom `(:tr (:td ,(key-description kseq))
-                         (:td ,(print-dom cmd))))
-              rows)))
-     (nreverse rows)))
+        (let ((row (dom `(:tr (:td ,(key-description kseq))
+                              (:td ,(print-dom cmd))))))
+          (cond
+            ((functionp cmd)
+             (attach-presentation row cmd))
+            ((and (symbolp cmd) (fboundp cmd))
+             (attach-presentation row (symbol-function cmd))))
+          (push row rows))))
+    (nreverse rows)))
 
 (define-mode describe-keymap-mode (describe-mode list-mode)
   ((for-keymap :initform (alex:required-argument :keymap)
                :initarg :keymap)))
+
+(define-keys describe-keymap-mode
+  "enter" 'describe-goto-command)
 
 (define-command describe-keymap
   :interactive
@@ -160,6 +176,13 @@
   ((for-buffer :initform (alex:required-argument :buffer)
                :initarg :buffer)))
 
+(define-keys describe-bindings-mode
+  "enter" 'describe-goto-command)
+
+(define-command describe-goto-command
+  :mode (describe-keymap-mode describe-bindings-mode) ()
+  (inspect-object (presentation-at (focus) 'function t)))
+
 (define-command describe-bindings ()
   "Describe key bindings in currently active keymaps."
   (pop-to-buffer
@@ -186,6 +209,9 @@
   ((for-object
     :initform (alex:required-argument :object)
     :initarg :object)))
+
+(define-keys inspector-mode
+  "enter" 'describe-goto-definition)
 
 (defgeneric render-inspect-object (object)
   (:method ((object t)))
