@@ -180,7 +180,8 @@ not defined in this theme are inherited from PARENT."
      :content "<No Item>"
      :display "inline")
     ("td" :padding-right "1em")
-    ("td:first-child" :padding-left "0.5rem"))
+    ("td:first-child" :padding-left "0.5rem")
+    (".header" :inherit bold))
 
   ;; Web
   'web-hints
@@ -401,5 +402,5 @@ not defined in this theme are inherited from PARENT."
      :display "inline")
     ("td" :padding-right "1em")
     ("td:first-child" :padding-left "0.5rem")
-    (".focus" :background-color "lavender")))
-
+    (".focus" :background-color "lavender")
+    (".header" :inherit bold)))
