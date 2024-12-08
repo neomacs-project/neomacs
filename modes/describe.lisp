@@ -253,18 +253,21 @@
    (render-describe-documentation (documentation object t))))
 
 (defmethod render-inspect-object ((object function))
-  (append
-   (match (swank/backend:function-name object)
-     ((list 'macro-function name)
+  (match (swank/backend:function-name object)
+    ((list (or 'macro-function :macro) name)
+     (append
       (render-describe-definitions
-       name (find-definitions name '(:macro))))
-     ((list 'setf name)
+       name (find-definitions name '(:macro)))
+      (render-describe-documentation (documentation name 'function))))
+    ((list 'setf name)
+     (render-describe-definitions
+      name (find-definitions (list 'setf name) '(:function))))
+    ((and name (type symbol))
+     (append
       (render-describe-definitions
-       name (find-definitions (list 'setf name) '(:function))))
-     ((and name (type symbol))
-      (render-describe-definitions
-       name (find-definitions name '(:function)))))
-   (render-describe-documentation (documentation object t))))
+       name (find-definitions name '(:function)))
+      (render-describe-documentation (documentation name 'function))))
+    (_ (render-describe-documentation (documentation object t)))))
 
 (defun inspect-object (object)
   (pop-to-buffer (make-buffer
@@ -282,6 +285,32 @@
 (define-command inspect-presentation ()
   "Inspect object presentation under focus."
   (inspect-object (presentation-at (focus))))
+
+;;; Describe functions
+
+(define-mode function-list-mode (list-mode) ())
+
+(defmethod generate-rows ((buffer function-list-mode))
+  (let ((*print-case* :downcase)
+        (*package* (find-package "NEOMACS-USER"))
+        (visited (make-hash-table))
+        rows)
+    (do-all-symbols (v)
+      (when (fboundp v)
+        (unless (gethash v visited)
+          (setf (gethash v visited) t)
+          (push (attach-presentation (dom `(:tr (:td ,(prin1-to-string v))))
+                                     (symbol-function v))
+                rows))))
+    rows))
+
+(define-command describe-function
+  :interactive
+  (lambda ()
+    (list (completing-read "Describe function: " 'function-list-mode)))
+  (function)
+  "Describe FUNCTION."
+  (inspect-object function))
 
 ;;; Styles
 
