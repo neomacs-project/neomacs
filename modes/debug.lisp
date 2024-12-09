@@ -188,9 +188,7 @@ recursive invocation, which can result in dead loop.")
                 (list (cons :type 'debug-request)
                       (cons :environment
                             (dissect:capture-environment c))
-                      (cons :mailbox mailbox)))
-               ;; Dummy buffer
-               (cons :buffer "-1")))
+                      (cons :mailbox mailbox)))))
         (apply #'dissect:invoke
                (sb-concurrency:receive-message mailbox)))))
 

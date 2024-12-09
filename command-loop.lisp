@@ -28,6 +28,9 @@ non-nil HANDLER-P, which would return and signal a `quit' condition."))
 (define-condition async-quit (quit) ()
   (:report "Quit (async interrupt)"))
 
+(define-condition kill () ()
+  (:report "Kill"))
+
 (defvar *locked-buffers* nil)
 
 (defvar *post-command-buffers* nil)
@@ -275,8 +278,10 @@ If nil, disable message logging. If t, log messages but don't truncate
   (let (*this-command-keys*)
     (iter (setq *last-quit-time* nil)
       (for data = (sb-concurrency:receive-message *event-queue*))
-      (until (eql data 'quit))
-      (for buffer = (gethash (parse-integer (assoc-value data :buffer)) *buffer-table*))
+      (when (eql data 'kill)
+        (error 'kill))
+      (for buffer = (when-let (id (assoc-value data :buffer))
+                      (gethash (parse-integer id) *buffer-table*)))
       (for event = (assoc-value data :input-event))
       (if handlers-p
           (restart-case
@@ -351,7 +356,8 @@ and restart handlers."
   (sb-thread:with-new-session ()
     (iter (handler-case (command-loop)
             (quit () (message "Already at top level"))
-            (top-level ())))))
+            (top-level ())
+            (kill () (return))))))
 
 (defun start-command-loop ()
   "Start Neomacs command loop.
@@ -362,7 +368,7 @@ function `command-loop' to take effect."
   (when (and *command-loop-thread*
              (bt:thread-alive-p *command-loop-thread*))
     (format t "Waiting for command loop to quit...")
-    (sb-concurrency:send-message *event-queue* 'quit)
+    (sb-concurrency:send-message *event-queue* 'kill)
     (bt:join-thread *command-loop-thread*)
     (format t "ok~%"))
   (setq *command-loop-thread*
