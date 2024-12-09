@@ -201,22 +201,26 @@ If nil, disable message logging. If t, log messages but don't truncate
                (dolist (key (funcall *input-method-function* key))
                  (handle-key buffer key run-command-fn)))))
           ((equal type "load")
-           (with-current-buffer buffer
-             (on-buffer-loaded
-              buffer (assoc-value event :url) nil)))
+           (when buffer
+             (with-current-buffer buffer
+               (on-buffer-loaded
+                buffer (assoc-value event :url) nil))))
           ((equal type "fail-load")
-           (with-current-buffer buffer
-             (on-buffer-loaded
-              buffer (assoc-value event :url)
-              (or (assoc-value event :err)
-                  (list (cons :code "UNKNOWN"))))))
+           (when buffer
+             (with-current-buffer buffer
+               (on-buffer-loaded
+                buffer (assoc-value event :url)
+                (or (assoc-value event :err)
+                    (list (cons :code "UNKNOWN")))))))
           ((equal type "dom-ready")
-           (with-current-buffer buffer
-             (on-buffer-dom-ready buffer)))
+           (when buffer
+             (with-current-buffer buffer
+               (on-buffer-dom-ready buffer))))
           ((equal type "title-updated")
-           (with-current-buffer buffer
-             (on-buffer-title-updated
-              buffer (assoc-value event :title))))
+           (when buffer
+             (with-current-buffer buffer
+               (on-buffer-title-updated
+                buffer (assoc-value event :title)))))
           ((equal type "did-start-loading")
            (when buffer (setf (load-spinner buffer) t)))
           ((equal type "did-stop-loading")
@@ -241,16 +245,18 @@ If nil, disable message logging. If t, log messages but don't truncate
           ((equal type "frame-closed")
            (delete-buffer buffer))
           ((equal type "frame-focused")
-           (with-current-buffer buffer nil))
+           (when buffer (with-current-buffer buffer nil)))
           ((equal type "focus")
            (when buffer (focus-buffer buffer)))
           ((equal type "enter-html-full-screen")
-           (with-current-buffer (frame-root buffer)
-             (delete-other-windows buffer)
-             (enable 'fullscreen-mode)))
+           (when buffer
+             (with-current-buffer (frame-root buffer)
+               (delete-other-windows buffer)
+               (enable 'fullscreen-mode))))
           ((equal type "leave-html-full-screen")
-           (with-current-buffer (frame-root buffer)
-             (disable 'fullscreen-mode)))
+           (when buffer
+             (with-current-buffer (frame-root buffer)
+               (disable 'fullscreen-mode))))
           ((equal type "found-in-page")
            (let ((match (assoc-value event :matches)))
              (if (zerop match)
