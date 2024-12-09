@@ -374,6 +374,7 @@ is your responsible to copy the marker if you still need it later."
   "M-b" 'backward-word
   "C-M-f" 'forward-element-end
   "C-M-b" 'backward-element
+  "C-M-u" 'backward-up-node
   "M-<" 'beginning-of-buffer
   "M->" 'end-of-buffer
   "C-a" 'beginning-of-line
