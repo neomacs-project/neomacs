@@ -78,6 +78,10 @@ Try the following workaround:
             (format t "Loading ~a.~%" config-file)
             (load config-file))
           (format t "~a not yet exist.~%" config-file))))
+  (evaluate-javascript
+   (format nil "Ceramic.downloadPath = ~S"
+           (quote-js (uiop:native-namestring "~/Downloads")))
+   :global)
   (dolist (h *startup-hooks*)
     (with-demoted-errors (format nil "Error running startup hook ~a: " h)
       (funcall h)))

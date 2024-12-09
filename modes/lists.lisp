@@ -11,13 +11,22 @@
 (defgeneric generate-rows (buffer))
 
 (defmethod revert-buffer-aux ((buffer list-mode))
-  (erase-buffer)
-  (let ((body-node (make-element "tbody")))
-    (insert-nodes (end-pos (document-root buffer))
-                  (make-element "table" :children (list body-node)))
-    (iter (for row in (ignore-errors (generate-rows buffer)))
-      (insert-nodes (end-pos body-node) row))
-    (setf (pos (focus)) (pos-down body-node))))
+  ;; Try to keep focus around the same place by remembering
+  ;; presentation attribute, if any
+  (let* ((row (pos-up-ensure
+               (focus buffer)
+               (alex:rcurry #'tag-name-p "tr")))
+         (presentation (and row (attribute row 'presentation))))
+    (erase-buffer)
+    (let ((body-node (make-element "tbody")))
+      (insert-nodes (end-pos (document-root buffer))
+                    (make-element "table" :children (list body-node)))
+      (iter (for row in (ignore-errors (generate-rows buffer)))
+        (insert-nodes (end-pos body-node) row))
+      (setf (pos (focus))
+            (or (find presentation (child-nodes body-node)
+                      :key (alex:rcurry #'attribute 'presentation))
+                (pos-down body-node))))))
 
 (defmethod selectable-p-aux ((buffer list-mode) pos)
   (and (not (or (tag-name-p pos "tbody")

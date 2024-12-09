@@ -41,6 +41,7 @@
                (:file "modes/web-hints")
                (:file "modes/web-adblock")
                (:file "modes/pdf")
+               (:file "modes/download")
                (:file "intl/simple")
                (:file "start"))
   :depends-on (:lwcells

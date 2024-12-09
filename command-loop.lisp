@@ -170,6 +170,8 @@ If nil, disable message logging. If t, log messages but don't truncate
         (funcall run-command-fn cmd))
     (funcall run-command-fn nil)))
 
+(defvar *event-handler-table* (make-hash-table :test 'equal))
+
 (defun handle-event (buffer event run-command-fn)
   (let ((type (assoc-value event :type)))
     (cond ((equal type "keyDown")
@@ -269,7 +271,9 @@ If nil, disable message logging. If t, log messages but don't truncate
            (debug-for-environment
             (assoc-value event :environment)
             (assoc-value event :mailbox)))
-          (t (warn "Unrecoginized Electron event: ~a" event)))))
+          (t (if-let (handler (gethash type *event-handler-table*))
+               (funcall handler buffer event)
+               (warn "Unrecoginized Electron event: ~a" event))))))
 
 (defun command-loop (&optional
                        (guard-fn (constantly t))

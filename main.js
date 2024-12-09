@@ -1,8 +1,7 @@
 const electron = require('electron');
-const {app,net,WebContentsView,BaseWindow,
+const {app,net,WebContentsView,BaseWindow,dialog,session,
        protocol,clipboard,nativeTheme,ipcMain} = electron;
 const WebSocket = require('ws');
-const dialog = require('electron').dialog;
 const { pathToFileURL } = require('url')
 const path = require('node:path')
 
@@ -102,10 +101,10 @@ Ceramic.closeFrame = function(id) {
     delete Ceramic.frames[id];
 };
 
-Ceramic.generateBufferId = function (){
+Ceramic.generateId = function (dict){
     for(let i = -1;;i--){
         const id = i.toString();
-        if(!(id in Ceramic.buffers)) return id;
+        if(!(id in dict)) return id;
     }}
 
 Ceramic.createBuffer = function(id, url, options) {
@@ -151,7 +150,7 @@ Ceramic.createBuffer = function(id, url, options) {
             action: 'allow',
             outlivesOpener: true,
             createWindow: (options) =>{
-                const newId = Ceramic.generateBufferId();
+                const newId = Ceramic.generateId(Ceramic.buffers);
                 const newOptions = {}; // Have to filter out junk in options
                 if(options.webContents) newOptions.webContents = options.webContents;
                 if(options.webPreferences) newOptions.webPreferences = options.webPreferences;
@@ -172,6 +171,8 @@ Ceramic.closeBuffer = function(id) {
 Ceramic.quit = function() {
     app.quit();
 };
+
+Ceramic.downloads = {};
 
 /* Start up */
 
@@ -198,7 +199,39 @@ app.on('ready', function() {
         }
         else{
             const pathToServe = path.resolve(Mounts[host],p);
-            return net.fetch(pathToFileURL(pathToServe).toString());}});});
+            return net.fetch(pathToFileURL(pathToServe).toString());}})
+    session.defaultSession.on('will-download', function(event, item, webContents){
+        item.setSavePath(path.join(Ceramic.downloadPath,item.getFilename()));
+        const newId = Ceramic.generateId(Ceramic.downloads);
+        const normalizeState = function(state, paused, resumable){
+            switch(state){
+            case "progressing":
+                return paused?"paused":"progressing";
+            case "interrupted":
+                return resumable?"interrupted":"failed";
+            default:
+                return state;}}
+        item.neomacsId = newId;
+        Ceramic.downloads[newId] = item;
+        RemoteJS.send(JSON.stringify({inputEvent:
+                                      {type: "new-download", id: newId,
+                                       url: item.getURL(),
+                                       path: item.getSavePath(),
+                                       total: item.getTotalBytes()},
+                                      state: normalizeState(item.getState(), item.isPaused(), true),
+                                      startTime: item.getStartTime(),
+                                      buffer: webContents.neomacsId}));
+        item.on('updated', function(event, state){
+            RemoteJS.send(JSON.stringify({inputEvent:
+                                          {type: "download-updated", id: newId,
+                                           state: normalizeState(state, item.isPaused(), true),
+                                           received: item.getReceivedBytes(),
+                                           speed: item.getCurrentBytesPerSecond()}}))})
+        item.on('done', function(event, state){
+            RemoteJS.send(JSON.stringify({inputEvent:
+                                          {type: "download-done", id: newId,
+                                           state: normalizeState(state, item.isPaused(), false),
+                                           total: item.getTotalBytes()}}))});});});
 
 //process.removeAllListeners("uncaughtExceptions");
 process.on("uncaughtException", (err) => {
