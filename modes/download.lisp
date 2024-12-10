@@ -63,7 +63,9 @@
 
 (define-command list-downloads ()
   (switch-to-buffer
-   (get-buffer-create "*downloads*" :mode 'download-list-mode)))
+   (get-buffer-create
+    "*downloads*" :mode 'download-list-mode
+    :revert t)))
 
 (define-command download-list-toggle-pause
   :mode download-list-mode ()
