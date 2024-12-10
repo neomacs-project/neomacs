@@ -188,12 +188,7 @@ app.on('ready', function() {
     protocol.handle('neomacs', (req) => {
         const {host, pathname} = new URL(req.url);
         p = pathname.substring(1);
-        if (host == 'contents'){
-            const content = Contents[p];
-            delete Contents[p];
-            return new Response(content,{headers: {'content-type': "text/html; charset=utf-8"}});
-        }
-        else if (host == 'null.contents'){
+        if (host == 'null.contents'){
             return new Response("<!DOCTYPE html><html><head></head><body></body></html>",
                                 {headers: {'content-type': "text/html; charset=utf-8"}});
         }

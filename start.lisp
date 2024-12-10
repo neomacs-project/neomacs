@@ -59,6 +59,10 @@ Try the following workaround:
   (ceramic:start)
   (mount-asset "sys" (ceramic:resource-directory 'assets))
   (mount-asset "user" (uiop:xdg-config-home "neomacs/assets/"))
+  (setq *contents-tmp-path*
+        (merge-pathnames #p"neomacs/contents/" (uiop:temporary-directory)))
+  (ensure-directories-exist *contents-tmp-path*)
+  (mount-asset "contents" *contents-tmp-path*)
   (let ((intro-path (ceramic:resource 'doc "build/intro.html")))
     (when (uiop:file-exists-p intro-path)
       (make-buffer

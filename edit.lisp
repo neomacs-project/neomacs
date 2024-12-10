@@ -512,6 +512,8 @@ become the last child of NEW-NODE."
   (serialize document-root stream)
   (write-string "</html>" stream))
 
+(defvar *contents-tmp-path* nil "Directory path to store temporarily generated HTML.")
+
 (defgeneric revert-buffer-aux (buffer)
   (:documentation "Regenerate the content of BUFFER.")
   (:method ((buffer buffer))
@@ -525,17 +527,16 @@ become the last child of NEW-NODE."
     ;; DOM manipulation for larger files.
     (let ((*inhibit-dom-update* t))
       (call-next-method))
-    (evaluate-javascript
-     (format nil "Contents[~s]='~a'"
-             (id buffer)
-             (quote-js
-              (with-output-to-string (s)
-                (serialize-document
-                 (document-root buffer)
-                 (styles buffer)
-                 s))))
-     :global)
-    (load-url buffer (format nil "neomacs://contents/~a" (id buffer)))))
+    (with-open-file (s (make-pathname
+                        :name (id buffer) :type "html"
+                        :defaults *contents-tmp-path*)
+                       :direction :output
+                       :if-exists :supersede)
+      (serialize-document
+       (document-root buffer)
+       (styles buffer)
+       s))
+    (load-url buffer (format nil "neomacs://contents/~a.html" (id buffer)))))
 
 (define-command revert-buffer ()
   "Regenerate the content of current buffer.
