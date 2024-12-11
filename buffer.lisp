@@ -945,9 +945,42 @@ document.body.addEventListener('click',function (event){
       :inherit selection))
 
 (defsheet common
-    `((:import (url "neomacs://sys/space-mono/space-mono.css"))
-      (:import (url "neomacs://sys/cmu-concrete/cmu-concrete.css"))
-      (:import (url "neomacs://sys/dejavu-sans-mono/dejavu-sans-mono.css"))))
+    `((:font-face
+       :font-family "Space Mono" :font-style "normal" :font-weight "400"
+       :src "url(\"neomacs://sys/space-mono/SpaceMono-Regular.ttf\") format(\"truetype\")")
+      (:font-face
+       :font-family "Space Mono" :font-style "italic" :font-weight "400"
+       :src "url(\"neomacs://sys/space-mono/SpaceMono-Italic.ttf\") format(\"truetype\")")
+      (:font-face
+       :font-family "Space Mono" :font-style "normal" :font-weight "700"
+       :src "url(\"neomacs://sys/space-mono/SpaceMono-Bold.ttf\") format(\"truetype\")")
+      (:font-face
+       :font-family "Space Mono" :font-style "italic" :font-weight "700"
+       :src "url(\"neomacs://sys/space-mono/SpaceMono-BoldItalic.ttf\") format(\"truetype\")")
+      (:font-face
+       :font-family "CMU Concrete" :font-style "normal" :font-weight "400"
+       :src "url(\"neomacs://sys/cmu-concrete/cmunorm.ttf\") format(\"truetype\")")
+      (:font-face
+       :font-family "CMU Concrete" :font-style "italic" :font-weight "400"
+       :src "url(\"neomacs://sys/cmu-concrete/cmunoti.ttf\") format(\"truetype\")")
+      (:font-face
+       :font-family "CMU Concrete" :font-style "normal" :font-weight "700"
+       :src "url(\"neomacs://sys/cmu-concrete/cmunobx.ttf\") format(\"truetype\")")
+      (:font-face
+       :font-family "CMU Concrete" :font-style "italic" :font-weight "700"
+       :src "url(\"neomacs://sys/cmu-concrete/cmunobi.ttf\") format(\"truetype\")")
+      (:font-face
+       :font-family "DejaVu Sans Mono" :font-style "normal" :font-weight "400"
+       :src "url(\"neomacs://sys/dejavu-sans-mono/DejaVuSansMono.ttf\") format(\"truetype\")")
+      (:font-face
+       :font-family "DejaVu Sans Mono" :font-style "italic" :font-weight "400"
+       :src "url(\"neomacs://sys/dejavu-sans-mono/DejaVuSansMono-Oblique.ttf\") format(\"truetype\")")
+      (:font-face
+       :font-family "DejaVu Sans Mono" :font-style "normal" :font-weight "700"
+       :src "url(\"neomacs://sys/dejavu-sans-mono/DejaVuSansMono-Bold.ttf\") format(\"truetype\")")
+      (:font-face
+       :font-family "DejaVu Sans Mono" :font-style "italic" :font-weight "700"
+       :src "url(\"neomacs://sys/dejavu-sans-mono/DejaVuSansMono-BoldOblique.ttf\") format(\"truetype\")")))
 
 (defstyle doc-node `(((:append ".focus-tail::after")
                       :content "  "
