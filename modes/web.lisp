@@ -43,22 +43,12 @@
     :styles nil
     :content-scripts nil)))
 
-(defvar *web-history-list* nil
-  "List of `history-entry' for web history.")
-
-(defvar *web-history-path* nil
-  "File path to save web history entries.")
-
-(define-class history-entry ()
+(define-class history-entry (bknr.datastore:store-object)
   ((title :initform nil :initarg :title)
    (url :initform (alex:required-argument :url) :initarg :url)
-   (access-time :initform (local-time:now))))
-
-(defmethod initialize-instance :after ((self history-entry) &key access-time)
-  (push self *web-history-list*)
-  (when access-time
-    (setf (access-time self)
-          (local-time:parse-timestring access-time))))
+   (access-time :initarg :time))
+  (:metaclass bknr.datastore:persistent-class)
+  (:default-initargs :time (get-universal-time)))
 
 (defun record-history-maybe (buffer url)
   (unless (and (history-entry buffer)
@@ -69,39 +59,6 @@
         (setf (history-entry buffer) nil)
         (setf (history-entry buffer)
               (make-instance 'history-entry :url url)))))
-
-(defun load-web-history ()
-  (message "Loading web history...")
-  (setq *web-history-list* nil)
-  (unless *web-history-path*
-    (setq *web-history-path* (uiop:xdg-data-home "neomacs" "web-history")))
-  (ensure-directories-exist *web-history-path*)
-  (with-open-file (s *web-history-path*
-                     :direction :input
-                     :if-does-not-exist :create)
-    (handler-case
-        (loop
-          (apply #'make-instance 'history-entry (read s)))
-      (end-of-file () nil)))
-  (message "Loaded web history."))
-
-(defun save-web-history ()
-  (unless *web-history-path*
-    (setq *web-history-path* (uiop:xdg-data-home "neomacs" "web-history")))
-  (ensure-directories-exist *web-history-path*)
-  (with-open-file (s *web-history-path*
-                     :direction :output
-                     :if-exists :supersede
-                     :if-does-not-exist :create)
-    (with-standard-io-syntax
-      (dolist (h (reverse *web-history-list*))
-        (write (list :url (url h)
-                     :title (title h)
-                     :access-time
-                     (local-time:format-timestring
-                      nil (access-time h)))
-               :stream s)
-        (terpri s)))))
 
 (define-mode web-mode (read-only-mode)
   ((scroll-multiplier :default 16 :type (integer 1))
@@ -215,7 +172,8 @@
 
 (defmethod on-buffer-title-updated progn ((buffer web-mode) title)
   (when-let (entry (history-entry buffer))
-    (setf (title entry) title))
+    (bknr.datastore:with-transaction ()
+      (setf (title entry) title)))
   (rename-buffer title))
 
 (defmethod on-buffer-did-start-navigation progn
@@ -414,13 +372,14 @@ wc.setZoomFactor(1.0)}"
 (define-mode web-history-list-mode (list-mode) ())
 
 (defmethod generate-rows ((buffer web-history-list-mode))
-  (iter (for entry in *web-history-list*)
+  (iter (for entry in (bknr.datastore:store-objects-with-class 'history-entry))
     (collecting
       (dom `(:tr (:td :class "title" ,(or (title entry) "-"))
                  (:td :class "url" ,(url entry))
                  (:td :class "time"
                       ,(format-readable-timestring
-                        (access-time entry))))))))
+                        (local-time:universal-to-timestamp
+                         (access-time entry)))))))))
 
 (defsheet web-history-list-mode
     `((".title"

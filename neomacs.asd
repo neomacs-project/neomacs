@@ -64,6 +64,7 @@
                :swank
                :swank/exts
                :plump
+               :bknr.datastore
                :trivial-package-local-nicknames))
 
 (asdf:defsystem neomacs/app

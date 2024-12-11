@@ -1,12 +1,15 @@
 (in-package #:neomacs)
 
 (sera:export-always
-    '(start *startup-hooks* *kill-hooks*))
+    '(start *store-path* *startup-hooks* *kill-hooks*))
 
-(defvar *startup-hooks* '(load-web-history install-adblocker mount-pdf-tmp)
+(defvar *store-path* nil
+  "Path to bknr.datastore, defaults to (uiop:xdg-data-home \"neomacs/store/\").")
+
+(defvar *startup-hooks* '(install-adblocker mount-pdf-tmp)
   "List of functions to run after Neomacs starts.")
 
-(defvar *kill-hooks* '(save-web-history)
+(defvar *kill-hooks* nil
   "List of functions to run before `kill-neomacs'.")
 
 (defun start (&optional (self-govern t))
@@ -86,6 +89,11 @@ Try the following workaround:
    (format nil "Ceramic.downloadPath = ~S"
            (quote-js (uiop:native-namestring "~/Downloads")))
    :global)
+  (unless *store-path*
+    (setq *store-path* (uiop:xdg-data-home "neomacs/store/")))
+  (make-instance 'bknr.datastore:mp-store
+                 :directory *store-path*
+                 :subsystems (list (make-instance 'bknr.datastore:store-object-subsystem)))
   (dolist (h *startup-hooks*)
     (with-demoted-errors (format nil "Error running startup hook ~a: " h)
       (funcall h)))
