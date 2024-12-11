@@ -372,7 +372,8 @@ wc.setZoomFactor(1.0)}"
 (define-mode web-history-list-mode (list-mode) ())
 
 (defmethod generate-rows ((buffer web-history-list-mode))
-  (iter (for entry in (bknr.datastore:store-objects-with-class 'history-entry))
+  (iter (for entry in (sort (bknr.datastore:store-objects-with-class 'history-entry) #'>
+                            :key #'access-time))
     (collecting
       (dom `(:tr (:td :class "title" ,(or (title entry) "-"))
                  (:td :class "url" ,(url entry))
