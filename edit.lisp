@@ -503,6 +503,7 @@ become the last child of NEW-NODE."
 
 (defun serialize-document (document-root styles stream)
   (write-string "<!DOCTYPE html>
+<meta charset=\"UTF-8\">
 <html><head>" stream)
   (dolist (style (reverse styles))
     (format stream "<style id=\"neomacs-style-~a\">" style)

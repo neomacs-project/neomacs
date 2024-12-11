@@ -232,19 +232,22 @@
   "Open link under focus."
   (if-let (node (pos-up-ensure (pos marker)
                                (alex:rcurry #'tag-name-p "a")))
-    (let ((url (quri:uri (attribute node "href"))))
+    (progn
       (push-global-marker)
-      (with-current-buffer
-          (find-file (merge-pathnames (quri:uri-path url)
-                                      (file-path (current-buffer))))
-        (when-let
-            (node (block nil
-                    (do-elements
-                        (lambda (child)
-                          (when (equal (attribute child "id") (quri:uri-fragment url))
-                            (return child)))
-                      (document-root (current-buffer)))))
-          (setf (pos (focus)) node))))
+      (if-let (web-url (look-like-url-p (attribute node "href")))
+        (find-url web-url)
+        (let ((url (quri:uri (attribute node "href"))))
+          (with-current-buffer
+              (find-file (merge-pathnames (quri:uri-path url)
+                                          (file-path (current-buffer))))
+            (when-let
+                (node (block nil
+                        (do-elements
+                            (lambda (child)
+                              (when (equal (attribute child "id") (quri:uri-fragment url))
+                                (return child)))
+                          (document-root (current-buffer)))))
+              (setf (pos (focus)) node))))))
     (user-error "No link under focus")))
 
 ;;; Get DOM from renderer
