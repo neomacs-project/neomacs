@@ -26,6 +26,11 @@
    (line-starts)
    (scrollback-lines :initform nil)))
 
+(defun cursor-equalp (a b)
+  (and (eql (3bst::x a) (3bst::x b))
+       (eql (3bst::y a) (3bst::y b))
+       (eql (3bst::state a) (3bst::state b))))
+
 (defmethod enable-aux ((mode-name (eql 'term-mode)))
   (let* ((buffer (current-buffer))
          (3bst:*term* (for-term buffer)))
@@ -61,8 +66,9 @@
                                         (setf last-cursor
                                               (3bst::copy-cursor
                                                (3bst::cursor 3bst:*term*))))
-                                       ((not (equalp last-cursor
-                                                     (3bst::cursor 3bst:*term*)))
+                                       ((not (cursor-equalp
+                                              last-cursor
+                                              (3bst::cursor 3bst:*term*)))
                                         (redisplay-focus (for-term buffer) buffer)
                                         (setf last-cursor
                                               (3bst::copy-cursor
