@@ -32,7 +32,8 @@
            :completion-buffer
            (make-completion-buffer
             '(web-history-list-mode completion-buffer-mode)
-            :require-match nil))))
+            :require-match nil
+            :deduplicate t))))
   (url-or-query)
   "Open or search for URL-OR-QUERY."
   (switch-to-buffer
@@ -365,18 +366,22 @@ wc.setZoomFactor(1.0)}"
 
 ;;; Web histroy
 
-(define-mode web-history-list-mode (list-mode) ())
+(define-mode web-history-list-mode (list-mode)
+  ((deduplicate-p :initform nil :initarg :deduplicate)))
 
 (defmethod generate-rows ((buffer web-history-list-mode))
-  (iter (for entry in (sort (bknr.datastore:store-objects-with-class 'history-entry) #'>
-                            :key #'access-time))
-    (collecting
-      (dom `(:tr (:td :class "title" ,(or (title entry) "-"))
-                 (:td :class "url" ,(url entry))
-                 (:td :class "time"
-                      ,(format-readable-timestring
-                        (local-time:universal-to-timestamp
-                         (access-time entry)))))))))
+  (let ((entries (sort (bknr.datastore:store-objects-with-class 'history-entry) #'>
+                       :key #'access-time)))
+    (when (deduplicate-p buffer)
+      (setq entries (delete-duplicates entries :key #'url :test 'equal)))
+    (iter (for entry in entries)
+      (collecting
+        (dom `(:tr (:td :class "title" ,(or (title entry) "-"))
+                   (:td :class "url" ,(url entry))
+                   (:td :class "time"
+                        ,(format-readable-timestring
+                          (local-time:universal-to-timestamp
+                           (access-time entry))))))))))
 
 (defsheet web-history-list-mode
     `((".title"
