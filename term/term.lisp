@@ -267,8 +267,14 @@
 "))
     (when (equal seq "Tab") (setf seq "	"))
     (when (key-ctrl key)
-      (setf seq (string (code-char (1+ (- (char-code (aref seq 0))
-                                          (char-code #\a)))))))
+      ;; ASCII 0-31
+      (let ((i (char-code (aref seq 0))))
+        (cond ((<= (char-code #\a) i (char-code #\z))
+               (setf seq (string (code-char (1+ (- i (char-code #\a)))))))
+              ((= i (char-code #\@))
+               (setf seq (string (code-char 0))))
+              ((<= (char-code #\[) i (char-code #\_))
+               (setf seq (string (code-char (+ 27 (- i (char-code #\[))))))))))
     (when (key-meta key)
       (setf seq (str:concat "" seq)))
     (term-send-seq seq)))
@@ -289,6 +295,10 @@
   :mode term-mode ()
   "Send the next key to terminal."
   (term-send-key (read-key "Send to terminal: ")))
+
+(define-command term-paste
+  :mode term-mode ()
+  )
 
 (defstyle term '(:font-family "monospace"))
 
