@@ -5,7 +5,8 @@
       splice-node join-nodes raise-node split-node
       wrap-node delete-node replace-node
       *clipboard-ring* *clipboard-ring-index*
-      revert-buffer-aux))
+      compute-nodes-for-paste compute-nodes-for-paste-pop
+      paste-command-p revert-buffer-aux))
 
 ;;; DOM Edit
 
@@ -738,24 +739,27 @@ If selection is active, copy selected contents instead."
                      (error 'top-of-subtree))))
         (clipboard-insert (list (clone-node pos))))))
 
-(define-command paste ()
-  "Paste the first item in clipboard."
+(defun compute-nodes-for-paste ()
+  "Get a list of nodes suitable for `paste' from clipboard."
   (setq *clipboard-ring-index* 0)
   (read-system-clipboard-maybe)
   (let ((item (containers:item-at *clipboard-ring* *clipboard-ring-index*)))
     (setf (advance-p (selection-marker (current-buffer))) nil)
     (setf (pos (selection-marker (current-buffer))) (pos (focus)))
-    (apply #'insert-nodes (focus)
-           (mapcar #'clone-node (clipboard-item-nodes item)))))
+    (mapcar #'clone-node (clipboard-item-nodes item))))
 
-(define-command paste-pop ()
-  "Cycle pasted contents, or prompt for a clipboard item to paste."
-  (undo-auto-amalgamate)
-  (if (member *last-command* '(paste paste-pop))
+(define-command paste ()
+  "Paste the first item in clipboard."
+  (apply #'insert-nodes (focus)
+         (compute-nodes-for-paste)))
+
+(defun compute-nodes-for-paste-pop (undo-fn)
+  "Get a list of nodes suitable for `paste-pop' from clipboard."
+  (if (and (symbolp *last-command*)
+           (get *last-command* 'paste-command-p))
       (progn
         (incf *clipboard-ring-index*)
-        (delete-range
-         (range (selection-marker (current-buffer)) (focus))))
+        (funcall undo-fn))
       (progn
         (read-system-clipboard-maybe)
         (read-from-minibuffer
@@ -764,9 +768,21 @@ If selection is active, copy selected contents instead."
          :completion-buffer
          (make-completion-buffer
           '(clipboard-list-mode completion-buffer-mode)))))
-  (let ((item (containers:item-at *clipboard-ring* *clipboard-ring-index*)))
-    (apply #'insert-nodes (focus)
-           (mapcar #'clone-node (clipboard-item-nodes item)))))
+  (mapcar #'clone-node
+          (clipboard-item-nodes
+           (containers:item-at *clipboard-ring* *clipboard-ring-index*))))
+
+(define-command paste-pop ()
+  "cycle pasted contents, or prompt for a clipboard item to paste."
+  (undo-auto-amalgamate)
+  (apply #'insert-nodes (focus)
+         (compute-nodes-for-paste-pop
+          (lambda ()
+            (delete-range
+             (range (selection-marker (current-buffer)) (focus)))))))
+
+(setf (get 'paste 'paste-command-p) t
+      (get 'paste-pop 'paste-command-p) t)
 
 (define-command forward-cut (&optional (pos (focus)))
   "Cut until end of line and save into clipboard."
