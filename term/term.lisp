@@ -45,15 +45,15 @@
           (thread buffer)
           (bt2:make-thread
            (lambda ()
-             (let (*print-readably*)
+             (let (*print-readably*
+                   (3bst:*term* (for-term buffer)))
                (handler-case
                    (iter (for c = (read-char-no-hang (pty buffer)
                                                      nil 'eof))
                      (until (eql c 'eof))
                      (with last-cursor)
                      (if c
-                         (let ((3bst:*term* (for-term buffer))
-                               (neomacs::*current-buffer* buffer))
+                         (let ((neomacs::*current-buffer* buffer))
                            (3bst:handle-input (string c)))
                          (progn
                            (when (typep buffer 'term-insert-mode)
