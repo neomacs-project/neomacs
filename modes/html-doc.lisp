@@ -200,8 +200,10 @@
   :mode html-doc-mode (&optional (marker (focus)))
   "Insert a Sexp list and change the surrounding node to a comma expr."
   (let* ((list (make-list-node nil)))
-    (let ((*record-attribute-undo* t))
-      (add-class (node-containing marker) "comma-expr"))
+    (let ((*record-attribute-undo* t)
+          (node (node-containing marker)))
+      (add-class node "comma-expr")
+      (setf (attribute node 'keymap) *sexp-node-keymap*))
     (insert-nodes marker list)
     (setf (pos marker) (end-pos list))))
 
