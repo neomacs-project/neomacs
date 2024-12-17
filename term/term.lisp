@@ -194,6 +194,9 @@
   (:toggler t)
   (:documentation "Forward most keys to terminal."))
 
+(defmethod enable-aux ((mode-name (eql 'term-insert-mode)))
+  (redisplay-focus (for-term (current-buffer)) (current-buffer)))
+
 (defvar *terminfo-installed-p* nil
   "Whether we know that st terminfo entry are already installed.")
 
