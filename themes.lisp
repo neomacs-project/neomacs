@@ -192,7 +192,27 @@ not defined in this theme are inherited from PARENT."
      :border-radius "2px"
      :border-width "2px"
      :border-style "solid"
-     :z-index #.(1- (expt 2 31)))))
+     :z-index #.(1- (expt 2 31))))
+
+  ;; Term
+  ;; Adapted from Gogh schemes Github dark
+  ;; https://gogh-co.github.io/Gogh/
+  'ansi-black '(:color "#000")
+  'ansi-red '(:color "#f78166")
+  'ansi-green '(:color "#56d364")
+  'ansi-yellow '(:color "#e3b341")
+  'ansi-blue '(:color "#6ca4f8")
+  'ansi-magenta '(:color "#db61a2")
+  'ansi-cyan '(:color "#2b7489")
+  'ansi-white '(:color "#ffffff")
+  'ansi-bright-black '(:color "#4d4d4d")
+  'ansi-bright-red '(:color "#f78166")
+  'ansi-bright-green '(:color "#56d364")
+  'ansi-bright-yellow '(:color "#e3b341")
+  'ansi-bright-blue '(:color "#6ca4f8")
+  'ansi-bright-magenta '(:color "#db61a2")
+  'ansi-bright-cyan '(:color "#2b7489")
+  'ansi-bright-white '(:color "#ffffff"))
 
 (define-theme anti-matrix
     "Variant of `matrix', a mostly-monochrome light theme."
@@ -265,7 +285,27 @@ not defined in this theme are inherited from PARENT."
      :border-radius "2px"
      :border-width "2px"
      :border-style "solid"
-     :z-index #.(1- (expt 2 31)))))
+     :z-index #.(1- (expt 2 31))))
+
+  ;; Term
+  ;; Adapted from Gogh schemes Github light
+  ;; https://gogh-co.github.io/Gogh/
+  'ansi-white '(:color "#000")
+  'ansi-red '(:color "#cf222e")
+  'ansi-green '(:color "#1a7f37")
+  'ansi-yellow '(:color "#9a6700")
+  'ansi-blue '(:color "#0969da")
+  'ansi-magenta '(:color "#8250df")
+  'ansi-cyan '(:color "#1b7c83")
+  'ansi-black '(:color "#6e7781")
+  'ansi-bright-white '(:color "#57606a")
+  'ansi-bright-red '(:color "#a40e26")
+  'ansi-bright-green '(:color "#2da44e")
+  'ansi-bright-yellow '(:color "#bf8700")
+  'ansi-bright-blue '(:color "#218bff")
+  'ansi-bright-magenta '(:color "#a475f9")
+  'ansi-bright-cyan '(:color "#3192aa")
+  'ansi-bright-black '(:color "#8c959f"))
 
 (define-theme light-blue
   "A light and blue theme."
@@ -403,4 +443,24 @@ not defined in this theme are inherited from PARENT."
     ("td" :padding-right "1em")
     ("td:first-child" :padding-left "0.5rem")
     (".focus" :background-color "lavender")
-    (".header" :inherit bold)))
+    (".header" :inherit bold))
+
+  ;;        Term
+  ;; Adapted from Gogh schemes Github light
+  ;; https://gogh-co.github.io/Gogh/
+  'ansi-white '(:color "#000")
+  'ansi-red '(:color "#cf222e")
+  'ansi-green '(:color "#1a7f37")
+  'ansi-yellow '(:color "#9a6700")
+  'ansi-blue '(:color "#0969da")
+  'ansi-magenta '(:color "#8250df")
+  'ansi-cyan '(:color "#1b7c83")
+  'ansi-black '(:color "#6e7781")
+  'ansi-bright-white '(:color "#57606a")
+  'ansi-bright-red '(:color "#a40e26")
+  'ansi-bright-green '(:color "#2da44e")
+  'ansi-bright-yellow '(:color "#bf8700")
+  'ansi-bright-blue '(:color "#218bff")
+  'ansi-bright-magenta '(:color "#a475f9")
+  'ansi-bright-cyan '(:color "#3192aa")
+  'ansi-bright-black '(:color "#8c959f"))

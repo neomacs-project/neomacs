@@ -115,3 +115,23 @@ SYMBOL is allowed to take some special value:
       (t (setf (cell-ref (get symbol 'style)) spec)))))
 
 (setf (get :native-theme 'standard-style) "light")
+
+;; Adapted from Gogh schemes Everforest light medium
+;; https://gogh-co.github.io/Gogh/
+
+(defstyle ansi-black '(:color "#d3c6aa"))
+(defstyle ansi-red '(:color "#f85552"))
+(defstyle ansi-green '(:color "#8da101"))
+(defstyle ansi-yellow '(:color "#dfa000"))
+(defstyle ansi-blue '(:color "#3a94c5"))
+(defstyle ansi-magenta '(:color "#df69ba"))
+(defstyle ansi-cyan '(:color "#35a77c"))
+(defstyle ansi-white '(:color "#000"))
+(defstyle ansi-bright-black '(:color "#dfddc8"))
+(defstyle ansi-bright-red '(:color "#e67e80"))
+(defstyle ansi-bright-green '(:color "#a7c080"))
+(defstyle ansi-bright-yellow '(:color "#dbbc7f"))
+(defstyle ansi-bright-blue '(:color "#7fbbb3"))
+(defstyle ansi-bright-magenta '(:color "#d699b6"))
+(defstyle ansi-bright-cyan '(:color "#83c092"))
+(defstyle ansi-bright-white '(:color "#5c6a72"))

@@ -323,23 +323,6 @@
 
 (defstyle term '(:font-family "monospace"))
 
-(defstyle ansi-black '(:color "#fff"))
-(defstyle ansi-red '(:color "#c00"))
-(defstyle ansi-green '(:color "#0c0"))
-(defstyle ansi-yellow '(:color "#cc0"))
-(defstyle ansi-blue '(:color "#00c"))
-(defstyle ansi-magenta '(:color "#c0c"))
-(defstyle ansi-cyan '(:color "#0cc"))
-(defstyle ansi-white '(:color "#000"))
-(defstyle ansi-bright-black '(:color "#ccc"))
-(defstyle ansi-bright-red '(:color "#f00"))
-(defstyle ansi-bright-green '(:color "#0f0"))
-(defstyle ansi-bright-yellow '(:color "#ff0"))
-(defstyle ansi-bright-blue '(:color "#00f"))
-(defstyle ansi-bright-magenta '(:color "#f0f"))
-(defstyle ansi-bright-cyan '(:color "#0ff"))
-(defstyle ansi-bright-white '(:color "#777"))
-
 (defsheet term-mode
     `(("body" :inherit term)
       ,@(iter (for color in +ansi-colors+)
