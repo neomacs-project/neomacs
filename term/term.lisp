@@ -240,11 +240,13 @@
   "tab" 'term-forward-key
   "escape" (make-term-send-seq-command "")
   "C-q" 'term-quote-send-key
-  "C-c C-j" 'term-insert-mode)
+  "C-c C-j" 'term-insert-mode
+  "C-y" 'term-paste
+  "M-y" 'term-paste-pop)
 
 (iter (for i from (char-code #\a) to (char-code #\z))
   (for char = (code-char i))
-  (unless (member char '(#\x #\c #\q))
+  (unless (member char '(#\x #\c #\q #\y))
     (set-key (find-keymap 'term-insert-mode)
              (format nil "C-~a" char) 'term-forward-key)
     (set-key (find-keymap 'term-insert-mode)
@@ -298,7 +300,23 @@
 
 (define-command term-paste
   :mode term-mode ()
-  )
+  (term-send-seq "[200~")
+  (term-send-seq
+   (apply #'convert-to-text
+          (compute-nodes-for-paste)))
+  (term-send-seq "[201~"))
+
+(define-command term-paste-pop
+  :mode term-mode ()
+  (let ((nodes (compute-nodes-for-paste-pop
+                (lambda ()
+                  (term-send-seq "")))))
+    (term-send-seq "[200~")
+    (term-send-seq (apply #'convert-to-text nodes))
+    (term-send-seq "[201~")))
+
+(setf (get 'term-paste 'paste-command-p) t
+      (get 'term-paste-pop 'paste-command-p) t)
 
 (defstyle term '(:font-family "monospace"))
 

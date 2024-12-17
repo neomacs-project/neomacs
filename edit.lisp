@@ -5,7 +5,7 @@
       splice-node join-nodes raise-node split-node
       wrap-node delete-node replace-node
       *clipboard-ring* *clipboard-ring-index*
-      compute-nodes-for-paste compute-nodes-for-paste-pop
+      convert-to-text compute-nodes-for-paste compute-nodes-for-paste-pop
       paste-command-p revert-buffer-aux))
 
 ;;; DOM Edit
@@ -662,16 +662,24 @@ Called by `self-insert-command' to get the character for insertion."
 
 (defvar *system-clipboard-last-read* nil)
 
-(defun convert-to-text (node)
-  "Like `text-content', but also use string representations."
-  (map-dom
-   (lambda (node results)
-     (etypecase node
-       (text-node (text node))
-       (element (let ((p (attribute node 'presentation)))
-                  (if (stringp p) p
-                      (apply #'sera:concat results))))))
-   node))
+(defun convert-to-text (node &rest more-nodes)
+  "Like `text-content', but also use string representations.
+
+If multiple arguments are provided, the results are concatenated together."
+  (with-output-to-string (s)
+    (dolist (node (cons node more-nodes))
+      (if (stringp node)
+          (write-string node s)
+          (write-string
+           (map-dom
+            (lambda (node results)
+              (etypecase node
+                (text-node (text node))
+                (element (let ((p (attribute node 'presentation)))
+                           (if (stringp p) p
+                               (apply #'sera:concat results))))))
+            node)
+           s)))))
 
 (defun clipboard-insert (items)
   (if items
