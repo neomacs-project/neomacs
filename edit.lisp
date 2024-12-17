@@ -670,16 +670,18 @@ If multiple arguments are provided, the results are concatenated together."
     (dolist (node (cons node more-nodes))
       (if (stringp node)
           (write-string node s)
-          (write-string
-           (map-dom
-            (lambda (node results)
-              (etypecase node
-                (text-node (text node))
-                (element (let ((p (attribute node 'presentation)))
-                           (if (stringp p) p
-                               (apply #'sera:concat results))))))
-            node)
-           s)))))
+          (labels ((process (node)
+                     (etypecase node
+                       (text-node (write-string (text node) s))
+                       (element
+                        (let ((p (attribute node 'presentation)))
+                          (if (stringp p)
+                              (write-string p s)
+                              (iter (for c first (first-child node)
+                                         then (next-sibling c))
+                                (while c)
+                                (process c))))))))
+            (process node))))))
 
 (defun clipboard-insert (items)
   (if items
