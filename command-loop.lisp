@@ -246,7 +246,8 @@ If nil, disable message logging. If t, log messages but don't truncate
             (make-buffer "Web" :mode 'web-mode
                                :id (assoc-value event :new-id)
                                :url (assoc-value event :url)
-                               :styles nil)))
+                               :styles nil
+                               :content-scripts nil)))
           ((equal type "frame-closed")
            (delete-buffer buffer))
           ((equal type "frame-focused")
