@@ -482,12 +482,14 @@ If an existing buffer is found, it is reinitialized with ARGS."
     name))
 
 (defun modes (buffer)
+  "Return the list of explicitly enabled modes in BUFFER."
   (iter (for c in (ignore-errors
                    (slot-value (class-of buffer) 'classes)))
     (when (typep c 'mode)
       (collect (class-name c)))))
 
 (defun keymaps (buffer)
+  "Compute the list of active keymaps for BUFFER."
   (let (keymaps)
     (iter (for node first (node-containing (focus buffer))
                then (parent node))
