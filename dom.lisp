@@ -30,6 +30,7 @@
        (last-child :cell nil)
        (tag-name :initform (error "Must supply :tag-name") :reader tag-name
                  :initarg :tag-name)
+       (id :accessor id)
        (attributes :initform (make-hash-table :test 'equal) :reader attributes)
        (invisible-p :cell (or (when-let (parent (parent self))
                                 (invisible-p parent))
@@ -61,10 +62,10 @@
         ((element-p node)
          (if (equal (tag-name node) "body")
              `(ps:chain document body)
-             (let ((id (attribute node "neomacs-identifier")))
-               `(ps:chain document
-                          (query-selector
-                           ,(format nil "[neomacs-identifier='~a']" id))))))
+             `(ps:chain document
+                        (query-selector
+                         ,(format nil "[neomacs-identifier='~a']"
+                                  (id node))))))
         ((null node) nil)
         (t (error "Unknown node type ~a." node))))
 
@@ -194,24 +195,24 @@ If ATTRIBUTE is not a string, this is a no-op."
   (print-unreadable-object (node stream :identity t :type t)
     (format stream "~a" (text node))))
 
-(defvar *serialize-exclude-attributes* nil)
-
 (defun serialize (node stream)
   "Serialize NODE to HTML and write to STREAM.
 STREAM can also be
   - T, denotes `*standard-output*',
   - nil, returns the result as a string."
-  (labels ((process (node s)
+  (labels ((format-attribute (k v s)
+             (format s " ~a=\"~a\""
+                     k (spinneret::escape-attribute-value v)))
+           (process (node s)
              (etypecase node
                (element
                 (format s "<~a" (tag-name node))
                 (iter (for (k v) in-hashtable (attributes node))
                   (when (stringp k)
-                    (unless (member k *serialize-exclude-attributes* :test 'equal)
-                      (when-let (value (cell-ref v))
-                        (format s " ~a=\"~a\""
-                                k (spinneret::escape-attribute-value
-                                   value))))))
+                    (when-let (value (cell-ref v))
+                      (format-attribute k value s))))
+                (when (slot-boundp node 'id)
+                  (format-attribute "neomacs-identifier" (id node) s))
                 (format s ">")
                 (iter (for c first (first-child node)
                            then (next-sibling c))
@@ -378,7 +379,7 @@ This includes `element's and `text-node's. Returns NODE."
 (defun get-element-by-neomacs-id (root id)
   (do-elements
       (lambda (child)
-        (when (equal (attribute child "neomacs-identifier") id)
+        (when (equal (id child) id)
           (return-from get-element-by-neomacs-id child)))
     root))
 

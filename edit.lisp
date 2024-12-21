@@ -11,11 +11,9 @@
 ;;; DOM Edit
 
 (defun assign-neomacs-id (node)
-  (setf (gethash "neomacs-identifier" (attributes node))
-        (make-eager-cell
-         :no-news-p #'equal
-         :value (princ-to-string
-                 (incf (next-neomacs-id (current-buffer))))))
+  (sera:ensure (id node)
+    (princ-to-string
+     (incf (next-neomacs-id (current-buffer)))))
   node)
 
 (defun text-markers-in (neomacs text-node offset length)

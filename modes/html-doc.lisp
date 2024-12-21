@@ -312,7 +312,9 @@ JSON should have the format like what `+get-body-json-code+' produces:
                (dolist (c (assoc-value json :children))
                  (append-child node (json-to-dom c)))
                (iter (for (k . v) in (assoc-value json :attributes))
-                 (setf (attribute node (str:downcase (symbol-name k))) v))
+                 (if (eql k :neomacs-identifier)
+                     (setf (id node) v)
+                     (setf (attribute node (str:downcase (symbol-name k))) v)))
                node)))
     (json-to-dom json)))
 
@@ -325,17 +327,17 @@ JSON should have the format like what `+get-body-json-code+' produces:
           (next-neomacs-id buffer) id)))
 
 (defmethod write-dom-aux ((buffer html-doc-mode) node stream)
-  (let ((*serialize-exclude-attributes* '("neomacs-identifier")))
-    (serialize node stream)))
+  ;; `clone-node' to remove `neomacs-identifier'
+  (serialize (clone-node node) stream))
 
 (defmethod save-buffer-aux ((buffer html-doc-mode))
   (with-open-file (s (file-path buffer)
                      :direction :output :if-exists :supersede)
     (with-standard-io-syntax
-      (let ((*serialize-exclude-attributes* '("neomacs-identifier")))
-        (serialize-document
-         (document-root buffer)
-         nil s))
+      (serialize-document
+       ;; `clone-node' to remove `neomacs-identifier'
+       (clone-node (document-root buffer))
+       nil s)
       nil)))
 
 (defun print-arglist (arglist package)
@@ -495,8 +497,7 @@ JSON should have the format like what `+get-body-json-code+' produces:
                      :if-exists :supersede)
     (message "Rendering ~a" output-path)
     (with-standard-io-syntax
-      (let ((*serialize-exclude-attributes* '("neomacs-identifier"))
-            (*package* (find-package "NEOMACS")))
+      (let ((*package* (find-package "NEOMACS")))
         (serialize-document
          (expand-comma-expr (document-root (current-buffer)))
          (styles (current-buffer))
