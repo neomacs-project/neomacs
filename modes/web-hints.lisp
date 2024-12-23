@@ -134,10 +134,10 @@
 
 (defun remove-hints ()
   (evaluate-javascript
-   (ps:ps
-     (ps:let ((hints-parent (ps:chain document (get-element-by-id "neomacs-hints"))))
-       (ps:when hints-parent
-         (ps:chain hints-parent (remove)))))
+   "{const parent = document.getElementById('neomacs-hints');
+if(parent) parent.remove();
+Array.from(document.querySelectorAll('[neomacs-hint]')).forEach(
+function(el){el.removeAttribute('neomacs-hint')})}"
    (current-buffer))
   (disable 'active-web-hint-mode))
 
