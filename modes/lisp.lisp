@@ -223,9 +223,7 @@
   (make-atom-node "symbol" (prin1-to-string obj)))
 
 (defmethod print-dom ((obj t) &key)
-  ;; Turn of CL's pretty printer because it introduces
-  ;; unnecessary line breaks
-  (let (*print-pretty*)
+  (let ((*print-pretty* t))
     (make-presentation-node (prin1-to-string obj) obj)))
 
 (defun insert-or-wrap-node (node)
@@ -1281,7 +1279,7 @@ sb-introspect:definition-source)'."
                         :inherit (sexp-node string)))
 (defstyle symbol-node `(:inherit sexp-node))
 (defstyle object-node `(:inherit symbol-node
-                        :text-decoration "underline"))
+                        :border "solid 1px currentColor"))
 (defstyle empty-symbol-node `(((:append "::after")
                                :content "_")
                               ((:append ":not(:last-child)")
