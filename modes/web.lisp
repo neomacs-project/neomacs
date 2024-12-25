@@ -18,7 +18,7 @@
            (setq parsed (quri:uri prepended))
            (when (or (quri:ip-addr-p (quri:uri-host parsed))
                      (ignore-errors
-                      (cl-tld:get-tld (quri:uri-domain parsed))))
+                      (not (eql (nth-value 1 (cl-tld:get-tld (quri:uri-domain parsed))) :unmanaged))))
              prepended))))))
 
 (defvar *search-prefix* "https://duckduckgo.com/html/?q="
