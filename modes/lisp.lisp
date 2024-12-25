@@ -360,7 +360,7 @@ the following node."
       (when (zerop (length rest))
         wrappers))))
 
-(defun node-to-sexp (node &optional (intern t))
+(defun node-to-sexp (node &optional (intern t) (ignore-prefix nil))
   "Parse DOM NODE as a Lisp object.
 It also takes into account any prefix preceding NODE.
 
@@ -402,9 +402,9 @@ found are replaced with a dummy symbol."
                                 (error "Presentation attribute missing from ~a" node)))
                            (t (error "Unrecognized DOM node: ~a" node)))))
                (when *form-node-table*
-                 (setf (gethash sexp *form-node-table*)
-                       (print node)))
-               (if-let (wrappers (ghost-symbol-p (previous-sibling node)))
+                 (setf (gethash sexp *form-node-table*) node))
+               (if-let (wrappers (and (not ignore-prefix)
+                                      (ghost-symbol-p (previous-sibling node))))
                  (apply-wrappers wrappers sexp)
                  sexp))))
     (process node)))
@@ -957,7 +957,7 @@ sb-introspect:definition-source)'."
               (setq arglist l operator symbol
                     form (ignore-errors (node-to-sexp cur nil)))
               (return)))))
-      (when operator
+      (when (and operator (listp form))
         (let ((arglist (swank::decode-arglist arglist)))
           (append
            (format-swank-highlighted-arglist
