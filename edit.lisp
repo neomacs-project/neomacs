@@ -589,7 +589,7 @@ Called by `self-insert-command' to get the character for insertion."
       (unless deleted
         (unless (node-after beg)
           (let* ((prev (node-containing beg))
-                 (next (next-sibling prev)))
+                 (next (node-containing end)))
             (when (and (element-p next)
                        (equal (attribute prev "class")
                               (attribute next "class")))
@@ -623,8 +623,8 @@ Called by `self-insert-command' to get the character for insertion."
                        (setq deleted t)))))
       (unless deleted
         (unless (node-before end)
-          (let* ((next (node-containing end))
-                 (prev (previous-sibling next)))
+          (let* ((prev (node-containing beg))
+                 (next (node-containing end)))
             (when (and (element-p prev)
                        (equal (attribute prev "class")
                               (attribute next "class")))
