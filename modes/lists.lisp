@@ -230,7 +230,8 @@ This should always be a directory pathname (with NIL name and type fields).")
          "tr" :children
          (list (make-element
                 "td" :children
-                (clipboard-item-nodes item))))
+                (mapcar #'clone-node
+                        (clipboard-item-nodes item)))))
         result)))
     (nreverse result)))
 
