@@ -15,10 +15,6 @@
 (defun start (&optional (self-govern t))
   "Start the Neomacs system.
 
-It's not safe to call this function more than once in a Lisp process.
-If Neomacs system has been shut down (all frames are closed), restart
-Lisp process before starting a new session.
-
 If SELF-GOVERN is nil, Neomacs assumes it is being started
 from an external Lisp development environment (e.g. SLIME). This has
 the following effect:
@@ -76,6 +72,11 @@ Try the following workaround:
     (setf *no-debugger* t
           *no-redirect-stream* t))
   (unless (get-buffer "*scratch*") (make-scratch))
+
+  ;; Discard all messages in `*event-queue*', so if Neomacs is
+  ;; restarted within same Lisp image, it won't read stale messages
+  (sb-concurrency:receive-pending-messages *event-queue*)
+
   (start-command-loop)
   (unless *no-init*
     (let ((*package* (find-package "NEOMACS-USER"))
@@ -91,9 +92,10 @@ Try the following workaround:
    :global)
   (unless *store-path*
     (setq *store-path* (uiop:xdg-data-home "neomacs/store/")))
-  (make-instance 'bknr.datastore:mp-store
-                 :directory *store-path*
-                 :subsystems (list (make-instance 'bknr.datastore:store-object-subsystem)))
+  (unless (and (boundp 'bknr.datastore:*store*) bknr.datastore:*store*)
+    (make-instance 'bknr.datastore:mp-store
+                   :directory *store-path*
+                   :subsystems (list (make-instance 'bknr.datastore:store-object-subsystem))))
   (dolist (h *startup-hooks*)
     (with-demoted-errors (format nil "Error running startup hook ~a: " h)
       (funcall h)))
@@ -110,10 +112,14 @@ Try the following workaround:
   (dolist (h *kill-hooks*)
     (with-demoted-errors (format nil "Error running kill hook ~a: " h)
       (funcall h)))
-  ;; Mark all buffer as non-alive to suppress post-command operations
-  (clrhash *buffer-table*)
-  (sb-concurrency:send-message *event-queue* 'quit)
-  (ceramic:quit))
+  (dolist (buffer (print (all-buffer-list nil)))
+    (when (and (buffer-alive-p buffer)
+               ;; Let frame deletes their own echo area
+               (not (typep buffer 'echo-area-mode)))
+      (delete-buffer buffer)))
+  (sb-concurrency:send-message *event-queue* 'kill)
+  (setf *current-frame-root* nil)
+  (ceramic:stop))
 
 (define-keys :global
   "C-x C-c" 'kill-neomacs)

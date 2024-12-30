@@ -210,11 +210,11 @@ Ceramic.buffers[~S].setBackgroundColor('rgba(255,255,255,0.0)');"
   (with-current-buffer buffer
     (dolist (new (reverse (sb-mop:class-precedence-list (class-of buffer))))
       (enable-aux (class-name new)))
-    (unless (member 'common (styles buffer))
-      (alex:appendf (styles buffer) (list 'common)))
     (dolist (style (styles buffer))
       (add-observer (css-cell style)
                     (make-update-style buffer style)))
+    (unless (member 'common (styles buffer))
+      (alex:appendf (styles buffer) (list 'common)))
     (when revert
       (revert-buffer))))
 

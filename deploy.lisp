@@ -40,7 +40,8 @@
   (neomacs::start)
   (sb-ext:process-wait
    (slot-value ceramic.driver:*driver* 'ceramic.driver::process))
-  (neomacs::kill-neomacs))
+  (neomacs::kill-neomacs)
+  (uiop:quit))
 
 (deploy:define-hook (:deploy neomacs) (directory)
   (copy-directory:copy
