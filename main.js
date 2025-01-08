@@ -33,6 +33,9 @@ Ceramic.startWebSockets = function(address, port) {
     RemoteJS.ws.onopen = function() {
         RemoteJS.send('connected');
     };
+    RemoteJS.ws.onclose = function() {
+        RemoteJS.send = function(data) {} // discard data to be sent over WebSocket
+        app.quit();}
 };
 
 Ceramic.syncEval = function(id, fn) {
