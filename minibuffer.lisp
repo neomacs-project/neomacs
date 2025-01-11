@@ -53,7 +53,9 @@
           (setf (history-index buffer) index)
           (delete-nodes (pos-down input) nil)
           (apply #'insert-nodes (end-pos input)
-                 (mapcar #'clone-node (nth index history))))
+                 (mapcar #'clone-node (nth index history)))
+          (let (*message-log-max*)
+            (message "History item: ~a" index)))
         (user-error "No previous history"))))
 
 (define-command minibuffer-next-history
@@ -71,7 +73,10 @@
           (apply #'insert-nodes (end-pos input)
                  (if (= index -1)
                      (saved-input buffer)
-                     (mapcar #'clone-node (nth index history)))))
+                     (mapcar #'clone-node (nth index history))))
+          (unless (= index -1)
+            (let (*message-log-max*)
+              (message "History item: ~a" index))))
         (user-error "No next history"))))
 
 (defgeneric minibuffer-input (buffer)
@@ -141,17 +146,19 @@ ARGS are passed to `make-buffer' to create the minibuffer."
 (defun read-password (prompt)
   (read-from-minibuffer prompt :mode 'minibuffer-password-mode))
 
-(defun completing-read (prompt list-mode &rest args)
+(defun completing-read
+    (prompt list-mode &rest args &key history &allow-other-keys)
   "Read and return a presentation from minibuffer with completion.
 
 This is a wrapper around `read-from-minibuffer' that creates a completion buffer in LIST-MODE. The LIST-MODE should attach a presentation for each row, which will be returned by `completing-read'."
   (read-from-minibuffer
    prompt
+   :history history
    :mode 'minibuffer-completion-mode
    :completion-buffer
    (apply #'make-completion-buffer
           (list list-mode 'completion-buffer-mode)
-          args)))
+          (alex:remove-from-plist args :history))))
 
 (define-mode completion-mode ()
   ((completion-buffer :initarg :completion-buffer))
@@ -335,10 +342,13 @@ when this row is selected.")))
     (iter (for k in (delete-duplicates keys :test 'equal))
       (push k (gethash (lookup-keybind k keymaps) table)))))
 
+(defvar *execute-command-history* nil)
+
 (define-command execute-command ()
   (call-interactively
    (completing-read
     "M-x " 'command-list-mode
+    :history '*execute-command-history*
     :include-modes (modes (current-buffer))
     :keybinding-index
     (collect-keybindings (keymaps (current-buffer))))))
