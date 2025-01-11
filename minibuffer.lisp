@@ -147,18 +147,21 @@ ARGS are passed to `make-buffer' to create the minibuffer."
   (read-from-minibuffer prompt :mode 'minibuffer-password-mode))
 
 (defun completing-read
-    (prompt list-mode &rest args &key history &allow-other-keys)
+    (prompt list-mode &rest args &key history initial &allow-other-keys)
   "Read and return a presentation from minibuffer with completion.
 
-This is a wrapper around `read-from-minibuffer' that creates a completion buffer in LIST-MODE. The LIST-MODE should attach a presentation for each row, which will be returned by `completing-read'."
+This is a wrapper around `read-from-minibuffer' that creates a completion buffer
+in LIST-MODE. The LIST-MODE should attach a presentation for each row, which
+will be returned by `completing-read'."
   (read-from-minibuffer
    prompt
    :history history
+   :initial initial
    :mode 'minibuffer-completion-mode
    :completion-buffer
    (apply #'make-completion-buffer
           (list list-mode 'completion-buffer-mode)
-          (alex:remove-from-plist args :history))))
+          (alex:remove-from-plist args :history :initial))))
 
 (define-mode completion-mode ()
   ((completion-buffer :initarg :completion-buffer))
