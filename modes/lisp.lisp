@@ -135,6 +135,11 @@
     (set-attribute-function node "operator" 'compute-operator))
   (when (class-p node "comment" "string")
     (setf (attribute node 'keymap) *plaintext-node-keymap*))
+  ;; Comment node must be followed by newline
+  (when (class-p node "comment")
+    (with-post-command (node 'next-sibling)
+      (unless (new-line-node-p (next-sibling node))
+        (insert-nodes (pos-right node) (make-new-line-node)))))
   (when (class-p node "object")
     (setf (attribute node 'read-only) t)
     (setf (attribute node 'keymap) *object-presentation-keymap*)))
@@ -253,10 +258,12 @@
 
 (define-command wrap-paren :mode lisp-mode
   (&optional (pos (focus)))
-  (let ((node (make-list-node nil)))
-    (setq pos (or (pos-up-ensure pos #'sexp-node-p)
-                  (error 'top-of-subtree)))
-    (wrap-node pos node)))
+  (if (selection-active (current-buffer))
+      (insert-or-wrap-node (make-list-node nil))
+      (let ((node (make-list-node nil)))
+        (setq pos (or (pos-up-ensure pos #'sexp-node-p)
+                      (error 'top-of-subtree)))
+        (wrap-node pos node))))
 
 (define-command insert-string :mode lisp-mode ()
   (insert-or-wrap-node (make-element "span" :class "string")))
@@ -270,14 +277,14 @@
         (setf (pos marker) (end-pos node)))))
 
 (define-command insert-comment :mode lisp-mode
-  (&optional (marker (focus)))
+  (&optional (pos (focus)))
   (labels ((cycle-level (n)
              (lret ((n (1+ (mod n 4))))
                (message "Comment Level -> ~a" n))))
     (if-let
         (node (find-if (alex:rcurry #'class-p "comment")
-                       (list (pos marker)
-                             (pos-prev marker))))
+                       (list (node-after pos)
+                             (pos-prev pos))))
       (setf (attribute node "comment-level")
             (prin1-to-string
              (cycle-level
@@ -288,10 +295,24 @@
 
 (define-command wrap-comment :mode lisp-mode
   (&optional (pos (focus)))
-  (let ((node (make-element "span" :class "comment" :comment-level "1")))
-    (setq pos (or (pos-up-ensure pos #'sexp-node-p)
-                  (error 'top-of-subtree)))
-    (wrap-node pos node)))
+  (if-let
+      (node (find-if (alex:rcurry #'class-p "comment")
+                     (list (node-after pos)
+                           (pos-prev pos))))
+    (progn
+      ;; Clean up trailing newline
+      (let ((next (pos-right node)))
+        (when (and (new-line-node-p next)
+                   (end-pos-p (pos-right next)))
+          (delete-node next)))
+      (splice-node node))
+    (if (selection-active (current-buffer))
+        (insert-or-wrap-node
+         (make-element "span" :class "comment" :comment-level "2"))
+        (let ((node (make-element "span" :class "comment" :comment-level "2")))
+          (setq pos (or (pos-up-ensure pos #'sexp-node-p)
+                        (error 'top-of-subtree)))
+          (wrap-node pos node)))))
 
 (define-command lisp-raise :mode lisp-mode
   (&optional (pos (focus)))
@@ -1185,11 +1206,20 @@ sb-introspect:definition-source)'."
                    (write c :stream s)))
                :stream stream))
              ((equal (attribute self "class") "comment")
-              (dotimes (_ (parse-number:parse-number (attribute self "comment-level")))
-                (write-char #\; stream))
-              (write-char #\  stream)
-              (iter (for c in (child-nodes self))
-                (write c :stream stream)))
+              (bind ((content (with-output-to-string (stream)
+                                (iter (for c in (child-nodes self))
+                                  (write c :stream stream))))
+                     (lines (str:split #\Newline content))
+                     (prefix (str:concat (str:repeat
+                                             (parse-number:parse-number
+                                              (attribute self "comment-level"))
+                                           ";")
+                                         " ")))
+                (iter (for line in lines)
+                  (unless (first-iteration-p)
+                    (pprint-newline :mandatory stream))
+                  (write-string prefix stream)
+                  (write-string line stream))))
              (t (error "TODO")))))
 
     (set-pprint-dispatch
