@@ -31,7 +31,8 @@ the following effect:
     (ceramic:setup)
     (with-open-file
         (s (merge-pathnames
-            #p"resources/default_app/package.json"
+            #+darwin #p"Electron.app/Contents/Resources/default_app/package.json"
+            #-darwin #p"resources/default_app/package.json"
             (ceramic.file:release-directory))
            :direction :output
            :if-exists :supersede)
