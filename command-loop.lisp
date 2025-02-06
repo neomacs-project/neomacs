@@ -186,7 +186,41 @@ If nil, disable message logging. If t, log messages but don't truncate
                (evaluate-javascript
                 (ps:ps (ps:chain (js-buffer buffer) web-contents (focus)))
                 :global)))
-           (let* ((sym (assoc-value event :key))
+           (let* ((sym #-darwin (assoc-value event :key)
+                       ;; FIXME: this is a temporary workaround for macOS AltGr deadkey problem, see
+                       ;; https://github.com/neomacs-project/neomacs/issues/97. This might not work for
+                       ;; non-US keyboard layout. A more robust solution is to use
+                       ;; charactersIgnoringModifiers, which may require a native extension to Electron
+                       #+darwin (let ((code (assoc-value event :code))
+                                      (shift (assoc-value event :shift)))
+                                  (cond ((sera:string-prefix-p "Key" code)
+                                         (if shift
+                                           (string (char code 3))
+                                           (string (char-downcase (char code 3)))))
+                                        ((sera:string-prefix-p "Digit" code)
+                                         (case (char code 5)
+                                           (#\1 (if shift "!" "1"))
+                                           (#\2 (if shift "@" "2"))
+                                           (#\3 (if shift "#" "3"))
+                                           (#\4 (if shift "$" "4"))
+                                           (#\5 (if shift "%" "5"))
+                                           (#\6 (if shift "^" "6"))
+                                           (#\7 (if shift "&" "7"))
+                                           (#\8 (if shift "*" "8"))
+                                           (#\9 (if shift "(" "9"))
+                                           (#\0 (if shift ")" "0"))))
+                                        (t (sera:string-case code
+                                             ("BracketLeft" (if shift "{" "["))
+                                             ("BracketRight" (if shift "}" "]"))
+                                             ("Minus" (if shift "_" "-"))
+                                             ("Equal" (if shift "+" "="))
+                                             ("Semicolon" (if shift ":" ";"))
+                                             ("Backquote" (if shift "~" "`"))
+                                             ("Backslash" (if shift "|" "\\"))
+                                             ("Comma" (if shift "<" ","))
+                                             ("Period" (if shift ">" "."))
+                                             ("Slash" (if shift "?" "/"))
+                                             (t (assoc-value event :key)))))))
                   (key (make-key :ctrl (assoc-value event :control)
                                  :meta (assoc-value event :alt)
                                  :super (assoc-value event :meta)
