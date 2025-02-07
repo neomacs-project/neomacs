@@ -710,14 +710,14 @@ drop into Neomacs debugger."))
 Error messages are prepended with PROMPT.
 
 If `*debug-on-error*' is t, run BODY without catching its errors."
-  `(block nil
-     (handler-bind
-         ((error
-            (lambda (c)
-              (unless *debug-on-error*
-                (message "~a~a" ,prompt c)
-                (return)))))
-       ,@body)))
+  `(block demoted-errors
+     (let ((c (block demoted-errors-abnormal
+                (handler-bind
+                    ((error (lambda (c)
+                              (unless *debug-on-error*
+                                (return-from demoted-errors-abnormal c)))))
+                  (return-from demoted-errors (progn ,@body))))))
+       (message "~a~a" ,prompt c))))
 
 (defun user-error (control-string &rest format-arguments)
   "Signal a `simple-user-error' with messages formatted from

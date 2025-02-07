@@ -324,22 +324,27 @@ If nil, disable message logging. If t, log messages but don't truncate
       (for event = (assoc-value data :input-event))
       (if handlers-p
           (restart-case
-              (handler-bind
-                  (((or quit user-error)
-                     (lambda (c)
-                       (funcall *quit-hook* c)
-                       (message "~a" c)
-                       (next-iteration)))
-                   (error (lambda (c)
-                            (unless *debug-on-error*
-                              (funcall *error-hook* c)
-                              (message "~a" c)
-                              (next-iteration))))
-                   (exit-recursive-edit
-                     (lambda (c)
-                       (declare (ignore c))
-                       (error 'quit))))
-                (handle-event buffer event run-command-fn))
+              (block command-loop
+                (let ((c (block command-loop-abnormal
+                           (handler-bind
+                               (((or quit user-error exit-recursive-edit)
+                                  (lambda (c)
+                                    (return-from command-loop-abnormal c)))
+                                (error
+                                  (lambda (c)
+                                    (unless *debug-on-error*
+                                      (return-from command-loop-abnormal c)))))
+                             (return-from command-loop
+                               (handle-event buffer event run-command-fn))))))
+                  (typecase c
+                    ((or quit user-error)
+                     (funcall *quit-hook* c)
+                     (message "~a" c))
+                    (exit-recursive-edit
+                     (error 'quit))
+                    (t
+                     (funcall *error-hook* c)
+                     (message "~a" c)))))
             (abort ()
               :report "Return to command loop"))
           (handle-event buffer event run-command-fn))
