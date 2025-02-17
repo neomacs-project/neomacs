@@ -152,11 +152,12 @@ Ceramic.createBuffer = function(id, url, options) {
         return {
             action: 'allow',
             outlivesOpener: true,
-            createWindow: (options) =>{
+            createWindow: (_options) =>{
                 const newId = Ceramic.generateId(Ceramic.buffers);
                 const newOptions = {}; // Have to filter out junk in options
-                if(options.webContents) newOptions.webContents = options.webContents;
-                if(options.webPreferences) newOptions.webPreferences = options.webPreferences;
+                if(_options.webContents) newOptions.webContents = _options.webContents;
+                if(_options.webPreferences) newOptions.webPreferences = _options.webPreferences;
+                newOptions.webPreferences.preload = options.webPreferences.preload; // inherit preload from parent
                 const newBuffer = Ceramic.createBuffer(newId, details.url, newOptions);
                 RemoteJS.send(JSON.stringify({inputEvent: {type: "new-buffer", newId: newId, url: details.url}, buffer: id}));
                 return newBuffer;}}});
