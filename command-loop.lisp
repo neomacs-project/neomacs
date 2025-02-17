@@ -283,7 +283,10 @@ If nil, disable message logging. If t, log messages but don't truncate
                                :styles nil
                                :content-scripts nil)))
           ((equal type "frame-closed")
-           (delete-buffer buffer))
+           (delete-buffer buffer)
+           (unless *current-frame-root*
+             ;; All window closed, game over
+             (kill-neomacs))           )
           ((equal type "frame-focused")
            (when buffer (with-current-buffer buffer nil)))
           ((equal type "focus")

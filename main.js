@@ -171,12 +171,14 @@ Ceramic.closeBuffer = function(id) {
 };
 
 /* Lifecycle management */
-
 Ceramic.quit = function() {
     app.quit();
 };
 
 Ceramic.downloads = {};
+
+// Let command-loop.lisp call (kill-neomacs) gracefully
+app.on('window-all-closed', function(e){e.preventDefault();})
 
 /* Start up */
 
