@@ -65,7 +65,7 @@ BUFFER is NIL."
   (setq cera.d:*driver* (make-instance 'driver)
         trivial-ws:+default-timeout+ 1000000
         ceramic.setup::+main-javascript+ (asdf:system-relative-pathname :neomacs #p"main.js")
-        ceramic.setup::*electron-version* "33.2.0"))
+        ceramic.setup::*electron-version* "34.2.0"))
 
 (defvar *event-queue* (sb-concurrency:make-mailbox))
 
